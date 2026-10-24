@@ -1,16 +1,29 @@
 import { describe, expect, it } from 'vitest';
 import {
   BORDA_PADRAO,
+  AREA_UTIL_MIN_CM,
+  CORES_GRID,
   GRID_PADRAO,
+  GRID_PASSO_MIN_PX,
+  LIMITE_NOME_PROJETO,
+  LIMITE_PASSO_GRID_CM,
   LIMITE_PERSONALIZADO_CM,
+  LIMITES_REFERENCIA_CM,
+  MARGEM_RETIFICACAO,
+  NOME_PROJETO_PADRAO,
   NOME_VARIANTE_PADRAO,
   PASSOS_GRID_CM,
   PERFIL_PADRAO,
   PERFIS,
   PRAZO_PURGA_DIAS,
+  PREVIA_LARGURA_PX,
+  SEGMENTO_MIN_PX,
   TAMANHO_PADRAO_ID,
   TAMANHOS_SUGERIDOS,
+  THUMB_PAREDE_PX,
+  ZOOM,
 } from './constantes';
+import { GridSchema } from './schemas';
 
 describe('tamanhos sugeridos (RN-01, FMT-01)', () => {
   it('lista os 17 tamanhos aprovados, na ordem do grupo', () => {
@@ -108,5 +121,66 @@ describe('outras constantes', () => {
 
   it('prazo de purga é 30 dias (RN-24)', () => {
     expect(PRAZO_PURGA_DIAS).toBe(30);
+  });
+});
+
+// Spec M1 §4.1 e premissas A-02, A-06 a A-09, A-12.
+describe('constantes do M1', () => {
+  it('GRID_PADRAO é um grid completo e válido (A-08, DESIGN §2.2)', () => {
+    expect(GRID_PADRAO).toEqual({
+      visivel: true,
+      snap: true,
+      passoCm: 5,
+      principalACada: 5,
+      cor: '#1F1B16',
+      opacidade: 0.08,
+    });
+    expect(GridSchema.safeParse(GRID_PADRAO).success).toBe(true);
+  });
+
+  it('cores prontas do grid: Tinta, Branco e Cinza (A-08)', () => {
+    expect(CORES_GRID).toEqual([
+      { nome: 'Tinta', hex: '#1F1B16' },
+      { nome: 'Branco', hex: '#FFFFFF' },
+      { nome: 'Cinza', hex: '#8C8C8C' },
+    ]);
+  });
+
+  it('passo "Outro" vai de 0,5 a 100 cm, de 0,1 em 0,1 (A-08)', () => {
+    expect(LIMITE_PASSO_GRID_CM).toEqual({ min: 0.5, max: 100, passo: 0.1 });
+  });
+
+  it('grid some abaixo de 4 px na tela (A-07)', () => {
+    expect(GRID_PASSO_MIN_PX).toBe(4);
+  });
+
+  it('margem de retificação é 100% por lado (M1-03)', () => {
+    expect(MARGEM_RETIFICACAO).toBe(1);
+  });
+
+  it('medidas de referência: 10 a 2000 cm (A-09)', () => {
+    expect(LIMITES_REFERENCIA_CM).toEqual({ min: 10, max: 2000 });
+  });
+
+  it('área útil mínima: 5 cm por lado (RN-33)', () => {
+    expect(AREA_UTIL_MIN_CM).toBe(5);
+  });
+
+  it('miniatura da parede 400 px e prévia da perspectiva 320 px', () => {
+    expect(THUMB_PAREDE_PX).toBe(400);
+    expect(PREVIA_LARGURA_PX).toBe(320);
+  });
+
+  it('segmento da calibração linear: mínimo de 20 px da imagem (A-12)', () => {
+    expect(SEGMENTO_MIN_PX).toBe(20);
+  });
+
+  it('zoom de 10% a 800%, fator 1,1 por passo da roda (A-06)', () => {
+    expect(ZOOM).toEqual({ min: 0.1, max: 8, passo: 1.1 });
+  });
+
+  it('projeto novo se chama "Projeto sem nome", com nome de até 100 caracteres (A-02)', () => {
+    expect(NOME_PROJETO_PADRAO).toBe('Projeto sem nome');
+    expect(LIMITE_NOME_PROJETO).toBe(100);
   });
 });
