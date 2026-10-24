@@ -2,8 +2,8 @@
 
 | Campo | Valor |
 |---|---|
-| Versão | 0.10 (templates e área útil) |
-| Data | 2026-10-17 |
+| Versão | 0.11 (decisões da spec M1) |
+| Data | 2026-10-24 |
 | Autor | Nicholas Bittencourt |
 | Status | Requisitos e regras fechados — arquitetura em `docs/ARCHITECTURE.md` |
 
@@ -64,6 +64,7 @@ Prioridade: **P0** = obrigatório na v1 · **P1** = desejável na v1. Demais ite
 | RF-03 | Zoom e pan sobre a parede. | P0 | I |
 | RF-06 | Prévia frontal sob demanda na correção de perspectiva: botão "Gerar prévia" calcula uma versão de baixa resolução (~320 px) com os cantos atuais; ao mover uma alça, a prévia é marcada como desatualizada. | P0 | D |
 | RF-05 | Correção de perspectiva: usuário marca os 4 cantos de um retângulo real (parede, porta, quadro) e informa largura × altura em cm; o app retifica a imagem e obtém a escala. | P0 | D |
+| RF-07 | Trocar a foto da parede enquanto nenhuma variante do projeto tem fotos, com confirmação; a troca descarta escala, vista retificada e áreas úteis. | P0 | D |
 
 ### 5.2 Calibração de escala
 
@@ -153,7 +154,7 @@ Prioridade: **P0** = obrigatório na v1 · **P1** = desejável na v1. Demais ite
 | RN-05 | Alternar orientação ou mudar o tamanho mantém fixo o canto superior-esquerdo externo. | Decidido |
 | RN-06 | Posição X/Y, snap e bounding box usam o **tamanho externo** (inclui borda), pois é o objeto físico na parede. | Decidido |
 | RN-07 | Sistema de coordenadas: origem no canto superior-esquerdo do retângulo de referência da perspectiva (ou da imagem, se só houver calibração linear); X cresce para a direita, Y para baixo. | Decidido |
-| RN-08 | Escala: a correção de perspectiva é o método principal e já define a escala; a calibração linear é usada quando o usuário pular a perspectiva. Inclusão de fotos é bloqueada sem nenhuma das duas. | Decidido |
+| RN-08 | Escala: a correção de perspectiva é o método principal e já define a escala; a calibração linear é usada quando o usuário pular a perspectiva. Com a perspectiva aplicada, a calibração linear fica indisponível (refazer a escala = refazer a perspectiva); com escala linear, aplicar a perspectiva a substitui. Inclusão de fotos é bloqueada sem nenhuma das duas. | Decidido |
 | RN-09 | Com perspectiva aplicada, o canvas exibe a parede **retificada** (vista frontal); as fotos são desenhadas sem deformação. | Decidido |
 | RN-10 | Recalibrar ou refazer a perspectiva preserva posição e tamanho das fotos em cm. | Decidido |
 | RN-11 | Sobreposição entre fotos é permitida, com destaque visual (contorno vermelho) nas fotos sobrepostas. | Decidido |
@@ -163,7 +164,7 @@ Prioridade: **P0** = obrigatório na v1 · **P1** = desejável na v1. Demais ite
 | RN-15 | Grid: passo padrão 5 cm (opções 1, 2, 5, 10 cm ou personalizado); visível e snap ligados por padrão. | Decidido |
 | RN-16 | Teclado: seta move 1 cm; Shift + seta move 5 cm; com snap ligado, move um passo do grid. | Decidido |
 | RN-17 | Vários projetos persistidos; um projeto aberto por vez; excluir projeto pede confirmação. | Decidido |
-| RN-18 | Desfazer/refazer **por variante**, mínimo 50 passos, mantido enquanto o projeto está aberto (não persistido). Mudanças na parede entram no histórico da variante ativa. | Decidido |
+| RN-18 | Desfazer/refazer **por variante**, mínimo 50 passos, mantido enquanto o projeto está aberto (não persistido). Mudanças na parede (upload, troca, perspectiva, calibração) **não** entram no histórico: gravam ao confirmar o modo, que tem Cancelar. A área útil, que é da variante, entra no histórico. | Decidido |
 | RN-19 | Exportação: opção de incluir ou não o grid; nunca inclui handles de seleção nem destaques de alerta. Exceção: placeholders saem como retângulo vermelho hachurado semitransparente. | Decidido |
 | RN-20 | Arquivos não suportados na pasta são ignorados, com aviso da quantidade ignorada. | Decidido |
 | RN-28 | Tamanho personalizado: escolhido em "Personalizado…", editado no modo de recorte (largura × altura); 5 a 150 cm por lado, passo 0,1 cm; mudar o tamanho recentraliza o recorte (*cover*); orientação troca largura e altura; tamanhos quadrados não têm orientação; personalizado igual a um sugerido é tratado como o sugerido. | Decidido |
@@ -171,7 +172,7 @@ Prioridade: **P0** = obrigatório na v1 · **P1** = desejável na v1. Demais ite
 | RN-30 | Ao aplicar template, uma **borda única** para todas as vagas, escolhida no diálogo (padrão = borda padrão da variante ativa). Depois, cada foto pode ter a borda alterada normalmente. | Decidido |
 | RN-31 | Vagas do template são *placeholders* (mesmo estado da RF-30a: vermelho hachurado, contam como "sem foto"). | Decidido |
 | RN-32 | Posição do template: prévia centralizada na área útil; o usuário pode arrastar o conjunto (com snap) e confirma (clique/Enter; Esc cancela). Modelo maior que a área útil gera aviso antes de confirmar. | Decidido |
-| RN-33 | Área útil: após aplicar perspectiva/calibração, padrão = parede inteira, com confirmação e redimensionamento pelo usuário; editável pelo botão "Área útil" (alteração da variante: entra no desfazer e no salvamento). Contorno tracejado e exterior esmaecido; nada disso sai na exportação. | Decidido |
+| RN-33 | Área útil: após aplicar perspectiva/calibração, padrão = parede inteira (região com pixels da foto — ARCHITECTURE ADR-04), gravada já na primeira escala, com confirmação e redimensionamento pelo usuário (cancelar mantém a parede inteira); posição e tamanho livres a 0,1 cm, sem snap, mínimo 5 cm por lado, dentro da parede inteira; editável pelo botão "Área útil" (alteração da variante: entra no desfazer e no salvamento). Contorno tracejado e exterior esmaecido; nada disso sai na exportação. | Decidido |
 | RN-34 | Foto fora da área útil recebe o mesmo destaque de RN-12 e conta como alerta; não bloqueia o movimento. Grid continua na parede inteira. | Decidido |
 | RN-35 | Variante nova (vazia, duplicada ou de template) copia a área útil da variante ativa; a "Base" nasce com a parede inteira. Refazer perspectiva preserva as áreas em cm (aviso se ficarem fora da parede). | Decidido |
 | RN-21 | Os arquivos originais do usuário nunca são alterados nem guardados pelo app; só a versão processada é armazenada. O perfil é definido no upload e é definitivo — outro peso exige novo upload. | Decidido |
@@ -227,9 +228,9 @@ Cada marco tem especificação própria em `docs/specs/`, escrita após o aceite
 | Marco | Escopo | Protótipos |
 |---|---|---|
 | M0 — Setup | Monorepo, configuração, MongoDB (modelo, validadores, seed), fundação de design, cascas estáticas, testes | 00, 17, cascas 01/03 |
-| M1 — Parede e escala | Projetos (CRUD), upload da parede, perspectiva + prévia, calibração, área útil, grid, canvas com zoom/pan | 01, 02, 04, 04a, 05, 11, 13 |
+| M1 — Parede e escala | Projetos (CRUD), upload e troca da parede, perspectiva + prévia, calibração, área útil, grid, canvas com zoom/pan, salvamento manual (*hard save*) | 01, 02, 04, 04a, 05, 11, 13 |
 | M2 — Biblioteca e composição | Upload em lote, biblioteca e filtros, adicionar/mover, tamanhos + personalizado, recorte, borda e cor, snap, medidas, sobreposição e "fora da área", desfazer | 03, 03a, 03b, 07, 16 |
-| M3 — Variantes, templates e salvamento | Variantes, galeria e posicionamento de templates, *soft/hard save*, conflito, comparação | 06, 09, 14, 15, 15b |
+| M3 — Variantes, templates e salvamento | Variantes, galeria e posicionamento de templates, *soft save* (rascunho e recuperação), diálogo de conflito, comparação | 06, 09, 14, 15, 15b |
 | M4 — Ciclo de vida e exportação | Remover/excluir/restaurar, placeholders, purga, exportação | 08, 10, 12 |
 | M5 — v1 desejável | P1: RF-23 (contador de uso), RF-52 (linha forte do grid) | — |
 
@@ -237,7 +238,7 @@ Cada marco tem especificação própria em `docs/specs/`, escrita após o aceite
 
 | ID | Ideia |
 |---|---|
-| RF-04 | Substituir a foto da parede mantendo as fotos posicionadas. (Botão visível e inativo na v1.) |
+| RF-04 | Substituir a foto da parede mantendo as fotos posicionadas. (Na v1, o botão "Parede" só troca a parede sem fotos — RF-07; com fotos, fica visível e inativo.) |
 | RF-33b | Busca de projetos por nome. (Campo visível e inativo na v1.) |
 | RF-33c | Busca na biblioteca por nome, combinada com o filtro ativo. (Campo visível e inativo na v1.) |
 | RF-11 | Calibração pela largura total da parede. |

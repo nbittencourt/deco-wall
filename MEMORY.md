@@ -103,17 +103,32 @@ Pedido original do Nicholas:
 | 2026-10-18 | T4: o `$jsonSchema` do Mongo segue draft 4. Limite exclusivo sai como `minimum` + `exclusiveMinimum: true` (não como número). Migração `0001-inicial` roda uma vez (registro em `migracoes`); coleções e índices são idempotentes. | Decidido |
 | 2026-10-18 | T2 (domínio): schemas Zod 4 com `.strict()`; id = `IdSchema` com metadado `bson: 'objectId'`; conversor `gerarJsonSchema` lê a definição interna do Zod (`_zod.def`) e ignora superRefine. Sugerido aceita as duas orientações. Precisão de 0,1 cm (DM-08) é aplicada via `arredondarCm`; o schema ainda não rejeita valores fora do passo. | Decidido |
 
+| 2026-10-24 | Spec M1 v0.1 (rascunho) em `docs/specs/M1-parede-e-escala.md`, escrita antes do aceite do M0 a pedido do Nicholas; implementação só após o aceite (MS-01). | Feito |
+| 2026-10-24 | M1-01: *hard save* (Salvar/Ctrl+S, status, `beforeunload`, 409 com aviso simples) antecipado para o M1 para persistir grid e área útil; rascunho, recuperação e diálogo de conflito seguem no M3. | Decidido |
+| 2026-10-24 | M1-02: "Calibrar" inativo com a perspectiva aplicada; de linear para perspectiva, a perspectiva substitui (RN-08 no PRD v0.11). | Decidido |
+| 2026-10-24 | M1-03: retificar a foto inteira, cortada em +100% de L e de A em cada lado (máx. 3L × 3A), transparente fora da foto; parede inteira = caixa da região com pixels (ADR-04). | Decidido |
+| 2026-10-24 | M1-04: parede (upload, troca, perspectiva, calibração) fora do desfazer; área útil entra (RN-18 ajustada). | Decidido |
+| 2026-10-24 | M1-05: trocar a parede enquanto nenhuma variante tem fotos (novo RF-07); com fotos, "Parede" inativo (RF-04 segue futuro). Ajusta DV-02. | Decidido |
+| 2026-10-24 | M1-06: upload da parede abre direto o modo Perspectiva. M1-07: área útil livre a 0,1 cm, sem snap. M1-08: a primeira escala grava área útil = parede inteira; Cancelar a mantém. | Decidido |
+| 2026-10-24 | Premissas A-01 a A-20 da spec M1 revisadas (spec v0.2, pronta). Alteradas: A-02 projeto criado direto como "Projeto sem nome", nome editável inline no header; A-10 alças da perspectiva já prontas (25% das bordas); A-12 segmento linear pronto; A-15 Snap e "Encaixar no grid" funcionais já no M1 (sem efeito até o M2); A-17 miniatura sempre da foto original (revê DV-07); A-19 arquivos da parede com `no-cache` + `ETag`. Confirmadas: compensação sem transações (Mongo standalone), roda = zoom, área útil limitada à parede inteira, grid por variante com opacidade padrão 8%. | Decidido |
+| 2026-10-24 | Validação visual do M0, 1ª rodada (ajustes do Nicholas): `html` volta a 16 px (o `font-size: 14px` no `html` encolhia todo rem em 12,5%: header 49 px, botões 31,5 px, círculo do Switch encostando na borda); segmented com indicador deslizante; dica de rolagem no seletor de tamanho; ícone duplicado no alerta do card de template removido; primário inativo `sand` + `ink-3` (novo par no teste de contraste); títulos de seção do painel em Newsreader 18 px com divisória; "Excluídas" desmarca os outros filtros; `ComDica` (tooltip num `span` em volta do controle, para não disputar o `data-state` de Toggle/DropdownMenu) em todo botão só de ícone. DESIGN §6/§7 atualizada. | Feito |
+| 2026-10-24 | `.env` criado a partir do `.env.example` e pasta `C:\Users\nbitt\Pictures\ParedeFotos` criada para a validação. `.claude/launch.json` com `dev` e `start`; no painel do app, só o `start` (build servido pela API, porta 3001) subiu: o Vite do `dev` não abriu a porta lá dentro (sozinho, sobe normal). | Registrado |
+| 2026-10-24 | **M0 aceito pelo Nicholas** (validação visual T6d/T10). Divergências do header resolvidas: em 1280 só Área útil, Perspectiva, Calibrar e Parede vão para o menu "Parede ▾" (Comparar e Templates ficam); gap de 4 px e padding de 9 px nos botões fantasma (DESIGN §7); E2E de hover/foco nas dicas dos botões só de ícone. | Feito |
+| 2026-10-24 | Status de salvamento sai do header e fica só na barra de status, com o texto completo: "Alterações não salvas" e "Rascunho salvo às hh:mm" estouravam o header em 1280 e 1440. Diverge do protótipo 03a; DESIGN §7 e spec M1 §3.2 atualizadas. A marca "Parede" ao lado do voltar foi mantida. | Decidido |
+| 2026-10-24 | Repositório com remoto GitHub (`origin` = `github.com/nbittencourt/deco-wall`), configurado pelo Nicholas; substitui "git só local, sem GitHub" (17/10). Primeiro commit "M0 implementado" feito por ele; commits seguintes na `main`, sem push até pedido. | Decidido |
+
 ## Questões em aberto
 
 - Status HTTP de `/api/saude` quando algum componente está em erro: o teste verifica só o corpo. Definir na T5.
 
 ## Status
 
-- Fase atual: **M0 — implementação completa (T1 a T9); aguarda a validação visual do Nicholas (T6d e T10).** Verde: Vitest 206 testes (domínio 100, API e integração, web 20, sharp 2, fixtures 6, seed 14, contraste 13 pares), Playwright 8/8, typecheck, lint e `format:check`.
+- Fase atual: **M0 aceito (24/10).** Próximo: M1 (spec v0.2 pronta). Verde: Vitest 207 testes, Playwright 10/10, typecheck, lint e `format:check`.
 - Spikes (§5.6): **sharp** ✓ (`tests/spikes/sharp.test.ts`: JPEG com EXIF rotacionado vira WebP Leve com a orientação aplicada). **react-konva** ✓ (`tests/e2e/spike-konva.spec.ts`: Stage com retângulo arrastável; página `/dev/spike-konva`, removível após o M1).
 - Cobertura do domínio (`@vitest/coverage-v8` 5.0.5): instruções 91,7%, linhas 94,0%, funções 100%, ramos 84,3%.
 - `npm run seed:test` funciona (tsx 4.23.15, aprovada pelo Nicholas em 18/10). T1 fechada: ESLint, Prettier, `tsconfig`, typecheck, README e `git init` local.
-- Pendências: validação visual pelo Nicholas (identidade e cascas em 1440 × 900; aceites 10 e 11); commits por tarefa (spec §8, não feitos porque o pedido não veio); chunk JS de 840 kB no build (sem code-splitting no M0).
+- M1: spec v0.2 pronta (`docs/specs/M1-parede-e-escala.md`); começa com a liberação do Nicholas.
+- Pendências: commits por tarefa (spec §8, não feitos porque o pedido não veio); chunk JS de 840 kB no build (sem code-splitting no M0).
 
 ## Histórico
 
@@ -132,3 +147,4 @@ Pedido original do Nicholas:
 - 2026-10-17 — Documentação movida para `C:\Desenvolvimento\deco-wall`.
 - 2026-10-17 — Marcos M0–M5 aprovados; spec M0 v0.6 revisada e pronta.
 - 2026-10-17 — M0 liberado: bootstrap do monorepo e testes escritos (domínio, API, Mongo, seed, fixtures); 13 arquivos de teste rodando em vermelho, por módulos ainda não implementados.
+- 2026-10-24 — Spec M1 v0.1 (rascunho) com 8 decisões (M1-01 a M1-08) e 20 premissas; PRD v0.11, ARCHITECTURE v0.6, DESIGN v0.3.

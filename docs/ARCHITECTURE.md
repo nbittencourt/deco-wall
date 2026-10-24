@@ -2,10 +2,10 @@
 
 | Campo | Valor |
 |---|---|
-| Versão | 0.5 |
-| Data | 2026-10-17 |
-| Base | `docs/PRD.md` v0.6 |
-| Status | Decisões fechadas — próxima etapa: modelo de dados MongoDB |
+| Versão | 0.6 |
+| Data | 2026-10-24 |
+| Base | `docs/PRD.md` v0.11 |
+| Status | Decisões fechadas; modelo de dados em `docs/specs/M0-setup.md` §4 |
 
 > **Objetivo deste arquivo:** registrar a arquitetura e cada decisão técnica (ADR) com critérios, alternativas avaliadas e consequências. Toda escolha de biblioteca ou componente nova entra aqui antes de entrar no código.
 
@@ -111,6 +111,8 @@ Consequências:
 Prévia sob demanda (RF-06): mesmo warp do Worker sobre a parede reduzida, saída ~320 px de largura; não é persistida nem enviada à API.
 
 Pipeline: 4 alças com lupa sobre a parede → validação (convexo, ordem, área) → `H` → resolução limitada pelo perfil da parede → recorte na margem **+100%** do retângulo de referência → warp bilinear no Worker → bitmap retificado enviado à API e salvo em `PASTA_FOTOS` (evita reprocessar). Plano B: WebGL se > 3 s.
+
+Margem e parede inteira (M1-03, 24/10): retifica-se a **foto inteira** projetada por `H`, cortada em até +100% de L e +100% de A **em cada lado** do retângulo de referência (no máximo 3L × 3A); fora da foto o bitmap é transparente. **Parede inteira** = retângulo envolvente da região com pixels da foto, em cm (base da área útil padrão, RN-33). O servidor recalcula `H` e a geometria com as funções do domínio (fonte da verdade) e confere as dimensões do bitmap recebido. Detalhes: `docs/specs/M1-parede-e-escala.md` §4.2.
 
 ### ADR-05 — Processamento de imagens no upload: servidor com sharp · **Decidido**
 
@@ -278,6 +280,7 @@ deco-wall/
   tsconfig.base.json
   tsconfig.json             # typecheck do monorepo (estende tsconfig.base.json)
   eslint.config.js  .prettierrc  .prettierignore  .editorconfig  .gitignore
+  .claude/launch.json       # servidores do painel do Claude: dev (Vite + API) e start (build servido pela API)
   docs/
     PRD.md                  # requisitos e regras
     ARCHITECTURE.md         # este arquivo
@@ -296,7 +299,8 @@ deco-wall/
           theme.css         # tokens (@theme) + variáveis do shadcn — DESIGN §2.1, §3–5
           fonts.ts          # imports @fontsource (ADR-14)
         app/                # store, ações (casos de uso), portas
-        infra/              # cliente HTTP, workers (perspectiva)
+        infra/              # cliente HTTP
+          workers/          # retificação de perspectiva (prévia e completa)
         ui/
           canvas/
             theme.ts        # cores/medidas do canvas Konva — DESIGN §2.2
@@ -318,6 +322,8 @@ deco-wall/
   packages/
     domain/
       src/                  # tipos, schemas Zod, RN, geometria, homografia, snap, desenho, formatadores
+        geometria/          # homografia, quadrilátero, viewport, grid
+        escala/             # calibração linear, retificação, warp, parede inteira, área útil
         templates/
           catalogo.ts       # catálogo de templates (constante; fonte: docs/specs/templates.md)
   tests/

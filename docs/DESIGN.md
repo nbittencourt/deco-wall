@@ -2,8 +2,8 @@
 
 | Campo | Valor |
 |---|---|
-| Versão | 0.2 (área útil, templates, tamanhos, recorte, header em 1280, controles inativos) |
-| Data | 2026-10-17 |
+| Versão | 0.3 (botão "Parede" sem fotos, controles inativos por estado) |
+| Data | 2026-10-24 |
 | Status | Identidade e protótipos de alta fidelidade aprovados para implementação |
 | Protótipos | `docs/design/` (ver §10) |
 
@@ -161,9 +161,9 @@ Somente tema claro na v1. Foco visível: `ring` 2 px `accent` com offset 2 px em
 | Botão fantasma | `Button variant=ghost` | Sem borda; usado na toolbar e em “Cancelar”. |
 | Botão destrutivo | `Button variant=destructive` | `danger`, só na confirmação de excluir. |
 | Botão de ícone | `Button size=icon` | 36×36, `aria-label` obrigatório. |
-| Segmented control | `ToggleGroup type=single` | Trilho `sand`, padding 3, gap 2; item ativo branco + `shadow-xs`. **Colunas de largura igual** (`grid-auto-columns: 1fr`) e largura fixa ajustada ao conteúdo: Orientação 152 px (texto 13 px, ao lado do seletor de tamanho), PNG/JPG 160 px, Qualidade 240 px. Não esticar à largura do painel. |
-| Seletor de tamanho | `Select` | Substitui o segmented “10x15 | 20x30” do protótipo 03 (FMT-02). Itens agrupados: Padrão · Quadrados · Grandes · “Personalizado…”; rótulo mono “20 × 30 cm”; “Personalizado…” abre o modo de recorte com campos largura × altura (`CampoCm`). Orientação inativa para tamanhos quadrados. Gatilho 36 px; lista 170–220 px, raio 10, `--shadow-lg`; cabeçalho de grupo em `label` `ink-3`; item selecionado com fundo `accent-tint` e check `accent` (protótipos 03, 03b, 17). |
-| Filtros da biblioteca | `ToggleGroup` + `DropdownMenu` | “Todas · Projeto · Variante · ⋯”; “Excluídas” fica no menu ⋯. Com “Excluídas” ativo, o ⋯ fica no estado ativo e aparece chip `accent-tint` “Excluídas ×”. |
+| Segmented control | `ToggleGroup type=single` | Trilho `sand`, padding 3, gap 2; item ativo branco + `shadow-xs`. **Colunas de largura igual** (`grid-auto-columns: 1fr`) e largura fixa ajustada ao conteúdo: Orientação 152 px (texto 13 px, ao lado do seletor de tamanho), PNG/JPG 160 px, Qualidade 240 px. Não esticar à largura do painel. O fundo branco do item ativo **desliza** até a opção escolhida (200 ms, *ease-out*; sem animação na primeira pintura nem com `prefers-reduced-motion`). |
+| Seletor de tamanho | `Select` | Substitui o segmented “10x15 | 20x30” do protótipo 03 (FMT-02). Itens agrupados: Padrão · Quadrados · Grandes · “Personalizado…”; rótulo mono “20 × 30 cm”; “Personalizado…” abre o modo de recorte com campos largura × altura (`CampoCm`). Orientação inativa para tamanhos quadrados. Gatilho 36 px; lista 170–220 px, raio 10, `--shadow-lg`; cabeçalho de grupo em `label` `ink-3`; item selecionado com fundo `accent-tint` e check `accent` (protótipos 03, 03b, 17). Enquanto houver itens abaixo da área visível, rodapé `ink-3` 12 px com chevron: “Role para ver mais tamanhos”. |
+| Filtros da biblioteca | `ToggleGroup` + `DropdownMenu` | “Todas · Projeto · Variante · ⋯”; “Excluídas” fica no menu ⋯. Com “Excluídas” ativo, os demais filtros ficam desmarcados, o ⋯ fica no estado ativo e aparece chip `accent-tint` “Excluídas ×” (o × volta para “Todas”). |
 | Campo numérico | `Input` | Mono, 36 px; prefixo (X/Y) ou sufixo (cm) em `ink-3` dentro do campo; vírgula decimal. |
 | Toggle | `Switch` | 40×24, ligado = `accent`. |
 | Radio card | `RadioGroup` | Borda `line`; selecionado = borda 2 px `accent` + `accent-wash` (destrutivo: `danger` + `danger-wash`). |
@@ -171,7 +171,7 @@ Somente tema claro na v1. Foco visível: `ring` 2 px `accent` com offset 2 px em
 | Badge “sem foto” | `Badge` | Pill `danger-tint`, texto `danger-ink` 12 px. |
 | Chip de escala | — | `sand`, raio 6, mono 12 px “4,0 px/cm”. |
 | Status de salvamento | — | Ponto 7 px + texto 13 px `ink-2`: verde “Salvo”, âmbar “Alterações não salvas”, verde “Rascunho salvo às hh:mm”, `danger` “Conflito” (SV-08). |
-| Tooltip | `Tooltip` | Fundo `ink`, texto branco 12 px, raio 6, seta 5 px. Obrigatório em botões só com ícone e em controles inativos (§7.1). |
+| Tooltip | `Tooltip` | Fundo `ink`, texto branco 12 px, raio 6, seta 5 px. Obrigatório em botões só com ícone e em controles inativos (§7.1). Botão só de ícone e inativo mostra o nome do botão acima de “Disponível em uma próxima versão”. |
 | Grid / Snap (header) | `Toggle` | Grid: ícone + “5 cm” mono; Snap: só ícone, com `aria-label` e tooltip. Ligado = fundo `sand`. |
 | Card de template | `RadioGroup` item | Branco, raio 12, borda `line-soft`, padding 12; esboço proporcional às medidas em caixa `paper` de 116 px (retângulos `sketch`); nome Newsreader 17; total mono 12 + “N fotos”. Selecionado: borda + anel `accent` (2 px). Maior que a área útil: ícone de aviso + “Maior que a área útil” em `warning-ink`, sem bloquear. |
 | Card de projeto | — | Miniatura = só a foto da parede (DV-07); sem parede: ícone + “Sem foto da parede”. Menu ⋯: Renomear, Excluir (texto `danger-ink`). |
@@ -185,11 +185,11 @@ Somente tema claro na v1. Foco visível: `ring` 2 px `accent` com offset 2 px em
 
 - Alvo: desktop Chrome/Edge (RNF-02), referência 1440×900; mínimo útil 1280.
 - **Editor:** header (≈56 px) · coluna esquerda Biblioteca 264–296 px · canvas fluido · coluna direita Propriedades 300–320 px · barra de status 32 px.
-- **Header do editor (≥ 1440 px), da esquerda para a direita:** voltar · marca · nome do projeto (serif, máx. 120 px com reticências) · seletor de variante (badge “1 sem foto”) · Comparar | Templates · Área útil · Perspectiva · Calibrar · chip “4,0 px/cm” · Parede (inativo, DV-02) | Grid 5 cm · Snap | Desfazer · Refazer · (espaço) · status compacto (“Salvo 14:35”) · Salvar (Ctrl+S no tooltip) · Exportar (primário). Botões fantasma com padding horizontal 9 px e gap 4 px.
-- **Header < 1440 px (1280):** Área útil, Perspectiva, Calibrar e Parede (inativo, com tooltip) vão para o menu **“Parede ▾”**; o chip de escala continua visível. Breakpoint `max-width: 1439px` (protótipo 03a).
+- **Header do editor (≥ 1440 px), da esquerda para a direita:** voltar · marca · nome do projeto (serif, máx. 120 px com reticências) · seletor de variante (badge “1 sem foto”) · Comparar | Templates · Área útil · Perspectiva · Calibrar · chip “4,0 px/cm” · Parede (inativo, DV-02) | Grid 5 cm · Snap | Desfazer · Refazer · (espaço) · Salvar (Ctrl+S no tooltip) · Exportar (primário). Botões fantasma com padding horizontal 9 px e gap 4 px. O status de salvamento **não** fica no header: só na barra de status, com o texto completo (24/10; “Alterações não salvas” e “Rascunho salvo às hh:mm” estouram o header em 1280 e 1440). Diverge do protótipo 03a.
+- **Header < 1440 px (1280):** Área útil, Perspectiva, Calibrar e Parede (inativo, com tooltip) vão para o menu **“Parede ▾”**; Comparar, Templates e o chip de escala continuam visíveis. Breakpoint `max-width: 1439px` (protótipo 03a).
 - **Toolbar do canvas:** Adicionar · Duplicar · Trazer para frente · Enviar para trás · (espaço) · zoom − / % / + · Ajustar à tela.
 - **Painel da foto (RF-60):** cabeçalho (miniatura + nome) · Tamanho (select) e Orientação na mesma linha · Borda (cm + cor) · Tamanho externo · Posição X/Y · alerta de sobreposição, se houver · Enquadramento (“Ajustar recorte”) · Duplicar / Remover.
-- **Painel sem seleção (protótipo 11):** Composição · Escala · **Área útil desta variante** (L, A, X, Y + “Ajustar”) · Borda padrão · Grid (“Linha forte a cada” inativo).
+- **Painel sem seleção (protótipo 11):** Composição · Escala · **Área útil desta variante** (L, A, X, Y + “Ajustar”) · Borda padrão · Grid (“Linha forte a cada” inativo). Cada seção abre com título Newsreader 18 px `ink` e divisória `line-faint` acima (padding 18 px); labels de campo seguem em `label`.
 - **Modos (perspectiva, calibração, área útil, posicionamento de template):** header escuro `ink` + área `stage-dark` + painel direito de 320–360 px.
 - **Prévia frontal (perspectiva):** sob demanda — botão secundário “Gerar prévia” no bloco “Prévia frontal”; estados: vazio (texto de instrução), gerando (indicador), pronta, **desatualizada** (prévia esmaecida + aviso “Os cantos mudaram” + botão reativado). Não há atualização ao vivo (DV-06).
 - **Comparação:** dois painéis lado a lado, cada um com seletor de variante e dimensões; selo “Somente visualização”; zoom/pan **sempre sincronizados** e botão “Parede inteira” (enquadra a parede nos dois). A alternância “Zoom sincronizado / Independente” do protótipo 06 **não** será implementada (DV-01).
@@ -204,12 +204,14 @@ Somente tema claro na v1. Foco visível: `ring` 2 px `accent` com offset 2 px em
 
 ### 7.1 Funções ainda não implementadas
 
+- Botão **primário** inativo: fundo `sand` e texto `ink-3` (o `ink-disabled` sobre `accent` não tinha contraste).
 - Controles de funções previstas mas não implementadas (Ideias futuras do PRD ou marcos seguintes) **permanecem visíveis e inativos**: estilo `ink-disabled`, `aria-disabled="true"` (não `disabled`, para manter o foco e o tooltip), clique sem efeito.
 - Tooltip padrão: “Disponível em uma próxima versão”.
 - Casos atuais:
-  - botão **“Parede”** do header do editor (trocar a foto da parede — RF-04);
+  - botão **“Parede”** do header do editor quando alguma variante tem fotos (trocar a parede mantendo as fotos — RF-04). Sem fotos, o botão fica ativo e troca a parede com confirmação (RF-07, M1-05);
   - controle **“Linha forte a cada”** do painel Grid (RF-52 — P1, marco M5);
   - campos **“Buscar projeto”** (Projetos) e **“Buscar por nome”** (Biblioteca) — campo inativo (`aria-disabled`, sem aceitar digitação), mesmo tooltip (RF-33b / RF-33c, Ideias futuras).
+- Controles indisponíveis **pelo estado** (não por versão futura) usam o mesmo padrão inativo, com tooltip que diz o que falta: Perspectiva e Calibrar sem parede (“Carregue a foto da parede primeiro.”), Área útil sem escala (“Defina a escala primeiro.”), Calibrar com a perspectiva aplicada (“Com a perspectiva aplicada, use Perspectiva para refazer a escala.” — RN-08).
 
 ### 7.2 Área útil (RF-94, RN-33 a RN-35)
 

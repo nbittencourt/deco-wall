@@ -29,7 +29,7 @@ Itens que precisavam estar resolvidos antes da T1 — todos ✅. Nenhum código 
 | DV-04 | 03 Editor | Contador de uso ("1×") nas miniaturas | RF-23 (P1) | ✅ Mantido P1 (marco M5); não aparece até lá (17/10) |
 | DV-05 | 11 Painel | "Linha forte a cada" e cor do grid | RF-52 (P1); cor já é P0 (RF-51) | ✅ RF-52 mantido P1 (marco M5); controle visível e inativo até lá (17/10) |
 | DV-06 | 04 Perspectiva | "Prévia frontal" ao vivo | — | ✅ Prévia **sob demanda** (botão "Gerar prévia", ~320 px, estado desatualizada); novo RF-06 P0 (17/10) |
-| DV-07 | 01 Projetos | Card com miniatura e menu "Mais ações" | RF-90 | ✅ Miniatura = só a foto da parede (thumb 400 px gerada no upload e regenerada ao aplicar perspectiva, usando a retificada); menu: Renomear e Excluir (17/10) |
+| DV-07 | 01 Projetos | Card com miniatura e menu "Mais ações" | RF-90 | ✅ Miniatura = só a foto da parede (thumb 400 px gerada no upload); menu: Renomear e Excluir (17/10). Revisto em 24/10 (spec M1, A-17): a miniatura sai sempre da foto original e **não** é regenerada ao aplicar a perspectiva |
 | DV-08 | 03 Editor · 11 Painel | Cor da borda como botão "Branco" | ADR-09 | ✅ Cores prontas (6) + "Outra cor…" com seletor nativo (DESIGN §6) (17/10) |
 | DV-09 | 03 Editor | Botão "Ajustar recorte" | RN-14 | ✅ Modo de recorte (botão ou duplo clique; Enter/Esc; 1 passo de desfazer) — DESIGN §7.0 (17/10) |
 | DV-10 | 07 Upload | Progresso, "Cancelar restantes", ignorados por formato | ADR-05 | ✅ 1 requisição por arquivo, 3 em paralelo; inválidos descartados no browser; falha não interrompe o lote (com "tentar de novo"); cancelar aborta envios e fila (concluídos ficam); perfil único por lote, travado após iniciar; limite `UPLOAD_MAX_MB` = 50. Sem HEIC (RF-15 futuro) (17/10) |
