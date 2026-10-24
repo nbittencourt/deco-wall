@@ -311,4 +311,6 @@ Dependências novas, já previstas nas ADRs: `zustand` e `immer` (ADR-03), `bson
 - ESLint e Prettier ignoram `.claude/` (worktrees de outras sessões do Claude contaminavam o `tsconfigRootDir`).
 - Fora do desfazer (M1-04), sem rascunho/recuperação (M3), sem snap com efeito (M2): como na spec.
 
+**Limitação conhecida:** o browser confere o tamanho do arquivo com 50 MB fixos (o servidor usa `UPLOAD_MAX_MB` do `.env`); expor o valor à web fica para depois.
+
 **Pendências do M1:** validação do Nicholas (T12); decisão sobre o desempenho do perfil Alto (ADR-16); chunk JS de ~917 kB sem divisão (o Konva entra no pacote principal).

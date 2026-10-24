@@ -261,7 +261,7 @@ Consequências: importar só os pesos usados (Newsreader 500 variável com `opsz
 
 Consequências: `strokeWidth` 1,6–1,8 e tamanho 16–18 px por padrão (DESIGN §6); ícone sem texto exige `aria-label`; ícones ausentes na biblioteca (ex.: imagem-cortada do placeholder) podem ser SVG próprio no mesmo estilo.
 
-### ADR-16 — Desempenho da retificação: o gargalo é a codificação WebP · **Decidido** (24/10, medição do M1; revisão do Nicholas pendente)
+### ADR-16 — Desempenho da retificação: o gargalo é a codificação WebP · **Proposta** (24/10, medição do M1; aguarda a decisão do Nicholas)
 
 Medição no Chromium (Worker com warp + codificação WebP; `performance.measure('deco:retificacao')`; máquina de desenvolvimento do Nicholas; E2E `tests/e2e/desempenho.spec.ts`):
 
@@ -274,7 +274,7 @@ Medição no Chromium (Worker com warp + codificação WebP; `performance.measur
 - O warp (a parte que a ADR-04 previa como risco) custa ~0,9 s em 28 MP: **o plano B (WebGL) não resolve nada** — o que domina é o encoder WebP (libwebp), igual no Chromium e no `sharp` (7 s em Node para a mesma imagem ruidosa). Mover a codificação para o servidor não ajuda.
 - Leve e Médio (o uso normal; Leve é o padrão) cumprem os 3 s com folga. **Só o perfil Alto, com foto de 28 MP, fica no limite (≈ 3 s) ou acima dele (fotos com textura).**
 - Otimizações aplicadas: laço do warp sem alocações e com saída em `Uint8Array` (de 0,97 para ~0,78 s em Node).
-- **Decisão:** manter o pipeline da ADR-04 (Worker → WebP, servidor confere e grava) e a qualidade da ADR-05; o orçamento de 3 s (§8) vale para Leve e Médio. Para o Alto, o E2E guarda contra regressões com teto de 4,5 s na foto sintética e imprime o tempo; o app já mostra "Aplicando perspectiva…" com **Cancelar** (aborta o Worker).
+- **Decisão provisória (até o Nicholas decidir):** manter o pipeline da ADR-04 (Worker → WebP, servidor confere e grava) e a qualidade da ADR-05; o orçamento de 3 s (§8) vale para Leve e Médio. Para o Alto, o E2E guarda contra regressões com teto de 4,5 s na foto sintética e imprime o tempo; o app já mostra "Aplicando perspectiva…" com **Cancelar** (aborta o Worker).
 - **Opções para reduzir o Alto, se o Nicholas quiser** (cada uma muda a ADR-05 ou a arquitetura): (a) limitar o lado maior da retificada a 4096 px em qualquer perfil (÷2,25 nos dois custos); (b) qualidade WebP 0,8 só na retificada (de 3 a 5× mais rápido em imagens com ruído, arquivos 2× menores); (c) dividir o warp em 2–4 Workers (−0,6 s; exige `SharedArrayBuffer`, logo cabeçalhos COOP/COEP na API); (d) JPEG quando a retificada não tem transparência (0,2 s, mas fora do `.webp` do modelo de dados).
 
 ## 6. Estrutura do repositório

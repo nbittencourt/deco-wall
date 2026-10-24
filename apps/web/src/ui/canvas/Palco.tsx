@@ -15,6 +15,7 @@ import {
   type Viewport,
   zoomNoPonto,
 } from '@deco-wall/domain';
+import Konva from 'konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
 import {
@@ -46,6 +47,9 @@ import { useImagem } from './useImagem';
 // Palco: único módulo que fala com o Konva (ADR-02). Duas camadas: a cena em unidades do conteúdo
 // (cm ou px da foto), com zoom e pan; e a sobreposição em px de tela (alças, rótulos, lupa), para que
 // os controles tenham sempre o mesmo tamanho na tela, qualquer que seja o zoom.
+
+// Só o botão esquerdo arrasta nós (alças, interior da área): o do meio fica livre para o pan (A-06).
+Konva.dragButtons = [0];
 
 const MARGEM_AJUSTE_PX = 24;
 const PASSO_BOTAO = 1.25;
@@ -86,6 +90,8 @@ export function Palco({ cena, onEstado, ref }: PropsPalco) {
   const ajuste = useRef<Viewport | null>(null);
   const chaveAjustada = useRef<string | null>(null);
   const pan = useRef<{ x: number; y: number; vp: Viewport } | null>(null);
+  // Espaço segurado: a cena deixa de receber o mouse e qualquer arrasto vira pan (A-06).
+  const [espaco, setEspaco] = useState(false);
   const cenaAtual = useRef(cena);
   const ultimoEstado = useRef<EstadoPalco | null>(null);
 
@@ -182,7 +188,8 @@ export function Palco({ cena, onEstado, ref }: PropsPalco) {
     };
   }, [pronto]);
 
-  // Pan: arrastar o fundo ou a imagem, com o botão esquerdo ou o do meio. Espaço + arrastar é o mesmo gesto.
+  // Pan (A-06): arrastar o fundo ou a imagem, com o botão esquerdo; o botão do meio e Espaço + arrastar
+  // movem a vista mesmo sobre as alças e a área útil, que ocupam a parede inteira por padrão.
   useEffect(() => {
     const mover = (evento: MouseEvent) => {
       const inicio = pan.current;
@@ -196,18 +203,44 @@ export function Palco({ cena, onEstado, ref }: PropsPalco) {
     const soltar = () => {
       pan.current = null;
     };
+    const digitando = (alvo: EventTarget | null) => {
+      const elemento = alvo as HTMLElement | null;
+      return Boolean(
+        elemento &&
+        (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(elemento.tagName) || elemento.isContentEditable),
+      );
+    };
+    const aoPressionarTecla = (evento: KeyboardEvent) => {
+      if (evento.code !== 'Space' || digitando(evento.target)) return;
+      evento.preventDefault();
+      setEspaco(true);
+    };
+    const aoSoltarTecla = (evento: KeyboardEvent) => {
+      if (evento.code === 'Space') setEspaco(false);
+    };
+    const aoPerderFoco = () => setEspaco(false);
     window.addEventListener('mousemove', mover);
     window.addEventListener('mouseup', soltar);
+    window.addEventListener('keydown', aoPressionarTecla);
+    window.addEventListener('keyup', aoSoltarTecla);
+    window.addEventListener('blur', aoPerderFoco);
     return () => {
       window.removeEventListener('mousemove', mover);
       window.removeEventListener('mouseup', soltar);
+      window.removeEventListener('keydown', aoPressionarTecla);
+      window.removeEventListener('keyup', aoSoltarTecla);
+      window.removeEventListener('blur', aoPerderFoco);
     };
   }, []);
 
   const aoPressionar = (evento: KonvaEventObject<MouseEvent>) => {
     const alvo = evento.target;
     const noFundo = alvo === alvo.getStage() || alvo.hasName('pan');
-    if (!noFundo || (evento.evt.button !== 0 && evento.evt.button !== 1) || !vpAtual.current) return;
+    const botao = evento.evt.button;
+    // Com Espaço as camadas não escutam: o alvo é o próprio palco e o botão esquerdo também vale.
+    const permitido = botao === 1 || (botao === 0 && (noFundo || espaco));
+    if (!permitido || !vpAtual.current) return;
+    if (botao === 1) evento.evt.preventDefault(); // sem o "autoscroll" do botão do meio
     pan.current = { x: evento.evt.clientX, y: evento.evt.clientY, vp: vpAtual.current };
   };
 
@@ -219,13 +252,17 @@ export function Palco({ cena, onEstado, ref }: PropsPalco) {
   };
 
   return (
-    <div ref={caixa} data-testid="palco" className="relative size-full overflow-hidden">
+    <div
+      ref={caixa}
+      data-testid="palco"
+      className={`relative size-full overflow-hidden ${espaco ? 'cursor-grab' : ''}`}
+    >
       {vp && tela.largura > 0 && tela.altura > 0 && (
         <Stage width={tela.largura} height={tela.altura} onMouseDown={aoPressionar} onWheel={aoRolar}>
-          <Layer x={vp.x} y={vp.y} scaleX={vp.escala} scaleY={vp.escala}>
+          <Layer x={vp.x} y={vp.y} scaleX={vp.escala} scaleY={vp.escala} listening={!espaco}>
             <CamadaCena cena={cena} vp={vp} tela={tela} />
           </Layer>
-          <Layer>
+          <Layer listening={!espaco}>
             <Sobreposicao cena={cena} vp={vp} tela={tela} />
           </Layer>
         </Stage>

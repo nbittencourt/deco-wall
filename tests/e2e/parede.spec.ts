@@ -9,6 +9,7 @@ import {
   criarProjetoComPerspectiva,
   esperarPalco,
   lerProjeto,
+  paraTela,
   nomeUnico,
 } from './ajudantes';
 
@@ -216,6 +217,52 @@ test.describe('área útil (aceite 7)', () => {
     await page.getByRole('button', { name: 'Confirmar área' }).click();
     expect(Math.abs((await larguraDoCampo(largura)) - 250)).toBeLessThan(1);
     await expect(page.getByText('Alterações não salvas')).toBeVisible();
+  });
+
+  test('o pan funciona sobre a área útil (botão do meio e Espaço) e o interior ainda move a área', async ({
+    page,
+    request,
+  }) => {
+    const p = await criarProjetoComEscalaLinear(request, nomeUnico('Pan'));
+    await page.goto(`/projetos/${p.id}`);
+    await page.getByRole('button', { name: 'Área útil' }).click();
+    await esperarPalco(page);
+
+    // Aproxima até a parede (que é a área útil inteira) encher a tela: não sobra fundo para arrastar.
+    const caixa = (await page.getByTestId('palco').boundingBox())!;
+    const centro = { x: caixa.x + caixa.width / 2, y: caixa.y + caixa.height / 2 };
+    await page.mouse.move(centro.x, centro.y);
+    for (let i = 0; i < 12; i++) await page.mouse.wheel(0, -120);
+    await expect.poll(async () => (await paraTela(page, { x: 0, y: 0 })).x).toBeLessThan(caixa.x);
+
+    const antes = await paraTela(page, { x: 0, y: 0 });
+    await page.mouse.move(centro.x, centro.y);
+    await page.mouse.down({ button: 'middle' });
+    await page.mouse.move(centro.x + 80, centro.y + 40, { steps: 5 });
+    await page.mouse.up({ button: 'middle' });
+    const aposMeio = await paraTela(page, { x: 0, y: 0 });
+    expect(Math.round(aposMeio.x - antes.x)).toBe(80);
+    expect(Math.round(aposMeio.y - antes.y)).toBe(40);
+
+    await page.keyboard.down('Space');
+    await page.mouse.move(centro.x, centro.y);
+    await page.mouse.down();
+    await page.mouse.move(centro.x - 60, centro.y - 30, { steps: 5 });
+    await page.mouse.up();
+    await page.keyboard.up('Space');
+    const aposEspaco = await paraTela(page, { x: 0, y: 0 });
+    expect(Math.round(aposEspaco.x - aposMeio.x)).toBe(-60);
+    expect(Math.round(aposEspaco.y - aposMeio.y)).toBe(-30);
+
+    // Nenhum dos dois gestos mexeu na área.
+    await expect(page.getByLabel('X')).toHaveValue('0,0');
+    await expect(page.getByLabel('Largura')).toHaveValue('300,0');
+
+    // Sem Espaço, arrastar o interior continua movendo a área (agora com a largura reduzida para ter folga).
+    await page.getByLabel('Largura').fill('200');
+    await page.getByLabel('Largura').press('Enter');
+    await arrastar(page, { x: 100, y: 100 }, { x: 120, y: 100 });
+    await expect(page.getByLabel('X')).not.toHaveValue('0,0');
   });
 
   test('campos do painel aplicam com Enter e recusam valor fora da parede (A-13)', async ({
