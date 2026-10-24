@@ -133,11 +133,14 @@
 }
 
 @layer base {
+  /* O html mantém 16 px: as medidas do Tailwind são em rem (h-9 = 36 px, DESIGN §6). Só o texto base é 14 px. */
   html,
   body {
     background-color: var(--color-paper);
     color: var(--color-ink);
     font-family: var(--font-sans);
+  }
+  body {
     font-size: 14px;
     line-height: 1.4;
     -webkit-font-smoothing: antialiased;

@@ -2,7 +2,7 @@ import { Switch as SwitchPrimitive } from 'radix-ui';
 import type { ComponentProps } from 'react';
 import { cn } from '../../../lib/utils';
 
-// DESIGN §6: 40×24, ligado = accent.
+// DESIGN §6: 40×24, ligado = accent. Círculo de 20 px com folga de 2 px nos dois estados.
 export function Switch({ className, ...props }: ComponentProps<typeof SwitchPrimitive.Root>) {
   return (
     <SwitchPrimitive.Root

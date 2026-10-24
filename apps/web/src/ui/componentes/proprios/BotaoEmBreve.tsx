@@ -9,9 +9,11 @@ import { cn } from '../../../lib/utils';
 // aria-disabled (não disabled, para manter foco e tooltip), sem efeito no clique.
 export const TEXTO_EM_BREVE = 'Disponível em uma próxima versão';
 
-function Dica({ children }: { children: ReactNode }) {
+// Em botão só de ícone, a dica diz também o que o botão faz ("Desfazer").
+function Dica({ titulo, children }: { titulo?: string; children: ReactNode }) {
   return (
     <TooltipContent>
+      {titulo && <span className="block font-medium">{titulo}</span>}
       <span className="inline-flex items-center gap-1.5">
         <Info className="size-3.5" aria-hidden="true" />
         {children}
@@ -19,6 +21,12 @@ function Dica({ children }: { children: ReactNode }) {
     </TooltipContent>
   );
 }
+
+// Primário inativo: sem o fundo accent (o cinza sobre terracota não tinha contraste), texto ink-3 sobre sand.
+const ESTILO_INATIVO = {
+  default: 'bg-sand text-ink-3 hover:bg-sand',
+  outro: 'text-ink-disabled hover:bg-transparent',
+} as const;
 
 type BotaoEmBrevProps = Omit<BotaoProps, 'onClick'> & {
   children?: ReactNode;
@@ -45,12 +53,12 @@ export function BotaoEmBreve({
           aria-disabled="true"
           aria-label={rotuloIcone}
           onClick={semEfeito}
-          className={cn('text-ink-disabled hover:bg-transparent', className)}
+          className={cn(variant === 'default' ? ESTILO_INATIVO.default : ESTILO_INATIVO.outro, className)}
         >
           {children}
         </Button>
       </TooltipTrigger>
-      <Dica>{TEXTO_EM_BREVE}</Dica>
+      <Dica titulo={rotuloIcone}>{TEXTO_EM_BREVE}</Dica>
     </Tooltip>
   );
 }

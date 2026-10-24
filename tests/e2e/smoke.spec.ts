@@ -44,7 +44,12 @@ test.describe('header do editor', () => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto('/editor');
     await expect(page.getByRole('button', { name: 'Menu Parede' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Comparar' })).toBeHidden();
+    // Só os 4 itens da parede vão para o menu; Comparar e Templates ficam (DESIGN §7).
+    await expect(page.getByRole('button', { name: 'Comparar' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Templates' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Perspectiva' })).toBeHidden();
+    // O status de salvamento fica só na barra de status.
+    await expect(page.locator('header').getByRole('status')).toHaveCount(0);
 
     // Uma linha só: o centro vertical de todos os filhos visíveis fica na mesma faixa, e nada transborda.
     const medidas = await page.evaluate(() => {
@@ -75,6 +80,39 @@ test.describe('controles inativos (aceite 12)', () => {
 
     await exportar.focus();
     await expect(page.getByRole('tooltip').filter({ hasText: TEXTO_INATIVO }).first()).toBeVisible();
+  });
+});
+
+// DESIGN §6: todo botão só de ícone tem tooltip com o nome, no hover (mouse real) e no foco.
+test.describe('dicas dos botões só de ícone', () => {
+  const ICONES = [
+    'Voltar aos projetos',
+    'Snap ao grid',
+    'Desfazer',
+    'Refazer',
+    'Mais filtros',
+    'Trazer para frente',
+    'Enviar para trás',
+    'Diminuir zoom',
+    'Aumentar zoom',
+  ];
+
+  test('hover mostra o nome do botão', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/editor');
+    for (const nome of ICONES) {
+      // Sai para uma área neutra antes: o Radix só troca de tooltip depois que o ponteiro deixa o anterior.
+      await page.mouse.move(720, 500, { steps: 4 });
+      await expect(page.getByRole('tooltip')).toHaveCount(0);
+      await page.locator(`[aria-label="${nome}"]`).first().hover();
+      await expect(page.getByRole('tooltip').filter({ hasText: nome })).toBeVisible();
+    }
+  });
+
+  test('foco pelo teclado também mostra a dica (ComDica)', async ({ page }) => {
+    await page.goto('/editor');
+    await page.locator('[aria-label="Snap ao grid"]').first().focus();
+    await expect(page.getByRole('tooltip').filter({ hasText: 'Snap ao grid' })).toBeVisible();
   });
 });
 

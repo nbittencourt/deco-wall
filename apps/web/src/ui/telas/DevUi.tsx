@@ -1,9 +1,10 @@
-import { formatarDimensao, formatarTamanho } from '@deco-wall/domain';
-import { ImageOff, Info, TriangleAlert, Check } from 'lucide-react';
+import { formatarDimensao, formatarTamanho, TAMANHOS_SUGERIDOS, type GrupoTamanho } from '@deco-wall/domain';
+import { ImageOff, Info, Check } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { BotaoEmBreve, CampoEmBreve } from '../componentes/proprios/BotaoEmBreve';
 import { ChipEscala } from '../componentes/proprios/ChipEscala';
+import { ComDica } from '../componentes/proprios/ComDica';
 import { Miniatura } from '../componentes/proprios/Miniatura';
 import { SeletorCor } from '../componentes/proprios/SeletorCor';
 import { StatusSalvamento, type EstadoSalvamento } from '../componentes/proprios/StatusSalvamento';
@@ -26,6 +27,13 @@ import { ToggleGroup, ToggleGroupItem } from '../componentes/ui/toggle-group';
 
 // Páginas de referência para validação visual (docs/specs/M0-setup.md §5.4, T6d).
 // Pranchas 00 (Identidade) e 17 (Componentes), conforme docs/DESIGN.md §6 e §10.
+
+// FMT-01: grupos do seletor de tamanho, na ordem de exibição.
+const GRUPOS_TAMANHO: [GrupoTamanho, string][] = [
+  ['padrao', 'Padrão'],
+  ['quadrado', 'Quadrados'],
+  ['grande', 'Grandes'],
+];
 
 const CORES: { grupo: string; itens: [string, string][] }[] = [
   {
@@ -201,9 +209,11 @@ function Componentes() {
           <Button variant="outline">Salvar</Button>
           <Button variant="ghost">Cancelar</Button>
           <Button variant="destructive">Excluir</Button>
-          <Button size="icon" aria-label="Mais ações">
-            <Info aria-hidden="true" />
-          </Button>
+          <ComDica texto="Mais ações">
+            <Button size="icon" aria-label="Mais ações">
+              <Info aria-hidden="true" />
+            </Button>
+          </ComDica>
           <BotaoEmBreve variant="outline">Parede</BotaoEmBreve>
         </div>
       </Bloco>
@@ -249,24 +259,17 @@ function Componentes() {
           <SelectTrigger aria-label="Tamanho da foto" className="w-56">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectLabel>Padrão</SelectLabel>
-              <SelectItem value="10x15">
-                {formatarTamanho({ sugeridoId: '10x15', larguraCm: 10, alturaCm: 15 })} cm
-              </SelectItem>
-              <SelectItem value="20x30">
-                {formatarTamanho({ sugeridoId: '20x30', larguraCm: 20, alturaCm: 30 })} cm
-              </SelectItem>
-            </SelectGroup>
-            <SelectGroup>
-              <SelectLabel>Quadrados</SelectLabel>
-              <SelectItem value="13x13">13 × 13 cm</SelectItem>
-            </SelectGroup>
-            <SelectGroup>
-              <SelectLabel>Grandes</SelectLabel>
-              <SelectItem value="30x40">30 × 40 cm</SelectItem>
-            </SelectGroup>
+          <SelectContent dicaRolagem="Role para ver mais tamanhos">
+            {GRUPOS_TAMANHO.map(([grupo, rotulo]) => (
+              <SelectGroup key={grupo}>
+                <SelectLabel>{rotulo}</SelectLabel>
+                {TAMANHOS_SUGERIDOS.filter((t) => t.grupo === grupo).map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {formatarTamanho({ sugeridoId: t.id, larguraCm: t.menorCm, alturaCm: t.maiorCm })} cm
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            ))}
             <SelectGroup>
               <SelectItem value="personalizado">Personalizado…</SelectItem>
             </SelectGroup>
@@ -334,10 +337,7 @@ function Componentes() {
           </RadioCard>
         </RadioGroup>
         <Alert variant="aviso" className="max-w-xs">
-          <span className="flex items-center gap-1.5 text-warning-ink">
-            <TriangleAlert className="size-4" aria-hidden="true" />
-            Maior que a área útil
-          </span>
+          Maior que a área útil
         </Alert>
       </Bloco>
 

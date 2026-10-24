@@ -1,5 +1,6 @@
 import { ImageOff, MoreHorizontal, Search } from 'lucide-react';
 import { BotaoEmBreve, CampoEmBreve } from '../componentes/proprios/BotaoEmBreve';
+import { ComDica } from '../componentes/proprios/ComDica';
 import { StatusApi } from '../componentes/proprios/StatusApi';
 import { Button } from '../componentes/ui/button';
 import {
@@ -65,11 +66,13 @@ export function Projetos() {
                   <p className="text-body-sm text-ink-3">{projeto.meta}</p>
                 </div>
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" aria-label={`Mais ações de ${projeto.nome}`}>
-                      <MoreHorizontal aria-hidden="true" />
-                    </Button>
-                  </DropdownMenuTrigger>
+                  <ComDica texto="Mais ações">
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" aria-label={`Mais ações de ${projeto.nome}`}>
+                        <MoreHorizontal aria-hidden="true" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                  </ComDica>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem aria-disabled="true" onSelect={semEfeito} className="text-ink-disabled">
                       Renomear

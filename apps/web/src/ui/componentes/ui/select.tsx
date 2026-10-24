@@ -1,6 +1,6 @@
 import { Select as SelectPrimitive } from 'radix-ui';
 import { Check, ChevronDown } from 'lucide-react';
-import type { ComponentProps } from 'react';
+import { useCallback, useState, type ComponentProps } from 'react';
 import { cn } from '../../../lib/utils';
 
 // DESIGN §6 (seletor de tamanho): gatilho 36 px; lista raio 10 com sombra lg; cabeçalho de grupo em label ink-3.
@@ -29,23 +29,55 @@ export function SelectTrigger({
   );
 }
 
+// Há itens abaixo da área visível da lista?
+function temMaisAbaixo(viewport: HTMLElement): boolean {
+  return viewport.scrollTop + viewport.clientHeight < viewport.scrollHeight - 1;
+}
+
 export function SelectContent({
   className,
   children,
+  dicaRolagem = 'Role para ver mais opções',
   ...props
-}: ComponentProps<typeof SelectPrimitive.Content>) {
+}: ComponentProps<typeof SelectPrimitive.Content> & {
+  // Texto exibido abaixo das opções enquanto houver itens escondidos mais abaixo.
+  dicaRolagem?: string;
+}) {
+  const [maisAbaixo, setMaisAbaixo] = useState(false);
+  // A lista só existe aberta; mede depois que o Radix posiciona o conteúdo.
+  const aoMontarViewport = useCallback((viewport: HTMLDivElement | null) => {
+    if (!viewport) return;
+    setMaisAbaixo(temMaisAbaixo(viewport));
+    requestAnimationFrame(() => setMaisAbaixo(temMaisAbaixo(viewport)));
+  }, []);
+
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
         position="popper"
         sideOffset={6}
         className={cn(
-          'z-50 max-h-[220px] min-w-[200px] overflow-hidden rounded-[10px] border border-line-soft bg-surface p-1 shadow-lg',
+          'z-50 flex max-h-[min(220px,var(--radix-select-content-available-height,220px))] min-w-[200px] flex-col overflow-hidden rounded-[10px] border border-line-soft bg-surface p-1 shadow-lg',
           className,
         )}
         {...props}
       >
-        <SelectPrimitive.Viewport>{children}</SelectPrimitive.Viewport>
+        <SelectPrimitive.Viewport
+          ref={aoMontarViewport}
+          onScroll={(evento) => setMaisAbaixo(temMaisAbaixo(evento.currentTarget))}
+          className="min-h-0 flex-1"
+        >
+          {children}
+        </SelectPrimitive.Viewport>
+        {maisAbaixo && (
+          <div
+            aria-hidden="true"
+            className="flex shrink-0 items-center justify-center gap-1 border-t border-line-faint px-2 pt-1.5 pb-1 text-xs text-ink-3"
+          >
+            <ChevronDown className="size-3.5" />
+            {dicaRolagem}
+          </div>
+        )}
       </SelectPrimitive.Content>
     </SelectPrimitive.Portal>
   );

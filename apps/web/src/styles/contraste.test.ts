@@ -36,6 +36,7 @@ const PARES: [string, string][] = [
   ['ink-2', 'sand'],
   ['ink-3', 'paper'],
   ['ink-3', 'surface'],
+  ['ink-3', 'sand'], // botão primário inativo (DESIGN §7.1)
   ['surface', 'accent'],
   ['surface', 'danger'],
   ['danger-ink', 'danger-tint'],
