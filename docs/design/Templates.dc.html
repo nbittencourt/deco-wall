@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Escolher template</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&amp;family=Instrument+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#9A4426}a:hover{color:#7A361E}
+.app{font-family:'Instrument Sans',system-ui,sans-serif;color:#1F1B16;font-size:14px;line-height:1.4;-webkit-font-smoothing:antialiased}
+.serif{font-family:'Newsreader',Georgia,serif;font-weight:500;letter-spacing:-.01em}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.btn{font:inherit;font-weight:500;min-height:36px;padding:0 14px;border:1px solid #DDD5C8;background:#fff;border-radius:8px;color:#1F1B16;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;text-decoration:none;white-space:nowrap;box-sizing:border-box}
+.btn-p{background:#B5532F;border-color:#B5532F;color:#fff}.btn-p:hover{background:#9A4426;color:#fff}
+.btn-g{background:transparent;border-color:transparent}
+.in{font:inherit;min-height:36px;border:1px solid #DDD5C8;border-radius:8px;padding:0 34px 0 10px;width:100%;box-sizing:border-box;background:#fff;color:#1F1B16}
+.card{background:#fff;border:1px solid #E6DFD3;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;box-sizing:border-box;text-align:left;font:inherit;color:#1F1B16;cursor:pointer;min-width:0}
+.card:hover{border-color:#CFC5B6}
+.pv{position:relative;height:116px;background:#F7F4EE;border-radius:8px;display:flex;align-items:center;justify-content:center}
+.sk{position:absolute;background:#E6DFD3;border:1px solid #CFC5B6;box-sizing:border-box;border-radius:2px}
+</style>
+</helmet>
+<div class="app" style="width: 960px; height: 900px; box-sizing: border-box; background: #fff; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden">
+  <div style="display: flex; align-items: center; gap: 12px; padding: 20px 24px 14px">
+    <div style="display: flex; flex-direction: column; gap: 2px">
+      <span class="serif" style="font-size: 24px">Escolher template</span>
+      <span style="font-size: 13px; color: #5A5248">Área útil da variante: <span class="mono">140,0 × 90,0 cm</span></span>
+    </div>
+    <div style="flex: 1"></div>
+    <button class="btn btn-g" aria-label="Fechar" style="width: 36px; padding: 0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+  </div>
+  <div style="flex: 1 1 auto; overflow: auto; padding: 4px 24px 20px">
+    <div role="radiogroup" aria-label="Templates" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px">
+      <sc-for list="{{tpls}}" as="t" hint-placeholder-count="12">
+        <button class="card" role="radio" aria-checked="{{t.chk}}" onClick="{{t.pick}}" style="border-color: {{t.bc}}; box-shadow: {{t.ring}}">
+          <span class="pv"><span style="position: relative; width: {{t.pw}}; height: {{t.ph}}">
+            <sc-for list="{{t.r}}" as="q" hint-placeholder-count="6">
+              <span class="sk" style="left: {{q.x}}; top: {{q.y}}; width: {{q.w}}; height: {{q.h}}"></span>
+            </sc-for>
+          </span></span>
+          <span style="display: flex; flex-direction: column; gap: 2px">
+            <span class="serif" style="font-size: 17px">{{t.nome}}</span>
+            <span style="font-size: 12px; color: #5A5248"><span class="mono">{{t.dim}}</span> · {{t.n}} fotos</span>
+          </span>
+          <sc-if value="{{t.big}}" hint-placeholder-val="{{false}}">
+            <span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6B4A12"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 9v4M12 17h.01"></path><path d="M10.3 3.9L2.4 18a2 2 0 001.7 3h15.8a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"></path></svg>Maior que a área útil</span>
+          </sc-if>
+        </button>
+      </sc-for>
+    </div>
+  </div>
+  <div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px; padding: 14px 24px; border-top: 1px solid #E6DFD3; background: #FBF9F5">
+    <div style="display: flex; flex-direction: column; gap: 4px; width: 130px; position: relative">
+      <label for="bt" style="font-size: 12px; font-weight: 500; color: #5A5248">Borda das fotos</label>
+      <input id="bt" class="in mono" value="0,0">
+      <span style="position: absolute; right: 10px; bottom: 9px; font-size: 12px; color: #6E655A">cm</span>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <span style="font-size: 12px; font-weight: 500; color: #5A5248">Cor da borda</span>
+      <button class="btn" aria-haspopup="dialog" style="justify-content: flex-start; padding: 0 10px; width: 130px"><span style="width: 16px; height: 16px; border-radius: 4px; border: 1px solid #CFC5B6; background: #fff"></span>Branco</button>
+    </div>
+    <span style="font-size: 13px; color: #5A5248; align-self: center; padding-top: 18px">Será criada a variante “{{selNome}}”.</span>
+    <div style="flex: 1 1 10px"></div>
+    <a href="Main.dc.html" class="btn btn-g">Cancelar</a>
+    <a href="{{posHref}}" class="btn btn-p">Posicionar na parede</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":960,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const sel = (this.state && this.state.sel) || 'Pirâmide';
+    const area = [140, 90];
+    const R = (a) => a.map(([x, y, w, h]) => ({ x: x + '%', y: y + '%', w: w + '%', h: h + '%' }));
+    const g3 = []; [0, 34.5, 69].forEach((y) => [0, 34.5, 69].forEach((x) => g3.push([x, y, 31, 31])));
+    const base = [
+      ['Pirâmide', 151.0, 70.6, 6, [[0,20,13,42],[15,10,20,57],[37,0,26,71],[65,10,20,57],[87,20,13,42],[42,78,16,22]]],
+      ['Escada', 70.7, 63.1, 6, [[0,64,30,36],[0,22,30,38],[34,44,30,36],[34,4,30,36],[68,24,32,36],[68,64,32,36]]],
+      ['Simetria dividida', 152.0, 106.0, 10, [[0,0,20,45],[22,0,22,30],[22,33,22,30],[0,48,20,52],[22,66,22,34],[80,0,20,45],[56,0,22,30],[56,33,22,30],[80,48,20,52],[56,66,22,34]]],
+      ['Centralizado', 87.0, 77.1, 8, [[33,22,34,56],[0,0,30,40],[0,46,30,54],[70,0,30,54],[70,60,30,40],[33,0,16,18],[51,0,16,18],[40,82,20,18]]],
+      ['Equilibrado', 131.3, 69.0, 8, [[0,10,20,60],[22,0,30,45],[22,50,14,50],[38,50,14,50],[54,0,22,30],[54,34,22,66],[78,10,22,40],[78,54,22,36]]],
+      ['Base nivelada', 166.6, 85.7, 10, [[0,40,9,60],[10,20,12,80],[23,50,9,50],[33,10,12,90],[46,40,9,60],[46,10,9,26],[56,30,10,70],[67,55,9,45],[77,15,12,85],[90,45,10,55]]],
+      ['Grade', 70.4, 69.5, 9, g3],
+      ['Mini salão', 65.8, 58.8, 5, [[0,0,38,55],[41,0,28,36],[72,0,28,48],[41,40,28,60],[0,59,38,41]]],
+      ['Cata-vento', 76.6, 76.6, 4, [[0,0,62,36],[64,0,36,62],[38,64,62,36],[0,38,36,62]]],
+      ['Mondrian', 73.4, 50.8, 4, [[0,0,60,100],[62,0,38,45],[62,48,18,52],[82,48,18,52]]],
+      ['Espiral', 77.7, 79.5, 9, [[0,0,49,49],[51,0,49,32],[76,34,24,30],[51,34,23,15],[51,51,23,15],[51,68,49,32],[0,51,24,49],[26,51,23,24],[26,77,23,23]]],
+      ['Trio', 77.2, 42.0, 3, [[0,0,31,100],[34.5,0,31,100],[69,0,31,100]]]
+    ];
+    const fmt = (n) => n.toFixed(1).replace('.', ',');
+    const tpls = base.map(([nome, w, h, n, r]) => {
+      const s = Math.min(176 / w, 92 / h);
+      const on = nome === sel;
+      return {
+        nome, n, dim: fmt(w) + ' × ' + fmt(h) + ' cm', r: R(r),
+        pw: Math.round(w * s) + 'px', ph: Math.round(h * s) + 'px',
+        big: w > area[0] || h > area[1],
+        chk: on ? 'true' : 'false', bc: on ? '#B5532F' : '#E6DFD3', ring: on ? '0 0 0 1px #B5532F' : 'none',
+        pick: () => this.setState({ sel: nome })
+      };
+    });
+    const selTpl = tpls.find((t) => t.nome === sel);
+    return { tpls, selNome: sel, posHref: selTpl && selTpl.big ? 'TemplatePosicionarAviso.dc.html' : 'TemplatePosicionar.dc.html' };
+  }
+}
+</script>
+</body>
+</html>

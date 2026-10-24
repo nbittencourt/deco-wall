@@ -1,0 +1,14 @@
+{
+  "name": "@deco-wall/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@deco-wall/domain": "*",
+    "@fastify/static": "10.1.6",
+    "fastify": "5.12.7",
+    "mongodb": "7.7.0",
+    "sharp": "0.35.5",
+    "zod": "4.6.7"
+  }
+}

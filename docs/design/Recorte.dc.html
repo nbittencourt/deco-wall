@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Modo de recorte</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&amp;family=Instrument+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#F7F4EE}
+a{color:#9A4426}a:hover{color:#7A361E}
+.app{font-family:'Instrument Sans',system-ui,sans-serif;color:#1F1B16;font-size:14px;line-height:1.4;-webkit-font-smoothing:antialiased}
+.serif{font-family:'Newsreader',Georgia,serif;font-weight:500;letter-spacing:-.01em}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.btn{font:inherit;font-weight:500;min-height:36px;padding:0 14px;border:1px solid #DDD5C8;background:#fff;border-radius:8px;color:#1F1B16;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;text-decoration:none;white-space:nowrap;box-sizing:border-box}
+.btn-p{background:#B5532F;border-color:#B5532F;color:#fff}.btn-p:hover{background:#9A4426;color:#fff}
+.lbl{font-size:12px;font-weight:500;color:#5A5248}
+.in{font:inherit;min-height:36px;border:1px solid #DDD5C8;border-radius:8px;padding:0 34px 0 10px;width:100%;box-sizing:border-box;background:#fff;color:#1F1B16}
+.cm{position:absolute;right:10px;bottom:9px;font-size:12px;color:#6E655A}
+.p1{background:linear-gradient(165deg,#F4CF9C 0%,#E3966A 45%,#9C5545 75%,#4D2D2E 100%)}
+.p2{background:linear-gradient(180deg,#BFD6E2 0%,#7FA8BE 48%,#3F6A80 70%,#26404D 100%)}
+.p3{background:linear-gradient(155deg,#D6DDB4 0%,#93AA70 45%,#557048 72%,#2F4229 100%)}
+.p6{background:linear-gradient(170deg,#F2DCD4 0%,#D39C91 48%,#86504C 100%)}
+.p7{background:linear-gradient(185deg,#E3EAE7 0%,#A9BDB7 50%,#5C7570 100%)}
+.p8{background:radial-gradient(circle at 70% 30%,#F7E7C6 0 12%,#D9A45F 30%,#7C4A2C 80%)}
+.grid{background-image:linear-gradient(#1F1B1614 1px,transparent 1px),linear-gradient(90deg,#1F1B1614 1px,transparent 1px);background-size:20px 20px}
+.dim{position:absolute;background:#1F1B168c}
+</style>
+</helmet>
+<div class="app" style="min-height: 900px; display: flex; flex-direction: column; background: #F7F4EE">
+  <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 10px 16px; background: #1F1B16; color: #fff; min-height: 56px; box-sizing: border-box">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8A487" stroke-width="1.6" aria-hidden="true"><path d="M6 2v14a2 2 0 002 2h14"></path><path d="M18 22V8a2 2 0 00-2-2H2"></path></svg>
+    <span class="serif" style="font-size: 19px">Ajustar recorte · IMG_2041.jpg</span>
+    <span style="font-size: 13px; color: #CFC5B6">O restante da parede fica bloqueado até concluir</span>
+  </header>
+  <div style="display: flex; flex-wrap: wrap; flex: 1 1 auto">
+    <main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+      <div style="flex: 1 1 auto; overflow: auto; padding: 28px; background: #ECE6DC">
+        <div style="position: relative; width: 860px; height: 560px; margin: 0 auto; background: linear-gradient(180deg,#EDE6DA 0%,#E4DBCC 100%); box-shadow: 0 1px 0 #D6CCBC, 0 18px 40px #5A524824; overflow: hidden">
+          <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 14px; background: #D3C6B3"></div>
+          <div style="position: absolute; left: 210px; width: 440px; bottom: 14px; height: 96px; background: #8F7D68; border-radius: 22px 22px 6px 6px"></div>
+          <div class="grid" style="position: absolute; inset: 0"></div>
+          <div style="position: absolute; inset: 0; opacity: .35; pointer-events: none">
+            <div class="p2" style="position: absolute; left: 330px; top: 80px; width: 120px; height: 80px"></div>
+            <div class="p7" style="position: absolute; left: 330px; top: 180px; width: 40px; height: 60px"></div>
+            <div class="p6" style="position: absolute; left: 390px; top: 180px; width: 40px; height: 60px"></div>
+            <div class="p3" style="position: absolute; left: 480px; top: 80px; width: 80px; height: 120px"></div>
+            <div class="p8" style="position: absolute; left: 470px; top: 220px; width: 60px; height: 40px"></div>
+          </div>
+          <div style="position: absolute; inset: 0; background: #F7F4EE59"></div>
+
+          <div style="position: absolute; left: 160px; top: 80px; width: 136px; height: 136px; background: #fff; box-shadow: 0 1px 2px #1F1B1633"></div>
+          <div class="p1" style="position: absolute; left: 168px; top: 58px; width: 120px; height: 180px; cursor: move"></div>
+          <div class="dim" style="left: 168px; top: 58px; width: 120px; height: 30px"></div>
+          <div class="dim" style="left: 168px; top: 208px; width: 120px; height: 30px"></div>
+          <div style="position: absolute; left: 168px; top: 88px; width: 120px; height: 120px; outline: 2px solid #B5532F; outline-offset: 0; box-sizing: border-box; display: flex; align-items: center; justify-content: center">
+            <span style="width: 32px; height: 32px; border-radius: 16px; background: #1F1B16b3; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" aria-hidden="true"><path d="M12 3v18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3"></path></svg></span>
+          </div>
+          <span class="mono" style="position: absolute; left: 160px; top: 248px; font-size: 11px; color: #fff; background: #B5532F; border-radius: 999px; padding: 2px 8px">30,0 × 30,0 cm</span>
+        </div>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 18px; padding: 7px 16px; border-top: 1px solid #E6DFD3; background: #FFFFFF; font-size: 12px; color: #5A5248">
+        <span>Arraste para reposicionar · Enter conclui · Esc cancela</span>
+      </div>
+    </main>
+    <aside style="flex: 1 1 320px; max-width: 320px; min-width: 280px; background: #FFFFFF; border-left: 1px solid #E6DFD3; padding: 18px; display: flex; flex-direction: column; gap: 18px; box-sizing: border-box">
+      <span class="serif" style="font-size: 22px">Ajustar recorte</span>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <span class="lbl" id="tl">Tamanho</span>
+        <button class="btn" aria-haspopup="listbox" aria-labelledby="tl" style="justify-content: space-between; padding: 0 10px; width: 100%"><span>Personalizado</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: end">
+          <div style="display: flex; flex-direction: column; gap: 4px; position: relative"><label for="cw" class="lbl">Largura</label><input id="cw" class="in mono" value="30,0" inputmode="decimal"><span class="cm">cm</span></div>
+          <span class="mono" style="padding-bottom: 9px; color: #5A5248">×</span>
+          <div style="display: flex; flex-direction: column; gap: 4px; position: relative"><label for="ch" class="lbl">Altura</label><input id="ch" class="in mono" value="30,0" inputmode="decimal"><span class="cm">cm</span></div>
+        </div>
+        <span style="font-size: 12px; color: #6E655A">Entre <span class="mono">5,0</span> e <span class="mono">150,0</span> cm em cada lado.</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #F7F4EE; border-radius: 10px">
+        <span style="font-size: 13px; color: #5A5248">Tamanho externo</span><span class="mono" style="font-weight: 500">34,0 × 34,0 cm</span>
+      </div>
+      <span style="font-size: 13px; color: #5A5248">A foto sempre preenche o quadro. Arraste a imagem para escolher a parte que aparece.</span>
+      <div style="margin-top: auto; display: flex; gap: 8px">
+        <a href="Main.dc.html" class="btn" style="flex: 1">Cancelar</a>
+        <a href="Main.dc.html" class="btn btn-p" style="flex: 1">Concluir</a>
+      </div>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

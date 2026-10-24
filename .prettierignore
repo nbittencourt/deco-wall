@@ -1,0 +1,10 @@
+node_modules
+dist
+coverage
+package-lock.json
+*.md
+docs
+tests/fixtures/imagens
+tests/fixtures/paredes
+test-results
+playwright-report

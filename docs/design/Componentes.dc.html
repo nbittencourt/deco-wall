@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Componentes novos</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&amp;family=Instrument+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#F7F4EE}
+a{color:#9A4426}a:hover{color:#7A361E}
+.app{font-family:'Instrument Sans',system-ui,sans-serif;color:#1F1B16;font-size:14px;line-height:1.4;-webkit-font-smoothing:antialiased}
+.serif{font-family:'Newsreader',Georgia,serif;font-weight:500;letter-spacing:-.01em}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.btn{font:inherit;font-weight:500;min-height:36px;padding:0 14px;border:1px solid #DDD5C8;background:#fff;border-radius:8px;color:#1F1B16;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;white-space:nowrap;box-sizing:border-box}
+.btn-g{background:transparent;border-color:transparent}
+.off{color:#8E8579;cursor:not-allowed}
+.in{font:inherit;min-height:36px;border:1px solid #DDD5C8;border-radius:8px;padding:0 10px;width:100%;box-sizing:border-box;background:#fff;color:#1F1B16}
+.in[disabled]{background:#F7F4EE;color:#8E8579;cursor:not-allowed}
+.k{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#9A4426}
+.cap{font-size:12px;color:#6E655A}
+.pop{background:#fff;border:1px solid #E6DFD3;border-radius:10px;box-shadow:0 12px 28px #1F1B1629;padding:6px}
+.opt{font:inherit;width:100%;display:flex;align-items:center;justify-content:space-between;min-height:32px;padding:0 10px;border:0;border-radius:6px;background:transparent;color:#1F1B16;cursor:pointer;text-align:left;box-sizing:border-box}
+.grp{font-size:12px;font-weight:500;color:#6E655A;padding:8px 10px 4px}
+.tip{position:relative;background:#1F1B16;color:#fff;font-size:12px;border-radius:6px;padding:6px 10px;white-space:nowrap}
+.tip::after{content:'';position:absolute;left:50%;bottom:-5px;margin-left:-5px;border:5px solid transparent;border-bottom:0;border-top-color:#1F1B16}
+.hatch{background:repeating-linear-gradient(45deg,#B4231833 0 6px,#FBEDEA 6px 12px)}
+.p2{background:linear-gradient(180deg,#BFD6E2 0%,#7FA8BE 48%,#3F6A80 70%,#26404D 100%)}
+.p3{background:linear-gradient(155deg,#D6DDB4 0%,#93AA70 45%,#557048 72%,#2F4229 100%)}
+.p5{background:linear-gradient(200deg,#E2DDF0 0%,#A7A0C6 45%,#5E5781 75%,#353050 100%)}
+.card{background:#fff;border:1px solid #E6DFD3;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;width:216px;box-sizing:border-box;text-align:left;font:inherit;color:#1F1B16;cursor:pointer}
+.pv{position:relative;height:120px;background:#F7F4EE;border-radius:8px;display:flex;align-items:center;justify-content:center}
+.sk{position:absolute;background:#E6DFD3;border:1px solid #CFC5B6;box-sizing:border-box;border-radius:2px}
+</style>
+</helmet>
+<div class="app" style="width: 1440px; height: 1240px; box-sizing: border-box; background: #F7F4EE; padding: 64px 72px; display: flex; flex-direction: column; gap: 44px">
+  <section style="display: flex; align-items: flex-end; justify-content: space-between; gap: 48px; padding-bottom: 28px; border-bottom: 1px solid #DDD5C8">
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <span class="serif" style="font-size: 40px; line-height: 1.05">Componentes novos</span>
+      <span style="font-size: 15px; color: #5A5248">Complementos da prancha 00, com os mesmos tokens.</span>
+    </div>
+  </section>
+
+  <section style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 48px">
+    <div style="display: flex; flex-direction: column; gap: 14px">
+      <span class="k">Seletor de tamanho</span>
+      <div style="display: flex; gap: 16px; align-items: flex-start">
+        <div style="display: flex; flex-direction: column; gap: 6px; width: 140px">
+          <span style="font-size: 12px; font-weight: 500; color: #5A5248">Tamanho</span>
+          <button class="btn" aria-haspopup="listbox" style="justify-content: space-between; padding: 0 10px"><span class="mono">20 × 30</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+          <span class="cap">Fechado</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div class="pop" role="listbox" aria-label="Tamanho" style="width: 200px; height: 330px; overflow: hidden">
+            <div class="grp">Padrão</div>
+            <button role="option" class="opt mono">10 × 15</button>
+            <button role="option" class="opt mono">13 × 18</button>
+            <button role="option" class="opt mono">15 × 21</button>
+            <button role="option" class="opt mono">20 × 25</button>
+            <button role="option" aria-selected="true" class="opt mono" style="background: #F3E1D8">20 × 30<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#B5532F" stroke-width="2" aria-hidden="true"><path d="M5 12l5 5L20 7"></path></svg></button>
+            <div class="grp">Quadrados</div>
+            <button role="option" class="opt mono">13 × 13</button>
+            <button role="option" class="opt mono">15 × 15</button>
+            <div class="grp">Grandes</div>
+          </div>
+          <span class="cap">Aberto · lista rola; termina em “Personalizado…”</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 14px">
+      <span class="k">Cor da borda</span>
+      <div style="display: flex; gap: 16px; align-items: flex-start">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <button class="btn" aria-haspopup="dialog" style="justify-content: flex-start; padding: 0 10px; width: 130px"><span style="width: 16px; height: 16px; border-radius: 4px; border: 1px solid #CFC5B6; background: #fff"></span>Branco</button>
+          <span class="cap">Fechado</span>
+        </div>
+        <div class="pop" role="dialog" aria-label="Cor da borda" style="width: 236px; padding: 12px; display: flex; flex-direction: column; gap: 10px">
+          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">
+            <sc-for list="{{cores}}" as="c" hint-placeholder-count="6">
+              <button aria-label="{{c.nome}}" style="font: inherit; border: 0; background: transparent; padding: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; color: #1F1B16">
+                <span style="width: 36px; height: 36px; border-radius: 8px; background: {{c.hex}}; box-shadow: {{c.ring}}"></span>
+                <span style="font-size: 11px; color: #5A5248; white-space: nowrap">{{c.nome}}</span>
+              </button>
+            </sc-for>
+          </div>
+          <div style="height: 1px; background: #F0EBE3"></div>
+          <button class="opt" style="padding: 0 4px">Outra cor…<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 14px">
+      <span class="k">Controle inativo</span>
+      <div style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start; padding-top: 4px">
+        <span class="tip" role="tooltip">Disponível em uma próxima versão</span>
+        <button class="btn btn-g off" aria-disabled="true" style="margin-left: 60px">Parede</button>
+      </div>
+      <div style="position: relative; width: 240px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8E8579" stroke-width="1.8" aria-hidden="true" style="position: absolute; left: 10px; top: 10px"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+        <input class="in" placeholder="Buscar por nome" aria-label="Buscar por nome" disabled style="padding-left: 34px">
+      </div>
+      <span class="cap">Visível, cor ink-disabled, sem efeito. Tooltip ao passar o mouse ou focar.</span>
+    </div>
+  </section>
+
+  <section style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 48px">
+    <div style="display: flex; flex-direction: column; gap: 14px">
+      <span class="k">Área útil no canvas</span>
+      <div style="position: relative; height: 230px; border-radius: 12px; overflow: hidden; background: linear-gradient(180deg,#EDE6DA 0%,#E4DBCC 100%)">
+        <div style="position: absolute; left: 36px; top: 40px; width: 300px; height: 160px; border: 1px dashed #5A5248; box-sizing: border-box; box-shadow: 0 0 0 600px #F7F4EE80"></div>
+        <span class="mono" style="position: absolute; left: 36px; top: 20px; font-size: 11px; color: #5A5248">Área útil · 180,0 × 110,0 cm</span>
+        <div class="p2" style="position: absolute; left: 90px; top: 80px; width: 70px; height: 50px"></div>
+        <div class="p5" style="position: absolute; left: 316px; top: 96px; width: 40px; height: 60px; outline: 2px dashed #B42318; outline-offset: 2px"></div>
+        <span style="position: absolute; left: 238px; top: 168px; display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 500; color: #fff; background: #B42318; border-radius: 999px; padding: 2px 8px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 8v5M12 17h.01"></path><circle cx="12" cy="12" r="9"></circle></svg>Fora da área útil</span>
+      </div>
+      <span class="cap">Tracejado fino ink-2, exterior esmaecido com papel a 50%. Foto que cruza o limite usa o sinal de alerta.</span>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 14px">
+      <span class="k">Vaga de template</span>
+      <div style="position: relative; height: 230px; border-radius: 12px; overflow: hidden; background: linear-gradient(180deg,#EDE6DA 0%,#E4DBCC 100%); display: flex; align-items: center; justify-content: center; gap: 16px">
+        <div class="hatch" style="width: 80px; height: 120px; border: 1.5px dashed #B42318; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9F1D14" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 3l18 18"></path></svg>
+          <span class="mono" style="font-size: 11px; color: #8A1A12; background: #FFFFFFcc; border-radius: 4px; padding: 0 4px">20 × 30</span>
+        </div>
+        <div class="hatch" style="width: 120px; height: 80px; border: 1.5px dashed #B42318; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; opacity: .75">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9F1D14" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 3l18 18"></path></svg>
+          <span class="mono" style="font-size: 11px; color: #8A1A12; background: #FFFFFFcc; border-radius: 4px; padding: 0 4px">30 × 20</span>
+        </div>
+      </div>
+      <span class="cap">Mesmo desenho do placeholder, com o tamanho em mono. Durante o posicionamento, 75% de opacidade.</span>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 14px">
+      <span class="k">Status de prévia</span>
+      <div style="display: flex; flex-direction: column; gap: 12px; padding: 16px; background: #fff; border-radius: 12px; border: 1px solid #E6DFD3">
+        <span style="font-size: 13px; color: #5A5248">Gerando prévia…</span>
+        <div style="height: 6px; background: #EFEAE1; border-radius: 3px; overflow: hidden"><div style="width: 45%; height: 6px; background: #5A5248; border-radius: 3px"></div></div>
+        <div style="display: flex; gap: 8px; padding: 10px 12px; border-radius: 10px; background: #FBF1DE; color: #6B4A12; font-size: 13px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true" style="flex: none"><path d="M12 9v4M12 17h.01"></path><path d="M10.3 3.9L2.4 18a2 2 0 001.7 3h15.8a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"></path></svg>Os cantos mudaram</div>
+      </div>
+      <span class="cap">Barra de progresso em ink-2 (não é ação). Aviso de desatualização usa o estilo de aviso.</span>
+    </div>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 14px">
+    <span class="k">Card de template</span>
+    <div style="display: flex; gap: 24px; align-items: flex-start">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <button class="card" aria-pressed="false">
+          <span class="pv"><span style="position: relative; width: 180px; height: 70px">
+            <span class="sk" style="left: 0%; top: 20%; width: 13%; height: 42%"></span><span class="sk" style="left: 15%; top: 10%; width: 20%; height: 57%"></span><span class="sk" style="left: 37%; top: 0%; width: 26%; height: 71%"></span><span class="sk" style="left: 65%; top: 10%; width: 20%; height: 57%"></span><span class="sk" style="left: 87%; top: 20%; width: 13%; height: 42%"></span><span class="sk" style="left: 42%; top: 78%; width: 16%; height: 22%"></span>
+          </span></span>
+          <span style="display: flex; flex-direction: column; gap: 2px"><span class="serif" style="font-size: 17px">Pirâmide</span><span style="font-size: 12px; color: #5A5248"><span class="mono">151,0 × 70,6 cm</span> · 6 fotos</span></span>
+        </button>
+        <span class="cap">Normal</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <button class="card" aria-pressed="true" style="border-color: #B5532F; box-shadow: 0 0 0 1px #B5532F">
+          <span class="pv"><span style="position: relative; width: 120px; height: 108px">
+            <span class="sk" style="left: 0%; top: 0%; width: 31%; height: 31%"></span><span class="sk" style="left: 34.5%; top: 0%; width: 31%; height: 31%"></span><span class="sk" style="left: 69%; top: 0%; width: 31%; height: 31%"></span><span class="sk" style="left: 0%; top: 34.5%; width: 31%; height: 31%"></span><span class="sk" style="left: 34.5%; top: 34.5%; width: 31%; height: 31%"></span><span class="sk" style="left: 69%; top: 34.5%; width: 31%; height: 31%"></span><span class="sk" style="left: 0%; top: 69%; width: 31%; height: 31%"></span><span class="sk" style="left: 34.5%; top: 69%; width: 31%; height: 31%"></span><span class="sk" style="left: 69%; top: 69%; width: 31%; height: 31%"></span>
+          </span></span>
+          <span style="display: flex; flex-direction: column; gap: 2px"><span class="serif" style="font-size: 17px">Grade</span><span style="font-size: 12px; color: #5A5248"><span class="mono">70,4 × 69,5 cm</span> · 9 fotos</span></span>
+        </button>
+        <span class="cap">Selecionado · anel terracota</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <button class="card" aria-pressed="false">
+          <span class="pv"><span style="position: relative; width: 180px; height: 93px">
+            <span class="sk" style="left: 0%; top: 40%; width: 9%; height: 60%"></span><span class="sk" style="left: 10%; top: 20%; width: 12%; height: 80%"></span><span class="sk" style="left: 23%; top: 50%; width: 9%; height: 50%"></span><span class="sk" style="left: 33%; top: 10%; width: 12%; height: 90%"></span><span class="sk" style="left: 46%; top: 40%; width: 9%; height: 60%"></span><span class="sk" style="left: 46%; top: 10%; width: 9%; height: 26%"></span><span class="sk" style="left: 56%; top: 30%; width: 10%; height: 70%"></span><span class="sk" style="left: 67%; top: 55%; width: 9%; height: 45%"></span><span class="sk" style="left: 77%; top: 15%; width: 12%; height: 85%"></span><span class="sk" style="left: 90%; top: 45%; width: 10%; height: 55%"></span>
+          </span></span>
+          <span style="display: flex; flex-direction: column; gap: 2px"><span class="serif" style="font-size: 17px">Base nivelada</span><span style="font-size: 12px; color: #5A5248"><span class="mono">166,6 × 85,7 cm</span> · 10 fotos</span></span>
+          <span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6B4A12"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 9v4M12 17h.01"></path><path d="M10.3 3.9L2.4 18a2 2 0 001.7 3h15.8a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"></path></svg>Maior que a área útil</span>
+        </button>
+        <span class="cap">Com aviso</span>
+      </div>
+      <div style="flex: 1; display: flex; flex-direction: column; gap: 8px; padding-left: 24px; border-left: 1px solid #DDD5C8; color: #5A5248; font-size: 13px; max-width: 360px">
+        <span>Esboço em areia (#E6DFD3) com contorno #CFC5B6, sem fotos, proporcional às medidas reais do arranjo.</span>
+        <span>Nome em Newsreader; total em IBM Plex Mono; contagem em Instrument Sans.</span>
+        <span>O aviso não bloqueia a escolha: o template pode ser posicionado e reduzido depois.</span>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1240}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const ring = (sel, claro) => sel ? '0 0 0 2px #fff, 0 0 0 4px #B5532F' : (claro ? 'inset 0 0 0 1px #CFC5B6' : 'none');
+    return {
+      cores: [
+        { nome: 'Branco', hex: '#FFFFFF', ring: ring(true, true) },
+        { nome: 'Off-white', hex: '#F3EEE4', ring: ring(false, true) },
+        { nome: 'Preto', hex: '#161412', ring: ring(false, false) },
+        { nome: 'Cinza', hex: '#8A8782', ring: ring(false, false) },
+        { nome: 'Madeira clara', hex: '#C9A27A', ring: ring(false, false) },
+        { nome: 'Madeira escura', hex: '#6B4A32', ring: ring(false, false) }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

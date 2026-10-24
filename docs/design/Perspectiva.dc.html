@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Correção de perspectiva</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&amp;family=Instrument+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#F7F4EE}
+a{color:#9A4426}a:hover{color:#7A361E}
+.app{font-family:'Instrument Sans',system-ui,sans-serif;color:#1F1B16;font-size:14px;line-height:1.4;-webkit-font-smoothing:antialiased}
+.serif{font-family:'Newsreader',Georgia,serif;font-weight:500;letter-spacing:-.01em}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.btn{font:inherit;font-weight:500;min-height:36px;padding:0 14px;border:1px solid #DDD5C8;background:#fff;border-radius:8px;color:#1F1B16;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;text-decoration:none;white-space:nowrap;box-sizing:border-box}
+.btn-p{background:#B5532F;border-color:#B5532F;color:#fff}.btn-p:hover{background:#9A4426;color:#fff}
+.btn-dk{background:transparent;border-color:#5A5248;color:#fff}.btn-dk:hover{background:#2E2924;color:#fff}
+.lbl{font-size:12px;font-weight:500;color:#5A5248}
+.in{font:inherit;min-height:36px;border:1px solid #DDD5C8;border-radius:8px;padding:0 34px 0 10px;width:100%;box-sizing:border-box;background:#fff;color:#1F1B16}
+.hd{position:absolute;width:18px;height:18px;border-radius:9px;background:#fff;border:2.5px solid #B5532F;box-sizing:border-box;box-shadow:0 1px 3px #1F1B1640}
+.tag{position:absolute;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#fff;background:#B5532F;border-radius:999px;padding:1px 7px}
+</style>
+</helmet>
+<div class="app" style="min-height: 900px; display: flex; flex-direction: column; background: #F7F4EE">
+  <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 10px 16px; background: #1F1B16; color: #fff">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8A487" stroke-width="1.6" aria-hidden="true"><path d="M4 6l16-2v16l-16-2z"></path></svg>
+    <span class="serif" style="font-size: 19px">Correção de perspectiva</span>
+    <span style="font-size: 13px; color: #CFC5B6">Marque os quatro cantos de um retângulo real da parede</span>
+    <div style="flex: 1 1 16px"></div>
+    <a href="Main.dc.html" class="btn btn-dk">Cancelar</a>
+    <a href="AreaUtil.dc.html" class="btn btn-p">Aplicar</a>
+  </header>
+  <div style="display: flex; flex-wrap: wrap; flex: 1 1 auto">
+    <main style="flex: 999 1 560px; min-width: 0; overflow: auto; padding: 28px; background: #2A2520">
+      <div style="position: relative; width: 900px; height: 600px; margin: 0 auto; overflow: hidden; border-radius: 4px">
+        <svg width="900" height="600" viewBox="0 0 900 600" style="position: absolute; inset: 0" role="img" aria-label="Foto da parede tirada em ângulo, com uma porta à direita">
+          <defs>
+            <linearGradient id="wl" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#D8CDBB"></stop><stop offset="1" stop-color="#EAE2D4"></stop></linearGradient>
+            <linearGradient id="fl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9C8467"></stop><stop offset="1" stop-color="#6E5A45"></stop></linearGradient>
+          </defs>
+          <rect width="900" height="600" fill="#C9BCA7"></rect>
+          <polygon points="60,40 900,0 900,600 60,560" fill="url(#wl)"></polygon>
+          <polygon points="0,600 60,560 900,600" fill="url(#fl)"></polygon>
+          <polygon points="0,0 60,40 60,560 0,600" fill="#B8AA93"></polygon>
+          <polygon points="560,150 700,138 712,520 566,507" fill="#F4EFE6" stroke="#B9AC97" stroke-width="3"></polygon>
+          <circle cx="684" cy="335" r="5" fill="#8F7D68"></circle>
+          <polygon points="150,410 470,400 470,520 150,520" fill="#8F7D68" opacity=".9"></polygon>
+          <polygon points="560,150 700,138 712,520 566,507" fill="#B5532F1f" stroke="#B5532F" stroke-width="2"></polygon>
+          <line x1="566" y1="507" x2="566" y2="560" stroke="#B5532F" stroke-width="1.5" stroke-dasharray="4 4"></line>
+        </svg>
+        <div class="hd" style="left: 551px; top: 141px"></div><span class="tag" style="left: 520px; top: 116px">1</span>
+        <div class="hd" style="left: 691px; top: 129px"></div><span class="tag" style="left: 712px; top: 112px">2</span>
+        <div class="hd" style="left: 703px; top: 511px"></div><span class="tag" style="left: 724px; top: 516px">3</span>
+        <div class="hd" style="left: 557px; top: 498px; background: #B5532F"></div><span class="tag" style="left: 524px; top: 524px">4</span>
+        <div style="position: absolute; left: 340px; top: 210px; width: 160px; height: 160px; border-radius: 80px; border: 3px solid #fff; box-shadow: 0 10px 30px #00000059; overflow: hidden; background: #EAE2D4">
+          <svg width="160" height="160" viewBox="0 0 160 160" aria-hidden="true"><rect width="160" height="160" fill="#EAE2D4"></rect><polygon points="80,80 160,74 160,160 82,160" fill="#F4EFE6" stroke="#B9AC97" stroke-width="8"></polygon><path d="M80 0v160M0 80h160" stroke="#B5532F" stroke-width="1.5"></path><circle cx="80" cy="80" r="9" fill="none" stroke="#B5532F" stroke-width="2"></circle></svg>
+        </div>
+        <span class="mono" style="position: absolute; left: 392px; top: 378px; font-size: 11px; color: #fff; background: #1F1B16cc; border-radius: 999px; padding: 2px 8px">Lupa 4×</span>
+      </div>
+    </main>
+    <aside style="flex: 1 1 320px; max-width: 360px; min-width: 280px; background: #FFFFFF; border-left: 1px solid #E6DFD3; padding: 22px; display: flex; flex-direction: column; gap: 22px; box-sizing: border-box">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div style="display: flex; justify-content: space-between; align-items: baseline"><span class="serif" style="font-size: 19px">Cantos</span><span class="mono" style="font-size: 12px; color: #5A5248">4 de 4</span></div>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; font-size: 13px">
+          <span style="display: flex; gap: 8px; align-items: center"><span class="mono" style="width: 20px; height: 20px; border-radius: 10px; background: #B5532F; color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center">1</span>Superior esq.</span>
+          <span style="display: flex; gap: 8px; align-items: center"><span class="mono" style="width: 20px; height: 20px; border-radius: 10px; background: #B5532F; color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center">2</span>Superior dir.</span>
+          <span style="display: flex; gap: 8px; align-items: center"><span class="mono" style="width: 20px; height: 20px; border-radius: 10px; background: #B5532F; color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center">4</span>Inferior esq.</span>
+          <span style="display: flex; gap: 8px; align-items: center"><span class="mono" style="width: 20px; height: 20px; border-radius: 10px; background: #B5532F; color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center">3</span>Inferior dir.</span>
+        </div>
+        <span style="font-size: 12px; color: #6E655A">Arraste as alças para ajustar. Use a roda do mouse para zoom.</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <span class="serif" style="font-size: 19px">Medidas reais</span>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+          <div style="display: flex; flex-direction: column; gap: 4px; position: relative"><label for="l" class="lbl">Largura</label><input id="l" class="in mono" value="80,0"><span style="position: absolute; right: 10px; bottom: 9px; font-size: 12px; color: #6E655A">cm</span></div>
+          <div style="display: flex; flex-direction: column; gap: 4px; position: relative"><label for="a" class="lbl">Altura</label><input id="a" class="in mono" value="210,0"><span style="position: absolute; right: 10px; bottom: 9px; font-size: 12px; color: #6E655A">cm</span></div>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <span class="serif" style="font-size: 19px">Prévia frontal</span>
+        <div style="height: 170px; border-radius: 10px; border: 1.5px dashed #CFC5B6; background: #F7F4EE; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 16px; text-align: center">
+          <span style="font-size: 13px; color: #5A5248">Gere uma prévia para conferir os cantos</span>
+          <button class="btn">Gerar prévia</button>
+        </div>
+        <span style="font-size: 12px; color: #6E655A">A origem das medidas é o canto superior esquerdo do retângulo marcado.</span>
+      </div>
+      <div style="display: flex; gap: 10px; padding: 12px; border-radius: 10px; background: #FBF1DE; color: #6B4A12; font-size: 13px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true" style="flex: none"><path d="M12 9v4M12 17h.01"></path><path d="M10.3 3.9L2.4 18a2 2 0 001.7 3h15.8a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"></path></svg>
+        Medidas assumem parede plana. Prefira referências com 1 m ou mais.
+      </div>
+      <a href="Calibracao.dc.html" style="margin-top: auto; font-size: 13px; font-weight: 500">Pular e usar calibração linear</a>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

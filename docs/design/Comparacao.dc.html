@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Comparar variantes</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&amp;family=Instrument+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#F7F4EE}
+a{color:#9A4426}a:hover{color:#7A361E}
+.app{font-family:'Instrument Sans',system-ui,sans-serif;color:#1F1B16;font-size:14px;line-height:1.4;-webkit-font-smoothing:antialiased}
+.serif{font-family:'Newsreader',Georgia,serif;font-weight:500;letter-spacing:-.01em}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.btn{font:inherit;font-weight:500;min-height:36px;padding:0 14px;border:1px solid #DDD5C8;background:#fff;border-radius:8px;color:#1F1B16;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;text-decoration:none;white-space:nowrap;box-sizing:border-box}
+.btn-g{background:transparent;border-color:transparent}
+.btn-i{width:36px;padding:0}
+.seg{display:inline-grid;grid-auto-flow:column;grid-auto-columns:1fr;background:#EFEAE1;border-radius:8px;padding:3px;gap:2px}
+.seg button{font:inherit;font-weight:500;min-height:30px;padding:0 12px;border:0;border-radius:6px;background:transparent;color:#5A5248;cursor:pointer;white-space:nowrap}
+.seg .on{background:#fff;color:#1F1B16;box-shadow:0 1px 2px #1F1B1624}
+.p1{background:linear-gradient(165deg,#F4CF9C 0%,#E3966A 45%,#9C5545 75%,#4D2D2E 100%)}
+.p2{background:linear-gradient(180deg,#BFD6E2 0%,#7FA8BE 48%,#3F6A80 70%,#26404D 100%)}
+.p3{background:linear-gradient(155deg,#D6DDB4 0%,#93AA70 45%,#557048 72%,#2F4229 100%)}
+.p6{background:linear-gradient(170deg,#F2DCD4 0%,#D39C91 48%,#86504C 100%)}
+.p7{background:linear-gradient(185deg,#E3EAE7 0%,#A9BDB7 50%,#5C7570 100%)}
+.p8{background:radial-gradient(circle at 70% 30%,#F7E7C6 0 12%,#D9A45F 30%,#7C4A2C 80%)}
+.grid{background-image:linear-gradient(#1F1B1614 1px,transparent 1px),linear-gradient(90deg,#1F1B1614 1px,transparent 1px);background-size:30px 30px}
+</style>
+</helmet>
+<div class="app" style="min-height: 900px; display: flex; flex-direction: column; background: #F7F4EE">
+  <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 16px; background: #FFFFFF; border-bottom: 1px solid #E6DFD3">
+    <a href="Main.dc.html" class="btn btn-g"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>Voltar ao editor</a>
+    <span class="serif" style="font-size: 19px">Comparar variantes</span>
+    <span style="font-size: 12px; color: #5A5248; background: #EFEAE1; border-radius: 999px; padding: 2px 10px">Somente visualização</span>
+    <div style="flex: 1 1 16px"></div>
+    <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #5A5248; margin-right: 6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M9 15l-3 3a3 3 0 01-4-4l3-3M15 9l3-3a3 3 0 014 4l-3 3M8 16l8-8"></path></svg>Zoom e posição iguais nos dois lados</span>
+    <button class="btn btn-g btn-i" aria-label="Diminuir zoom"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
+    <span class="mono" style="font-size: 12px; min-width: 40px; text-align: center">150%</span>
+    <button class="btn btn-g btn-i" aria-label="Aumentar zoom"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+    <button class="btn">Parede inteira</button>
+  </header>
+  <div style="flex: 1 1 auto; display: flex; flex-wrap: wrap; gap: 16px; padding: 16px; background: #ECE6DC">
+    <sc-for list="{{panes}}" as="p" hint-placeholder-count="2">
+      <section style="flex: 1 1 520px; min-width: 0; background: #fff; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 1px 2px #5A52481f">
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 10px 14px; border-bottom: 1px solid #E6DFD3">
+          <button class="btn"><span class="serif" style="font-size: 16px">{{p.nome}}</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+          <div style="flex: 1 1 10px"></div>
+          <span style="font-size: 13px; color: #5A5248">{{p.qtd}}</span>
+          <span class="mono" style="font-size: 12px; color: #5A5248; background: #EFEAE1; border-radius: 6px; padding: 3px 8px">{{p.dim}}</span>
+        </div>
+        <div style="position: relative; flex: 1 1 auto; min-height: 660px; overflow: hidden; background: linear-gradient(180deg,#EDE6DA 0%,#E2D8C8 100%)">
+          <div class="grid" style="position: absolute; inset: 0"></div>
+          <div style="position: absolute; left: 60px; top: 90px; width: 150px; height: 210px; background: #fff; padding: 12px; box-sizing: border-box; box-shadow: 0 1px 2px #1F1B1633"><div class="p1" style="width: 100%; height: 100%"></div></div>
+          <div class="p2" style="position: absolute; left: {{p.bx}}; top: 90px; width: 180px; height: 120px; box-shadow: 0 1px 2px #1F1B1633"></div>
+          <div class="p7" style="position: absolute; left: {{p.bx}}; top: 240px; width: 60px; height: 90px; box-shadow: 0 1px 2px #1F1B1633"></div>
+          <div class="p6" style="position: absolute; left: {{p.dx}}; top: 240px; width: 60px; height: 90px; box-shadow: 0 1px 2px #1F1B1633"></div>
+          <div class="{{p.ec}}" style="position: absolute; left: {{p.ex}}; top: {{p.ey}}; width: 90px; height: 60px; box-shadow: 0 1px 2px #1F1B1633"></div>
+          <div class="p3" style="position: absolute; left: {{p.fx}}; top: 90px; width: 120px; height: 180px; box-shadow: 0 1px 2px #1F1B1633"></div>
+          <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 18px; background: #D3C6B3"></div>
+          <div style="position: absolute; left: 40px; right: 40px; bottom: 18px; height: 140px; background: #8F7D68; border-radius: 26px 26px 6px 6px"></div>
+          <div style="position: absolute; left: 80px; right: 80px; bottom: 74px; height: 64px; background: #A08D77; border-radius: 16px"></div>
+        </div>
+      </section>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      panes: [
+        { nome: 'Base', qtd: '7 fotos', dim: '90,0 × 47,0 cm', bx: '240px', dx: '330px', ex: '420px', ey: '290px', ec: 'p8', fx: '450px' },
+        { nome: 'Simétrica', qtd: '7 fotos', dim: '96,0 × 45,0 cm', bx: '236px', dx: '356px', ex: '236px', ey: '345px', ec: 'p8', fx: '440px' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

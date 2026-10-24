@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Posicionar template</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&amp;family=Instrument+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#F7F4EE}
+a{color:#9A4426}a:hover{color:#7A361E}
+.app{font-family:'Instrument Sans',system-ui,sans-serif;color:#1F1B16;font-size:14px;line-height:1.4;-webkit-font-smoothing:antialiased}
+.serif{font-family:'Newsreader',Georgia,serif;font-weight:500;letter-spacing:-.01em}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.btn{font:inherit;font-weight:500;min-height:36px;padding:0 14px;border:1px solid #DDD5C8;background:#fff;border-radius:8px;color:#1F1B16;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;text-decoration:none;white-space:nowrap;box-sizing:border-box}
+.btn-p{background:#B5532F;border-color:#B5532F;color:#fff}.btn-p:hover{background:#9A4426;color:#fff}
+.btn-dk{background:transparent;border-color:#5A5248;color:#fff}.btn-dk:hover{background:#2E2924;color:#fff}
+.grid{background-image:linear-gradient(#1F1B162e 1px,transparent 1px),linear-gradient(90deg,#1F1B162e 1px,transparent 1px),linear-gradient(#1F1B1614 1px,transparent 1px),linear-gradient(90deg,#1F1B1614 1px,transparent 1px);background-size:100px 100px,100px 100px,20px 20px,20px 20px}
+.hatch{background:repeating-linear-gradient(45deg,#B4231833 0 6px,#FBEDEA 6px 12px)}
+.slot{position:absolute;border:1.5px dashed #B42318;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+</style>
+</helmet>
+<div class="app" style="min-height: 900px; display: flex; flex-direction: column; background: #F7F4EE">
+  <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 10px 16px; background: #1F1B16; color: #fff">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8A487" stroke-width="1.6" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"></rect><rect x="14" y="3" width="7" height="5" rx="1"></rect><rect x="14" y="12" width="7" height="9" rx="1"></rect><rect x="3" y="16" width="7" height="5" rx="1"></rect></svg>
+    <span class="serif" style="font-size: 19px">Posicionar template · Pirâmide</span>
+    <span style="font-size: 13px; color: #CFC5B6">6 vagas · nova variante “Pirâmide”</span>
+    <div style="flex: 1 1 16px"></div>
+    <a href="Templates.dc.html" class="btn btn-dk">Cancelar</a>
+    <a href="Main.dc.html" class="btn btn-p">Confirmar posição</a>
+  </header>
+  <main style="flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0">
+    <div style="flex: 1 1 auto; overflow: auto; padding: 28px; background: #ECE6DC; display: flex; flex-direction: column; align-items: center; gap: 16px">
+      <sc-if value="{{aviso}}" hint-placeholder-val="{{false}}">
+        <div role="alert" style="width: 860px; box-sizing: border-box; display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 10px; background: #FBE9E6; color: #8A1A12; font-size: 13px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true" style="flex: none"><path d="M12 8v5M12 17h.01"></path><circle cx="12" cy="12" r="9"></circle></svg>
+          <span><strong style="font-weight: 600">O template é maior que a área útil.</strong> <span class="mono">151,0 × 70,6 cm</span> não cabe em <span class="mono">140,0 × 90,0 cm</span>. Você pode confirmar assim mesmo e ajustar as fotos depois.</span>
+        </div>
+      </sc-if>
+      <div style="position: relative; width: 860px; height: 560px; flex: none; background: linear-gradient(180deg,#EDE6DA 0%,#E4DBCC 100%); box-shadow: 0 1px 0 #D6CCBC, 0 18px 40px #5A524824; overflow: hidden">
+        <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 14px; background: #D3C6B3; border-top: 1px solid #C4B6A1"></div>
+        <div style="position: absolute; left: 210px; width: 440px; bottom: 14px; height: 96px; background: #8F7D68; border-radius: 22px 22px 6px 6px"></div>
+        <div style="position: absolute; left: 252px; width: 172px; bottom: 54px; height: 48px; background: #A08D77; border-radius: 14px"></div>
+        <div style="position: absolute; left: 436px; width: 172px; bottom: 54px; height: 48px; background: #A08D77; border-radius: 14px"></div>
+        <div class="grid" style="position: absolute; inset: 0"></div>
+        <div style="position: absolute; left: {{ax}}; top: {{ay}}; width: {{aw}}; height: {{ah}}; border: 1px dashed #5A5248; box-sizing: border-box; box-shadow: 0 0 0 2000px #F7F4EE80"></div>
+        <span class="mono" style="position: absolute; left: {{ax}}; top: {{aly}}; font-size: 11px; color: #5A5248">{{areaLabel}}</span>
+
+        <div style="position: absolute; left: 120px; top: 111px; width: 620px; height: 298px; border: 1.5px dashed {{grpColor}}; border-radius: 4px; box-sizing: border-box; cursor: move"></div>
+        <div style="position: absolute; left: 128px; top: 119px; width: 604px; height: 283px; opacity: .8">
+          <sc-for list="{{slots}}" as="s" hint-placeholder-count="6">
+            <div class="slot hatch" style="left: {{s.x}}; top: {{s.y}}; width: {{s.w}}; height: {{s.h}}">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9F1D14" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 3l18 18"></path></svg>
+              <span class="mono" style="font-size: 11px; color: #8A1A12; background: #FFFFFFcc; border-radius: 4px; padding: 0 4px">{{s.t}}</span>
+            </div>
+          </sc-for>
+        </div>
+        <span class="mono" style="position: absolute; left: 120px; top: 418px; display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: #fff; background: {{grpColor}}; border-radius: 999px; padding: 2px 8px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"></path></svg>151,0 × 70,6 cm</span>
+      </div>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 18px; padding: 7px 16px; border-top: 1px solid #E6DFD3; background: #FFFFFF; font-size: 12px; color: #5A5248">
+      <span>Arraste para posicionar · Enter confirma · Esc cancela</span>
+      <div style="flex: 1 1 10px"></div>
+      <span class="mono">X 14,5 · Y 19,8 cm</span>
+      <span>Encaixe no grid de 5 cm</span>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"aviso":{"editor":"boolean","default":false},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const aviso = this.props.aviso ?? false;
+    const k = 4; // px por cm no desenho
+    const v = (t, x, y, w, h) => ({ t, x: x * k + 'px', y: y * k + 'px', w: w * k + 'px', h: h * k + 'px' });
+    // área útil: 180 × 110 cm (padrão) ou 140 × 90 cm (estado de aviso)
+    const area = aviso ? { x: 150, y: 80, w: 560, h: 360, l: 'Área útil · 140,0 × 90,0 cm' } : { x: 70, y: 40, w: 720, h: 440, l: 'Área útil · 180,0 × 110,0 cm' };
+    return {
+      aviso,
+      ax: area.x + 'px', ay: area.y + 'px', aw: area.w + 'px', ah: area.h + 'px', aly: (area.y - 18) + 'px',
+      areaLabel: area.l,
+      grpColor: aviso ? '#B42318' : '#5A5248',
+      slots: [
+        v('20 × 30', 0, 10, 20, 30),
+        v('30 × 40', 22.75, 5, 30, 40),
+        v('40 × 50', 55.5, 0, 40, 50),
+        v('30 × 40', 98.25, 5, 30, 40),
+        v('20 × 30', 131, 10, 20, 30),
+        v('15 × 21', 65, 55.6, 21, 15)
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

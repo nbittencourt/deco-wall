@@ -1,0 +1,48 @@
+// Tema do canvas Konva (DESIGN §2.2). Constantes em TypeScript, porque são aplicadas em nós Konva.
+// Medidas em cm são convertidas para px só na camada de canvas (P2).
+
+export const CORES_CANVAS = {
+  paredeTopo: '#EDE6DA',
+  paredeBase: '#E4DBCC',
+  sombraParede: 'rgba(90, 82, 72, 0.14)',
+  gridMenor: 'rgba(31, 27, 22, 0.08)',
+  gridPrincipal: 'rgba(31, 27, 22, 0.18)',
+  origem: '#5A5248',
+  selecao: '#B5532F',
+  alcaSelecao: '#FFFFFF',
+  sobreposicao: '#B42318',
+  foraDaParede: '#B42318',
+  areaUtil: '#5A5248',
+  exteriorAreaUtilEditor: 'rgba(247, 244, 238, 0.5)',
+  exteriorAreaUtilModo: 'rgba(31, 27, 22, 0.55)',
+  placeholderFundo: '#FBEDEA',
+  placeholderHachura: 'rgba(180, 35, 24, 0.2)',
+  placeholderBorda: '#B42318',
+  placeholderTexto: '#9F1D14',
+  vagaOpacidade: 0.8,
+  pillMedida: '#B5532F',
+  pillMedidaTexto: '#FFFFFF',
+} as const;
+
+export const MEDIDAS_CANVAS = {
+  bordaSelecaoPx: 2,
+  offsetSelecaoPx: 3,
+  alcaSelecaoPx: 8,
+  bordaAlcaPx: 2,
+  raioAlcaPx: 2,
+  bordaSobreposicaoPx: 2,
+  offsetSobreposicaoPx: 2,
+  bordaAreaUtilPx: 1,
+  alcaAreaUtilPx: 12,
+  bordaPlaceholderPx: 1.5,
+  bordaConjuntoTemplatePx: 1.5,
+  folgaConjuntoTemplatePx: 8,
+  bordaBoundingBoxPx: 1.5,
+  folgaBoundingBoxPx: 8,
+  alcaPerspectivaPx: 18,
+  bordaAlcaPerspectivaPx: 2.5,
+  lupaPx: 160,
+  lupaZoom: 4,
+  fonteMedidaPx: 11,
+  escalaDesenhoPxPorCm: 4,
+} as const;

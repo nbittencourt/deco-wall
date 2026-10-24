@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Conflito de versão</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&amp;family=Instrument+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#9A4426}a:hover{color:#7A361E}
+.app{font-family:'Instrument Sans',system-ui,sans-serif;color:#1F1B16;font-size:14px;line-height:1.4;-webkit-font-smoothing:antialiased}
+.serif{font-family:'Newsreader',Georgia,serif;font-weight:500;letter-spacing:-.01em}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.btn{font:inherit;font-weight:500;min-height:38px;padding:0 14px;border:1px solid #DDD5C8;background:#fff;border-radius:8px;color:#1F1B16;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;white-space:nowrap;box-sizing:border-box}
+.btn-p{background:#B5532F;border-color:#B5532F;color:#fff}
+.btn-g{background:transparent;border-color:transparent}
+.p1{background:linear-gradient(165deg,#F4CF9C 0%,#E3966A 45%,#9C5545 75%,#4D2D2E 100%)}
+.p2{background:linear-gradient(180deg,#BFD6E2 0%,#7FA8BE 48%,#3F6A80 70%,#26404D 100%)}
+.p7{background:linear-gradient(185deg,#E3EAE7 0%,#A9BDB7 50%,#5C7570 100%)}
+.p3{background:linear-gradient(155deg,#D6DDB4 0%,#93AA70 45%,#557048 72%,#2F4229 100%)}
+.wall{position:relative;height:150px;border-radius:8px;overflow:hidden;background:linear-gradient(180deg,#EDE6DA 0%,#E2D8C8 100%)}
+</style>
+</helmet>
+<div class="app" style="width: 640px; height: 560px; box-sizing: border-box; background: #fff; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden">
+  <div style="padding: 22px 24px 12px; display: flex; flex-direction: column; gap: 6px">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <span style="width: 32px; height: 32px; border-radius: 16px; background: #FBF1DE; display: flex; align-items: center; justify-content: center; flex: none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A5A12" stroke-width="1.8" aria-hidden="true"><path d="M12 9v4M12 17h.01"></path><path d="M10.3 3.9L2.4 18a2 2 0 001.7 3h15.8a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"></path></svg></span>
+      <span class="serif" style="font-size: 23px">Esta variante foi salva em outra aba</span>
+    </div>
+    <span style="font-size: 14px; color: #5A5248">“Base” mudou desde que você a abriu. Escolha qual versão manter. O salvamento automático está pausado.</span>
+  </div>
+  <div style="padding: 8px 24px 20px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; flex: 1 1 auto">
+    <div style="border: 2px solid #B5532F; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline"><strong style="font-weight: 600">A minha</strong><span class="mono" style="font-size: 12px; color: #5A5248">14:52 · esta aba</span></div>
+      <div class="wall">
+        <div style="position: absolute; left: 22%; top: 18%; width: 17%; height: 46%; background: #fff; padding: 3px; box-sizing: border-box"><div class="p1" style="width: 100%; height: 100%"></div></div>
+        <div class="p2" style="position: absolute; left: 44%; top: 18%; width: 24%; height: 28%"></div>
+        <div class="p7" style="position: absolute; left: 44%; top: 52%; width: 9%; height: 22%"></div>
+        <div class="p3" style="position: absolute; left: 72%; top: 18%; width: 13%; height: 40%"></div>
+      </div>
+      <span style="font-size: 13px; color: #5A5248">7 fotos · baseada na revisão 4</span>
+    </div>
+    <div style="border: 1px solid #DDD5C8; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline"><strong style="font-weight: 600">A salva</strong><span class="mono" style="font-size: 12px; color: #5A5248">14:48 · outra aba</span></div>
+      <div class="wall">
+        <div style="position: absolute; left: 22%; top: 18%; width: 17%; height: 46%; background: #fff; padding: 3px; box-sizing: border-box"><div class="p1" style="width: 100%; height: 100%"></div></div>
+        <div class="p2" style="position: absolute; left: 44%; top: 18%; width: 24%; height: 28%"></div>
+        <div class="p3" style="position: absolute; left: 72%; top: 18%; width: 13%; height: 40%"></div>
+      </div>
+      <span style="font-size: 13px; color: #5A5248">6 fotos · revisão 5</span>
+    </div>
+  </div>
+  <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; padding: 14px 24px; border-top: 1px solid #E6DFD3; background: #FBF9F5">
+    <button class="btn btn-g">Usar a salva</button>
+    <button class="btn">Salvar a minha como nova variante</button>
+    <button class="btn btn-p">Manter a minha</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":640,"height":560}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

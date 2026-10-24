@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Remover ou excluir imagem</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&amp;family=Instrument+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#9A4426}a:hover{color:#7A361E}
+.app{font-family:'Instrument Sans',system-ui,sans-serif;color:#1F1B16;font-size:14px;line-height:1.4;-webkit-font-smoothing:antialiased}
+.serif{font-family:'Newsreader',Georgia,serif;font-weight:500;letter-spacing:-.01em}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.btn{font:inherit;font-weight:500;min-height:36px;padding:0 14px;border:1px solid #DDD5C8;background:#fff;border-radius:8px;color:#1F1B16;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;white-space:nowrap;box-sizing:border-box}
+.btn-g{background:transparent;border-color:transparent}
+.btn-d{background:#B42318;border-color:#B42318;color:#fff}
+.opt{border:1px solid #DDD5C8;border-radius:10px;padding:14px;display:flex;gap:12px;cursor:pointer}
+.opt input{accent-color:#B42318;margin:3px 0 0}
+.p8{background:radial-gradient(circle at 70% 30%,#F7E7C6 0 12%,#D9A45F 30%,#7C4A2C 80%)}
+td,th{padding:8px 0;border-bottom:1px solid #F0EBE3;text-align:left}
+th{font-size:12px;font-weight:500;color:#5A5248}
+</style>
+</helmet>
+<div class="app" style="width: 640px; height: 600px; box-sizing: border-box; background: #fff; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden">
+  <div style="display: flex; align-items: center; gap: 14px; padding: 22px 24px 14px">
+    <div class="p8" style="width: 52px; height: 52px; border-radius: 8px; flex: none"></div>
+    <div style="display: flex; flex-direction: column">
+      <span class="serif" style="font-size: 22px">festa_sao_joao.jpg</span>
+      <span style="font-size: 13px; color: #5A5248">O que deseja fazer com esta imagem?</span>
+    </div>
+  </div>
+  <div style="padding: 4px 24px 20px; display: flex; flex-direction: column; gap: 18px; flex: 1 1 auto">
+    <fieldset style="border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px">
+      <legend style="position: absolute; width: 1px; height: 1px; overflow: hidden">Ação</legend>
+      <label class="opt"><input type="radio" name="acao"><span style="display: flex; flex-direction: column; gap: 2px"><strong style="font-weight: 600">Remover deste projeto</strong><span style="font-size: 13px; color: #5A5248">Sai das variantes de Sala de estar. Continua na biblioteca.</span></span></label>
+      <label class="opt" style="border: 2px solid #B42318; background: #FDF5F3"><input type="radio" name="acao" checked><span style="display: flex; flex-direction: column; gap: 2px"><strong style="font-weight: 600">Excluir da biblioteca</strong><span style="font-size: 13px; color: #5A5248">Fica em Excluídas por 30 dias e pode ser restaurada. Nas composições, o espaço da foto é mantido sem imagem.</span></span></label>
+    </fieldset>
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <span style="font-size: 12px; font-weight: 500; color: #5A5248">Usada em 4 lugares</span>
+      <table style="border-collapse: collapse; width: 100%; font-size: 13px">
+        <thead><tr><th>Projeto</th><th>Variante</th><th style="text-align: right">Vezes</th></tr></thead>
+        <tbody>
+          <tr><td>Sala de estar</td><td>Base</td><td class="mono" style="text-align: right">2</td></tr>
+          <tr><td>Sala de estar</td><td>Simétrica</td><td class="mono" style="text-align: right">1</td></tr>
+          <tr><td style="border-bottom: 0">Corredor</td><td style="border-bottom: 0">Base</td><td class="mono" style="text-align: right; border-bottom: 0">1</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div style="display: flex; gap: 8px; justify-content: flex-end; padding: 14px 24px; border-top: 1px solid #E6DFD3; background: #FBF9F5">
+    <button class="btn btn-g">Cancelar</button>
+    <button class="btn btn-d">Excluir imagem</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":640,"height":600}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

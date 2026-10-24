@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Exportar imagem</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&amp;family=Instrument+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#9A4426}a:hover{color:#7A361E}
+.app{font-family:'Instrument Sans',system-ui,sans-serif;color:#1F1B16;font-size:14px;line-height:1.4;-webkit-font-smoothing:antialiased}
+.serif{font-family:'Newsreader',Georgia,serif;font-weight:500;letter-spacing:-.01em}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.btn{font:inherit;font-weight:500;min-height:36px;padding:0 14px;border:1px solid #DDD5C8;background:#fff;border-radius:8px;color:#1F1B16;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;white-space:nowrap;box-sizing:border-box}
+.btn-p{background:#B5532F;border-color:#B5532F;color:#fff}
+.btn-g{background:transparent;border-color:transparent}
+.seg{display:inline-grid;grid-auto-flow:column;grid-auto-columns:1fr;background:#EFEAE1;border-radius:8px;padding:3px;gap:2px}
+.seg button{font:inherit;font-weight:500;min-height:30px;padding:0 12px;border:0;border-radius:6px;background:transparent;color:#5A5248;cursor:pointer}
+.seg .on{background:#fff;color:#1F1B16;box-shadow:0 1px 2px #1F1B1624}
+.p1{background:linear-gradient(165deg,#F4CF9C 0%,#E3966A 45%,#9C5545 75%,#4D2D2E 100%)}
+.p2{background:linear-gradient(180deg,#BFD6E2 0%,#7FA8BE 48%,#3F6A80 70%,#26404D 100%)}
+.p3{background:linear-gradient(155deg,#D6DDB4 0%,#93AA70 45%,#557048 72%,#2F4229 100%)}
+.p7{background:linear-gradient(185deg,#E3EAE7 0%,#A9BDB7 50%,#5C7570 100%)}
+.ph{background:repeating-linear-gradient(45deg,#B4231873 0 5px,#B4231829 5px 10px)}
+.sw{position:relative;width:40px;height:24px;border-radius:12px;background:#CFC5B6;flex:none}
+.sw::after{content:'';position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:9px;background:#fff;box-shadow:0 1px 2px #1F1B1640}
+</style>
+</helmet>
+<div class="app" style="width: 640px; height: 520px; box-sizing: border-box; background: #fff; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden">
+  <div style="display: flex; align-items: center; gap: 8px; padding: 20px 24px 12px">
+    <span class="serif" style="font-size: 24px">Exportar imagem</span>
+    <div style="flex: 1"></div>
+    <button class="btn btn-g" aria-label="Fechar" style="width: 36px; padding: 0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+  </div>
+  <div style="padding: 4px 24px 20px; display: flex; flex-wrap: wrap; gap: 24px; flex: 1 1 auto">
+    <div style="flex: 1 1 280px; height: 250px; position: relative; border-radius: 10px; overflow: hidden; background: linear-gradient(180deg,#EDE6DA 0%,#E2D8C8 100%)">
+      <div style="position: absolute; left: 18%; top: 16%; width: 15%; height: 40%; background: #fff; padding: 3px; box-sizing: border-box"><div class="p1" style="width: 100%; height: 100%"></div></div>
+      <div class="p2" style="position: absolute; left: 37%; top: 16%; width: 21%; height: 24%"></div>
+      <div class="p7" style="position: absolute; left: 37%; top: 45%; width: 7%; height: 18%"></div>
+      <div class="p3" style="position: absolute; left: 62%; top: 16%; width: 14%; height: 36%"></div>
+      <div class="ph" style="position: absolute; left: 50%; top: 56%; width: 10%; height: 12%"></div>
+      <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 8px; background: #D3C6B3"></div>
+      <div style="position: absolute; left: 22%; right: 22%; bottom: 8px; height: 46px; background: #8F7D68; border-radius: 12px 12px 3px 3px"></div>
+    </div>
+    <div style="flex: 1 1 220px; display: flex; flex-direction: column; gap: 18px">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <span style="font-size: 12px; font-weight: 500; color: #5A5248">Formato</span>
+        <div class="seg" style="align-self: flex-start; width: 160px"><button class="on">PNG</button><button>JPG</button></div>
+      </div>
+      <label style="display: flex; gap: 10px; align-items: center; cursor: pointer"><input type="checkbox" style="position: absolute; opacity: 0; width: 1px; height: 1px"><span class="sw" aria-hidden="true"></span>Incluir grid</label>
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #F7F4EE; border-radius: 10px">
+        <span style="font-size: 13px; color: #5A5248">Resolução</span><span class="mono" style="font-weight: 500">3072 × 2000 px</span>
+      </div>
+      <span style="font-size: 13px; color: #5A5248">Espaços sem foto aparecem em vermelho hachurado. O que passar da parede é recortado.</span>
+    </div>
+  </div>
+  <div style="display: flex; gap: 8px; justify-content: flex-end; padding: 14px 24px; border-top: 1px solid #E6DFD3; background: #FBF9F5">
+    <button class="btn btn-g">Cancelar</button>
+    <button class="btn btn-p"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 4v12M7 11l5 5 5-5M4 20h16"></path></svg>Baixar PNG</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":640,"height":520}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

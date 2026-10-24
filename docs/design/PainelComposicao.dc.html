@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Painel da composição</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&amp;family=Instrument+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#9A4426}a:hover{color:#7A361E}
+.app{font-family:'Instrument Sans',system-ui,sans-serif;color:#1F1B16;font-size:14px;line-height:1.4;-webkit-font-smoothing:antialiased}
+.serif{font-family:'Newsreader',Georgia,serif;font-weight:500;letter-spacing:-.01em}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.btn{font:inherit;font-weight:500;min-height:36px;padding:0 14px;border:1px solid #DDD5C8;background:#fff;border-radius:8px;color:#1F1B16;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;white-space:nowrap;box-sizing:border-box}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:#EFEAE1;border-radius:8px;padding:3px;gap:2px}
+.seg button{font:inherit;font-weight:500;min-height:30px;padding:0 6px;border:0;border-radius:6px;background:transparent;color:#5A5248;cursor:pointer}
+.seg .on{background:#fff;color:#1F1B16;box-shadow:0 1px 2px #1F1B1624}
+.lbl{font-size:12px;font-weight:500;color:#5A5248}
+.in{font:inherit;min-height:36px;border:1px solid #DDD5C8;border-radius:8px;padding:0 10px;width:100%;box-sizing:border-box;background:#fff;color:#1F1B16}
+.in[disabled]{background:#F7F4EE;color:#8E8579;cursor:not-allowed}
+.cm{position:absolute;right:10px;top:9px;font-size:12px;color:#6E655A}
+.pf{position:absolute;left:10px;top:9px;font-size:12px;color:#6E655A}
+.row{display:flex;justify-content:space-between;gap:8px;font-size:14px}
+.row span:first-child{color:#5A5248}
+.sec{display:flex;flex-direction:column;gap:10px;padding-top:18px;border-top:1px solid #F0EBE3}
+.sw{position:relative;width:40px;height:24px;border-radius:12px;background:#B5532F;flex:none}
+.sw::after{content:'';position:absolute;right:3px;top:3px;width:18px;height:18px;border-radius:9px;background:#fff;box-shadow:0 1px 2px #1F1B1640}
+.tg{display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+.tg input{position:absolute;opacity:0;width:1px;height:1px}
+</style>
+</helmet>
+<div class="app" style="width: 360px; height: 1040px; box-sizing: border-box; background: #fff; border-left: 1px solid #E6DFD3; padding: 20px; display: flex; flex-direction: column; gap: 18px">
+  <span class="serif" style="font-size: 22px">Composição</span>
+  <div style="display: flex; flex-direction: column; gap: 8px">
+    <div class="row"><span>Fotos</span><span class="mono">7</span></div>
+    <div class="row"><span>Área total</span><span class="mono">90,0 × 47,0 cm</span></div>
+    <div class="row"><span>Sobreposições</span><span class="mono" style="color: #9F1D14">2 fotos</span></div>
+    <div class="row"><span>Sem foto</span><span class="mono" style="color: #9F1D14">1</span></div>
+  </div>
+  <div class="sec">
+    <span class="lbl">Escala</span>
+    <div class="row"><span>Método</span><span>Perspectiva</span></div>
+    <div class="row"><span>Escala</span><span class="mono">4,0 px/cm</span></div>
+    <button class="btn" style="align-self: flex-start">Recalibrar</button>
+  </div>
+  <div class="sec">
+    <span class="lbl">Área útil desta variante</span>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+      <div style="position: relative"><label for="al" class="pf">L</label><input id="al" class="in mono" value="180,0" style="padding-left: 24px"><span class="cm">cm</span></div>
+      <div style="position: relative"><label for="aa" class="pf">A</label><input id="aa" class="in mono" value="110,0" style="padding-left: 24px"><span class="cm">cm</span></div>
+      <div style="position: relative"><label for="ax" class="pf">X</label><input id="ax" class="in mono" value="17,5" style="padding-left: 24px"><span class="cm">cm</span></div>
+      <div style="position: relative"><label for="ay" class="pf">Y</label><input id="ay" class="in mono" value="10,0" style="padding-left: 24px"><span class="cm">cm</span></div>
+    </div>
+    <a href="AreaUtil.dc.html" class="btn" style="align-self: flex-start; text-decoration: none">Ajustar</a>
+  </div>
+  <div class="sec">
+    <span class="lbl">Borda padrão para novas fotos</span>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+      <div style="position: relative"><label for="bw" style="position: absolute; width: 1px; height: 1px; overflow: hidden">Largura da borda em cm</label><input id="bw" class="in mono" value="0,0"><span style="position: absolute; right: 10px; top: 9px; font-size: 12px; color: #6E655A">cm</span></div>
+      <button class="btn" style="justify-content: flex-start" aria-label="Cor da borda: branco"><span style="width: 16px; height: 16px; border-radius: 4px; border: 1px solid #CFC5B6; background: #fff"></span>Branco</button>
+    </div>
+  </div>
+  <div class="sec">
+    <span class="lbl">Grid</span>
+    <label class="tg"><span>Mostrar grid</span><input type="checkbox" checked><span class="sw" aria-hidden="true"></span></label>
+    <label class="tg"><span>Encaixar no grid</span><input type="checkbox" checked><span class="sw" aria-hidden="true"></span></label>
+    <span style="font-size: 13px; color: #5A5248; margin-top: 4px">Passo</span>
+    <div class="seg"><button>1</button><button>2</button><button class="on">5</button><button>10</button><button>Outro</button></div>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+      <div style="display: flex; flex-direction: column; gap: 4px" title="Disponível em uma próxima versão"><label for="pr" class="lbl" style="color: #8E8579">Linha forte a cada</label><input id="pr" class="in mono" value="5" disabled></div>
+      <div style="display: flex; flex-direction: column; gap: 4px"><label for="op" class="lbl">Opacidade</label><input id="op" class="in mono" value="20%"></div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 4px"><span class="lbl">Cor das linhas</span>
+      <div style="display: flex; gap: 8px">
+        <button aria-label="Tinta" style="width: 32px; height: 32px; border-radius: 16px; background: #1F1B16; border: 2px solid #fff; box-shadow: 0 0 0 2px #B5532F; cursor: pointer"></button>
+        <button aria-label="Branco" style="width: 32px; height: 32px; border-radius: 16px; background: #fff; border: 1px solid #CFC5B6; cursor: pointer"></button>
+        <button aria-label="Terracota" style="width: 32px; height: 32px; border-radius: 16px; background: #B5532F; border: 0; cursor: pointer"></button>
+        <button aria-label="Azul" style="width: 32px; height: 32px; border-radius: 16px; background: #2F5E8A; border: 0; cursor: pointer"></button>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":360,"height":1040}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

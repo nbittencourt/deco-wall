@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Projeto novo</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&amp;family=Instrument+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#F7F4EE}
+a{color:#9A4426}a:hover{color:#7A361E}
+.app{font-family:'Instrument Sans',system-ui,sans-serif;color:#1F1B16;font-size:14px;line-height:1.4;-webkit-font-smoothing:antialiased}
+.serif{font-family:'Newsreader',Georgia,serif;font-weight:500;letter-spacing:-.01em}
+.btn{font:inherit;font-weight:500;min-height:36px;padding:0 14px;border:1px solid #DDD5C8;background:#fff;border-radius:8px;color:#1F1B16;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;text-decoration:none;white-space:nowrap;box-sizing:border-box}
+.btn-p{background:#B5532F;border-color:#B5532F;color:#fff}.btn-p:hover{background:#9A4426;color:#fff}
+.btn-g{background:transparent;border-color:transparent}
+.btn[disabled]{color:#8E8579;background:transparent;border-color:transparent;cursor:not-allowed}
+.btn-i{width:36px;padding:0}
+.seg{display:inline-grid;grid-auto-flow:column;grid-auto-columns:1fr;background:#EFEAE1;border-radius:8px;padding:3px;gap:2px}
+.seg button{font:inherit;font-weight:500;min-height:30px;padding:0 12px;border:0;border-radius:6px;background:transparent;color:#5A5248;cursor:pointer;white-space:nowrap}
+.seg .on{background:#fff;color:#1F1B16;box-shadow:0 1px 2px #1F1B1624}
+.sep{width:1px;height:24px;background:#DDD5C8}
+.step{display:flex;gap:14px;align-items:flex-start;padding:14px 16px;border-radius:12px;background:#fff;border:1px solid #E6DFD3}
+.num{flex:none;width:26px;height:26px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600}
+</style>
+</helmet>
+<div class="app" style="min-height: 900px; display: flex; flex-direction: column; background: #F7F4EE">
+  <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 10px 16px; background: #FFFFFF; border-bottom: 1px solid #E6DFD3">
+    <a href="Projetos.dc.html" class="btn btn-g btn-i" aria-label="Voltar para projetos"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a>
+    <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="4" width="12" height="16" rx="1.5" fill="#B5532F"></rect><rect x="17" y="4" width="13" height="9" rx="1.5" fill="#1F1B16"></rect><rect x="17" y="16" width="13" height="12" rx="1.5" fill="#D9C9B4"></rect><rect x="2" y="23" width="12" height="5" rx="1.5" fill="#D9C9B4"></rect></svg>
+    <span class="serif" style="font-size: 19px">Escritório</span>
+    <button class="btn" style="margin-left: 6px">Base <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+    <div class="sep"></div>
+    <button class="btn btn-g">Parede</button>
+    <button class="btn" disabled>Perspectiva</button>
+    <button class="btn" disabled>Calibrar</button>
+    <button class="btn" disabled>Grid</button>
+    <div style="flex: 1 1 16px"></div>
+    <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #5A5248"><span style="width: 7px; height: 7px; border-radius: 4px; background: #5E7A44"></span>Salvo</span>
+    <button class="btn" disabled>Exportar</button>
+  </header>
+  <div style="display: flex; flex-wrap: wrap; flex: 1 1 auto">
+    <aside style="flex: 1 1 264px; max-width: 296px; min-width: 240px; background: #FFFFFF; border-right: 1px solid #E6DFD3; padding: 16px; display: flex; flex-direction: column; gap: 14px; box-sizing: border-box">
+      <div style="display: flex; align-items: baseline; justify-content: space-between">
+        <span class="serif" style="font-size: 20px">Biblioteca</span>
+        <span style="font-size: 12px; color: #6E655A">48 fotos</span>
+      </div>
+      <button class="btn" style="width: 100%"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"></path></svg>Carregar fotos</button>
+      <div style="display: flex; gap: 10px; padding: 12px; border-radius: 10px; background: #F7F4EE; color: #5A5248; font-size: 13px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" style="flex: none"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 018 0v3"></path></svg>
+        Defina a escala da parede para posicionar fotos. As 48 fotos de outros projetos já estão disponíveis.
+      </div>
+    </aside>
+    <main style="flex: 999 1 560px; min-width: 0; display: flex; align-items: center; justify-content: center; padding: 40px 32px; background: #ECE6DC">
+      <div style="width: 100%; max-width: 680px; display: flex; flex-direction: column; gap: 24px">
+        <div style="display: flex; flex-direction: column; gap: 6px; text-align: center">
+          <h1 class="serif" style="margin: 0; font-size: 36px; font-weight: 500">Comece pela parede</h1>
+          <span style="color: #5A5248">Uma foto de frente, com a parede inteira e algo de medida conhecida.</span>
+        </div>
+        <div style="border: 1.5px dashed #BFB5A5; border-radius: 16px; background: #FBF9F5; padding: 40px 24px; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center">
+          <div style="width: 56px; height: 56px; border-radius: 28px; background: #F3E1D8; display: flex; align-items: center; justify-content: center">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#9A4426" stroke-width="1.6" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="9" cy="10" r="2"></circle><path d="M21 17l-5-5-9 8"></path></svg>
+          </div>
+          <strong style="font-size: 17px; font-weight: 600">Arraste a foto da parede aqui</strong>
+          <span style="color: #5A5248; font-size: 13px">JPG, PNG ou WEBP</span>
+          <button class="btn btn-p">Escolher arquivo</button>
+          <div style="display: flex; gap: 10px; align-items: center; margin-top: 4px">
+            <span style="font-size: 13px; color: #5A5248">Qualidade</span>
+            <div class="seg" style="width: 240px"><button class="on">Leve</button><button>Médio</button><button>Alto</button></div>
+          </div>
+        </div>
+        <ol style="margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+          <li class="step" style="border-color: #B5532F"><span class="num" style="background: #B5532F; color: #fff">1</span><span style="display: flex; flex-direction: column; gap: 2px"><strong style="font-weight: 600">Parede</strong><span style="font-size: 13px; color: #5A5248">Carregue a foto</span></span></li>
+          <li class="step"><span class="num" style="background: #EFEAE1; color: #5A5248">2</span><span style="display: flex; flex-direction: column; gap: 2px"><strong style="font-weight: 600">Escala</strong><span style="font-size: 13px; color: #5A5248">Perspectiva ou régua</span></span></li>
+          <li class="step"><span class="num" style="background: #EFEAE1; color: #5A5248">3</span><span style="display: flex; flex-direction: column; gap: 2px"><strong style="font-weight: 600">Fotos</strong><span style="font-size: 13px; color: #5A5248">Posicione e confira</span></span></li>
+        </ol>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

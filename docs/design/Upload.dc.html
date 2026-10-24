@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Upload em lote</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&amp;family=Instrument+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#9A4426}a:hover{color:#7A361E}
+.app{font-family:'Instrument Sans',system-ui,sans-serif;color:#1F1B16;font-size:14px;line-height:1.4;-webkit-font-smoothing:antialiased}
+.serif{font-family:'Newsreader',Georgia,serif;font-weight:500;letter-spacing:-.01em}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.btn{font:inherit;font-weight:500;min-height:36px;padding:0 14px;border:1px solid #DDD5C8;background:#fff;border-radius:8px;color:#1F1B16;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;white-space:nowrap;box-sizing:border-box}
+.btn-p{background:#B5532F;border-color:#B5532F;color:#fff}
+.btn-g{background:transparent;border-color:transparent}
+.opt{border:1px solid #DDD5C8;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:2px;cursor:pointer}
+.opt input{accent-color:#B5532F;margin:0 6px 0 0}
+.p1{background:linear-gradient(165deg,#F4CF9C 0%,#E3966A 45%,#9C5545 75%,#4D2D2E 100%)}
+.p2{background:linear-gradient(180deg,#BFD6E2 0%,#7FA8BE 48%,#3F6A80 70%,#26404D 100%)}
+.p5{background:linear-gradient(200deg,#E2DDF0 0%,#A7A0C6 45%,#5E5781 75%,#353050 100%)}
+.p7{background:linear-gradient(185deg,#E3EAE7 0%,#A9BDB7 50%,#5C7570 100%)}
+.p8{background:radial-gradient(circle at 70% 30%,#F7E7C6 0 12%,#D9A45F 30%,#7C4A2C 80%)}
+.px{background:#EFEAE1}
+</style>
+</helmet>
+<div class="app" style="width: 640px; height: 680px; box-sizing: border-box; background: #fff; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden">
+  <div style="display: flex; align-items: center; gap: 8px; padding: 20px 24px 12px">
+    <span class="serif" style="font-size: 24px">Carregar fotos</span>
+    <div style="flex: 1"></div>
+    <button class="btn btn-g" aria-label="Fechar" style="width: 36px; padding: 0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+  </div>
+  <div style="padding: 4px 24px 20px; display: flex; flex-direction: column; gap: 18px; flex: 1 1 auto; overflow: auto">
+    <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+      <button class="btn">Selecionar arquivos</button>
+      <button class="btn">Selecionar pasta</button>
+      <span style="font-size: 13px; color: #6E655A">ou arraste para esta janela</span>
+    </div>
+    <fieldset style="border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px">
+      <legend style="font-size: 12px; font-weight: 500; color: #5A5248; margin-bottom: 8px">Qualidade · definitiva para este envio</legend>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">
+        <label class="opt" style="border: 2px solid #B5532F; background: #FBF4F0"><span style="font-weight: 600"><input type="radio" name="p" checked>Leve</span><span class="mono" style="font-size: 12px; color: #5A5248">1024 px</span></label>
+        <label class="opt"><span style="font-weight: 600"><input type="radio" name="p">Médio</span><span class="mono" style="font-size: 12px; color: #5A5248">2048 px</span></label>
+        <label class="opt"><span style="font-weight: 600"><input type="radio" name="p">Alto</span><span class="mono" style="font-size: 12px; color: #5A5248">3072 px</span></label>
+      </div>
+      <span style="font-size: 12px; color: #6E655A">Convertidas para WebP. Seus arquivos originais não são alterados.</span>
+    </fieldset>
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline">
+        <span style="font-weight: 600">9 de 14 enviadas</span>
+        <span style="font-size: 12px; color: #6E655A">3 arquivos ignorados por formato</span>
+      </div>
+      <div style="height: 6px; background: #EFEAE1; border-radius: 3px; overflow: hidden"><div style="width: 64%; height: 6px; background: #B5532F"></div></div>
+    </div>
+    <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column">
+      <sc-for list="{{files}}" as="f" hint-placeholder-count="6">
+        <li style="display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid #F0EBE3">
+          <span class="{{f.c}}" style="width: 36px; height: 36px; border-radius: 6px; flex: none"></span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+            <span style="font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{f.nome}}</span>
+            <span style="font-size: 12px; color: {{f.cor}}">{{f.status}}</span>
+          </span>
+          <span class="mono" style="font-size: 12px; color: #6E655A">{{f.tam}}</span>
+        </li>
+      </sc-for>
+    </ul>
+  </div>
+  <div style="display: flex; gap: 8px; justify-content: flex-end; padding: 14px 24px; border-top: 1px solid #E6DFD3; background: #FBF9F5">
+    <button class="btn btn-g">Cancelar restantes</button>
+    <button class="btn btn-p">Concluir</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":640,"height":680}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      files: [
+        { nome: 'IMG_3301.jpg', status: 'Concluída', cor: '#4A6336', tam: '412 KB', c: 'p1' },
+        { nome: 'IMG_3302.jpg', status: 'Concluída', cor: '#4A6336', tam: '388 KB', c: 'p2' },
+        { nome: 'praia_2024.png', status: 'Processando…', cor: '#9A4426', tam: '—', c: 'p7' },
+        { nome: 'IMG_3304.heic', status: 'Formato não suportado', cor: '#9F1D14', tam: '—', c: 'px' },
+        { nome: 'viagem-roma.webp', status: 'Na fila', cor: '#6E655A', tam: '—', c: 'p5' },
+        { nome: 'IMG_3306.jpg', status: 'Na fila', cor: '#6E655A', tam: '—', c: 'p8' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

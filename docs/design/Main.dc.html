@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Editor da composição</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&amp;family=Instrument+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#F7F4EE}
+a{color:#9A4426}a:hover{color:#7A361E}
+.app{font-family:'Instrument Sans',system-ui,sans-serif;color:#1F1B16;font-size:14px;line-height:1.4;-webkit-font-smoothing:antialiased}
+.serif{font-family:'Newsreader',Georgia,serif;font-weight:500;letter-spacing:-.01em}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.btn{font:inherit;font-weight:500;min-height:36px;padding:0 14px;border:1px solid #DDD5C8;background:#fff;border-radius:8px;color:#1F1B16;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;text-decoration:none;white-space:nowrap;box-sizing:border-box}
+.btn:hover{background:#F3EEE6;color:#1F1B16}
+.btn-p{background:#B5532F;border-color:#B5532F;color:#fff}.btn-p:hover{background:#9A4426;color:#fff}
+.btn-g{background:transparent;border-color:transparent}
+.btn-i{width:36px;padding:0}
+.hb{padding:0 9px;gap:6px}
+.off,.off:hover{color:#8E8579;background:transparent;cursor:not-allowed}
+.seg{display:inline-grid;grid-auto-flow:column;grid-auto-columns:1fr;background:#EFEAE1;border-radius:8px;padding:3px;gap:2px}
+.seg button{font:inherit;font-weight:500;min-height:30px;padding:0 8px;border:0;border-radius:6px;background:transparent;color:#5A5248;cursor:pointer;white-space:nowrap}
+.seg .on{background:#fff;color:#1F1B16;box-shadow:0 1px 2px #1F1B1624}
+.seg button[disabled]{color:#8E8579;cursor:not-allowed;background:transparent;box-shadow:none}
+.tgl{font:inherit;font-weight:500;min-height:36px;padding:0 10px;border:1px solid #DDD5C8;border-radius:8px;background:#fff;color:#1F1B16;display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.tgl.on{background:#EFEAE1;border-color:#EFEAE1}
+.lbl{font-size:12px;font-weight:500;color:#5A5248}
+.in{font:inherit;min-height:36px;border:1px solid #DDD5C8;border-radius:8px;padding:0 10px;width:100%;box-sizing:border-box;background:#fff;color:#1F1B16}
+.in[disabled]{background:#F7F4EE;color:#8E8579;cursor:not-allowed}
+.sep{width:1px;height:24px;background:#DDD5C8;margin:0 2px}
+.chip{font-family:'IBM Plex Mono',monospace;font-size:12px;color:#5A5248;background:#EFEAE1;border-radius:6px;padding:3px 8px;white-space:nowrap}
+.p1{background:linear-gradient(165deg,#F4CF9C 0%,#E3966A 45%,#9C5545 75%,#4D2D2E 100%)}
+.p2{background:linear-gradient(180deg,#BFD6E2 0%,#7FA8BE 48%,#3F6A80 70%,#26404D 100%)}
+.p3{background:linear-gradient(155deg,#D6DDB4 0%,#93AA70 45%,#557048 72%,#2F4229 100%)}
+.p4{background:radial-gradient(circle at 50% 38%,#EBDCC8 0 18%,#B79C80 19% 40%,#6E5A49 75%)}
+.p5{background:linear-gradient(200deg,#E2DDF0 0%,#A7A0C6 45%,#5E5781 75%,#353050 100%)}
+.p6{background:linear-gradient(170deg,#F2DCD4 0%,#D39C91 48%,#86504C 100%)}
+.p7{background:linear-gradient(185deg,#E3EAE7 0%,#A9BDB7 50%,#5C7570 100%)}
+.p8{background:radial-gradient(circle at 70% 30%,#F7E7C6 0 12%,#D9A45F 30%,#7C4A2C 80%)}
+.grid{background-image:linear-gradient(#1F1B162e 1px,transparent 1px),linear-gradient(90deg,#1F1B162e 1px,transparent 1px),linear-gradient(#1F1B1614 1px,transparent 1px),linear-gradient(90deg,#1F1B1614 1px,transparent 1px);background-size:100px 100px,100px 100px,20px 20px,20px 20px}
+.hatch{background:repeating-linear-gradient(45deg,#B4231833 0 6px,#FBEDEA 6px 12px)}
+.h{position:absolute;width:8px;height:8px;background:#fff;border:2px solid #B5532F;border-radius:2px;box-sizing:border-box}
+.opt{font:inherit;width:100%;display:flex;align-items:center;justify-content:space-between;min-height:32px;padding:0 10px;border:0;border-radius:6px;background:transparent;color:#1F1B16;cursor:pointer;text-align:left}
+.opt:hover{background:#F3EEE6}
+.grp{font-size:12px;font-weight:500;color:#6E655A;padding:8px 10px 4px}
+.narrow{display:none}
+@media (max-width:1439px){.wide{display:none}.narrow{display:inline-flex}}
+</style>
+</helmet>
+<div class="app" style="min-height: 900px; display: flex; flex-direction: column; background: #F7F4EE">
+  <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 10px 12px; background: #FFFFFF; border-bottom: 1px solid #E6DFD3">
+    <a href="Projetos.dc.html" class="btn btn-g btn-i" aria-label="Voltar para projetos"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a>
+    <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="4" width="12" height="16" rx="1.5" fill="#B5532F"></rect><rect x="17" y="4" width="13" height="9" rx="1.5" fill="#1F1B16"></rect><rect x="17" y="16" width="13" height="12" rx="1.5" fill="#D9C9B4"></rect><rect x="2" y="23" width="12" height="5" rx="1.5" fill="#D9C9B4"></rect></svg>
+    <span class="serif" style="font-size: 18px; margin: 0 6px; max-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Sala de estar</span>
+    <button class="btn hb">Base <span style="font-size: 12px; color: #9F1D14; background: #FBE9E6; border-radius: 999px; padding: 1px 8px">1 sem foto</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+    <a href="Comparacao.dc.html" class="btn btn-g hb">Comparar</a>
+    <div class="sep"></div>
+    <a href="Templates.dc.html" class="btn btn-g hb">Templates</a>
+    <a href="AreaUtil.dc.html" class="btn btn-g hb wide">Área útil</a>
+    <a href="Perspectiva.dc.html" class="btn btn-g hb wide">Perspectiva</a>
+    <a href="Calibracao.dc.html" class="btn btn-g hb wide">Calibrar</a>
+    <span class="chip" style="margin: 0 2px">4,0 px/cm</span>
+    <button class="btn btn-g hb off wide" aria-disabled="true" title="Disponível em uma próxima versão">Parede</button>
+    <button class="btn btn-g hb narrow" aria-haspopup="menu">Parede<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+    <div class="sep"></div>
+    <button class="tgl on" aria-pressed="true" title="Grid"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 9h18M3 15h18M9 3v18M15 3v18"></path></svg><span class="mono" style="font-size: 13px">5 cm</span></button>
+    <button class="tgl on btn-i" aria-pressed="true" aria-label="Encaixar no grid" title="Encaixar no grid" style="padding: 0; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 3v8a6 6 0 0012 0V3"></path><path d="M6 7h4M14 7h4"></path></svg></button>
+    <div class="sep"></div>
+    <button class="btn btn-g btn-i" aria-label="Desfazer" title="Desfazer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M9 14L4 9l5-5"></path><path d="M4 9h10a6 6 0 010 12h-3"></path></svg></button>
+    <button class="btn btn-g btn-i" aria-label="Refazer" title="Refazer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M15 14l5-5-5-5"></path><path d="M20 9H10a6 6 0 000 12h3"></path></svg></button>
+    <div style="flex: 1 1 8px"></div>
+    <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #5A5248; margin-right: 6px; white-space: nowrap"><span style="width: 7px; height: 7px; border-radius: 4px; background: #5E7A44"></span>Salvo 14:35</span>
+    <button class="btn hb" title="Salvar (Ctrl+S)">Salvar</button>
+    <button class="btn btn-p hb" style="padding: 0 12px">Exportar</button>
+  </header>
+
+  <div style="display: flex; flex-wrap: wrap; flex: 1 1 auto; align-items: stretch">
+    <aside style="flex: 1 1 256px; max-width: 280px; min-width: 232px; background: #FFFFFF; border-right: 1px solid #E6DFD3; padding: 16px; display: flex; flex-direction: column; gap: 14px; box-sizing: border-box">
+      <div style="display: flex; align-items: baseline; justify-content: space-between">
+        <span class="serif" style="font-size: 20px">Biblioteca</span>
+        <span style="font-size: 12px; color: #6E655A">48 fotos</span>
+      </div>
+      <button class="btn btn-p" style="width: 100%"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"></path></svg>Carregar fotos</button>
+      <div style="position: relative; display: flex">
+        <div class="seg" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) 34px; width: 100%; box-sizing: border-box">
+          <button class="on" style="padding: 0 6px">Todas</button><button style="padding: 0 6px">Projeto</button><button style="padding: 0 6px">Variante</button><button style="padding: 0" aria-label="Mais filtros" aria-haspopup="menu" aria-expanded="{{menuExpanded}}" onClick="{{toggleMenu}}">⋯</button>
+        </div>
+        <sc-if value="{{menuOpen}}" hint-placeholder-val="{{false}}">
+          <div role="menu" style="position: absolute; right: 0; top: 42px; z-index: 5; min-width: 180px; background: #fff; border: 1px solid #E6DFD3; border-radius: 10px; box-shadow: 0 12px 28px #1F1B1629; padding: 6px; display: flex; flex-direction: column">
+            <a role="menuitem" href="BibliotecaExcluidas.dc.html" style="display: flex; align-items: center; justify-content: space-between; min-height: 36px; padding: 0 10px; border-radius: 6px; color: #1F1B16; text-decoration: none">Excluídas <span style="font-size: 12px; color: #6E655A">3</span></a>
+          </div>
+        </sc-if>
+      </div>
+      <div style="position: relative" title="Disponível em uma próxima versão">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8E8579" stroke-width="1.8" aria-hidden="true" style="position: absolute; left: 10px; top: 10px"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+        <input class="in" placeholder="Buscar por nome" aria-label="Buscar por nome" disabled style="padding-left: 34px">
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+        <sc-for list="{{thumbs}}" as="t" hint-placeholder-count="8">
+          <button style="font: inherit; text-align: left; padding: 0; border: 0; background: transparent; cursor: grab; display: flex; flex-direction: column; gap: 6px; color: #1F1B16">
+            <span class="{{t.cls}}" style="display: block; height: 88px; border-radius: 6px; box-shadow: {{t.ring}}"></span>
+            <span style="font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{t.nome}}</span>
+          </button>
+        </sc-for>
+      </div>
+    </aside>
+
+    <main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+      <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px 16px; border-bottom: 1px solid #E6DFD3; background: #FBF9F5">
+        <button class="btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Adicionar</button>
+        <button class="btn btn-g">Duplicar</button>
+        <button class="btn btn-g">Trazer para frente</button>
+        <button class="btn btn-g">Enviar para trás</button>
+        <div style="flex: 1 1 10px"></div>
+        <button class="btn btn-g btn-i" aria-label="Diminuir zoom"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
+        <span class="mono" style="font-size: 12px; min-width: 40px; text-align: center">75%</span>
+        <button class="btn btn-g btn-i" aria-label="Aumentar zoom"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+        <button class="btn btn-g">Ajustar à tela</button>
+      </div>
+      <div style="flex: 1 1 auto; overflow: auto; padding: 28px; background: #ECE6DC">
+        <div style="position: relative; width: 860px; height: 560px; margin: 0 auto; background: linear-gradient(180deg,#EDE6DA 0%,#E4DBCC 100%); box-shadow: 0 1px 0 #D6CCBC, 0 18px 40px #5A524824; overflow: hidden">
+          <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 14px; background: #D3C6B3; border-top: 1px solid #C4B6A1"></div>
+          <div style="position: absolute; left: 210px; width: 440px; bottom: 14px; height: 96px; background: #8F7D68; border-radius: 22px 22px 6px 6px"></div>
+          <div style="position: absolute; left: 190px; width: 48px; bottom: 14px; height: 70px; background: #7E6C58; border-radius: 16px 16px 4px 4px"></div>
+          <div style="position: absolute; left: 622px; width: 48px; bottom: 14px; height: 70px; background: #7E6C58; border-radius: 16px 16px 4px 4px"></div>
+          <div style="position: absolute; left: 252px; width: 172px; bottom: 54px; height: 48px; background: #A08D77; border-radius: 14px"></div>
+          <div style="position: absolute; left: 436px; width: 172px; bottom: 54px; height: 48px; background: #A08D77; border-radius: 14px"></div>
+          <sc-if value="{{showGrid}}" hint-placeholder-val="{{true}}">
+            <div class="grid" style="position: absolute; inset: 0"></div>
+          </sc-if>
+          <div style="position: absolute; left: 70px; top: 40px; width: 720px; height: 440px; border: 1px dashed #5A5248; box-sizing: border-box; box-shadow: 0 0 0 2000px #F7F4EE80; pointer-events: none"></div>
+          <span class="mono" style="position: absolute; left: 70px; top: 20px; font-size: 11px; color: #5A5248">Área útil · 180,0 × 110,0 cm</span>
+          <span class="mono" style="position: absolute; left: 6px; top: 4px; font-size: 11px; color: #5A5248">0,0</span>
+
+          <div style="position: absolute; left: 152px; top: 72px; width: 672px; height: 204px; border: 1.5px dashed #5A5248; border-radius: 4px; box-sizing: border-box"></div>
+          <span class="mono" style="position: absolute; left: 600px; top: 50px; font-size: 11px; color: #fff; background: #5A5248; border-radius: 999px; padding: 2px 8px">164,0 × 47,0 cm</span>
+
+          <div class="p2" style="position: absolute; left: 280px; top: 80px; width: 120px; height: 80px; outline: {{outB}}; outline-offset: 2px"></div>
+          <div class="p7" style="position: absolute; left: 280px; top: 180px; width: 40px; height: 60px; outline: {{outC}}; outline-offset: 2px"></div>
+          <div class="p6" style="position: absolute; left: 340px; top: 180px; width: 40px; height: 60px"></div>
+          <div class="p3" style="position: absolute; left: 440px; top: 80px; width: 80px; height: 120px; outline: 2px dashed #B42318; outline-offset: 2px"></div>
+          <div class="p8" style="position: absolute; left: 420px; top: 160px; width: 60px; height: 40px; outline: 2px dashed #B42318; outline-offset: 2px"></div>
+          <span style="position: absolute; left: 488px; top: 206px; display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 500; color: #fff; background: #B42318; border-radius: 999px; padding: 2px 8px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 8v5M12 17h.01"></path><circle cx="12" cy="12" r="9"></circle></svg>Sobreposição</span>
+
+          <div class="p5" style="position: absolute; left: 776px; top: 120px; width: 40px; height: 60px; outline: 2px dashed #B42318; outline-offset: 2px"></div>
+          <span style="position: absolute; left: 706px; top: 190px; display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 500; color: #fff; background: #B42318; border-radius: 999px; padding: 2px 8px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 8v5M12 17h.01"></path><circle cx="12" cy="12" r="9"></circle></svg>Fora da área útil</span>
+
+          <div class="hatch" style="position: absolute; left: 400px; top: 228px; width: 60px; height: 40px; border: 1.5px dashed #B42318; box-sizing: border-box; display: flex; align-items: center; justify-content: center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9F1D14" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 3l18 18"></path></svg>
+          </div>
+
+          <div style="position: absolute; left: 160px; top: 80px; width: {{selW}}; height: {{selH}}; background: #FFFFFF; box-sizing: border-box; padding: 8px; outline: 2px solid #B5532F; outline-offset: 3px; box-shadow: 0 1px 2px #1F1B1633">
+            <div class="p1" style="width: 100%; height: 100%"></div>
+          </div>
+          <div class="h" style="left: 153px; top: 73px"></div>
+          <div class="h" style="left: {{hR}}; top: 73px"></div>
+          <div class="h" style="left: 153px; top: {{hB}}"></div>
+          <div class="h" style="left: {{hR}}; top: {{hB}}"></div>
+          <span class="mono" style="position: absolute; left: 160px; top: {{lblY}}; font-size: 11px; color: #fff; background: #B5532F; border-radius: 999px; padding: 2px 8px; white-space: nowrap">{{extLabel}}</span>
+        </div>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 18px; padding: 7px 16px; border-top: 1px solid #E6DFD3; background: #FFFFFF; font-size: 12px; color: #5A5248">
+        <span class="mono">X 112,5 · Y 40,0 cm</span>
+        <span>Setas movem 1 passo do grid · Shift + setas: 5 cm</span>
+        <div style="flex: 1 1 10px"></div>
+        <span>Medidas aproximadas, parede considerada plana</span>
+      </div>
+    </main>
+
+    <aside style="flex: 1 1 320px; max-width: 320px; min-width: 280px; background: #FFFFFF; border-left: 1px solid #E6DFD3; padding: 18px; display: flex; flex-direction: column; gap: 18px; box-sizing: border-box">
+      <div style="display: flex; gap: 12px; align-items: center">
+        <div class="p1" style="width: 46px; height: 60px; border-radius: 4px; flex: none; outline: 4px solid #fff; box-shadow: 0 0 0 5px #E6DFD3"></div>
+        <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0; padding-left: 4px">
+          <span class="serif" style="font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">IMG_2041.jpg</span>
+          <span style="font-size: 12px; color: #6E655A">Retrato natural</span>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end">
+        <div style="display: flex; flex-direction: column; gap: 6px; position: relative">
+          <span class="lbl" id="lt">Tamanho</span>
+          <button class="btn" aria-haspopup="listbox" aria-expanded="{{sizeExpanded}}" aria-labelledby="lt" onClick="{{toggleSize}}" style="justify-content: space-between; padding: 0 10px; width: 100%"><span class="mono">{{sizeLabel}}</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+          <sc-if value="{{sizeOpen}}" hint-placeholder-val="{{false}}">
+            <div role="listbox" aria-label="Tamanho" style="position: absolute; left: 0; top: 66px; z-index: 6; width: 220px; max-height: 420px; overflow: auto; background: #fff; border: 1px solid #E6DFD3; border-radius: 10px; box-shadow: 0 12px 28px #1F1B1629; padding: 6px">
+              <sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
+                <div class="grp">{{g.nome}}</div>
+                <sc-for list="{{g.itens}}" as="i" hint-placeholder-count="5">
+                  <button role="option" class="opt mono" aria-selected="{{i.sel}}" onClick="{{i.pick}}" style="font-family: 'IBM Plex Mono', monospace; background: {{i.bg}}"><span>{{i.label}}</span><sc-if value="{{i.isSel}}" hint-placeholder-val="{{false}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#B5532F" stroke-width="2" aria-hidden="true"><path d="M5 12l5 5L20 7"></path></svg></sc-if></button>
+                </sc-for>
+              </sc-for>
+              <div style="height: 1px; background: #F0EBE3; margin: 6px 4px"></div>
+              <a role="option" class="opt" href="Recorte.dc.html" style="text-decoration: none">Personalizado…</a>
+            </div>
+          </sc-if>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <span class="lbl">Orientação</span>
+          <div class="seg" style="width: 152px"><button class="{{oR}}" onClick="{{setR}}" disabled="{{sq}}" style="font-size: 13px">Retrato</button><button class="{{oP}}" onClick="{{setP}}" disabled="{{sq}}" style="font-size: 13px">Paisagem</button></div>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <span class="lbl">Borda</span>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+          <div style="position: relative"><label for="bw" style="position: absolute; width: 1px; height: 1px; overflow: hidden">Largura da borda em cm</label><input id="bw" class="in mono" value="2,0"><span style="position: absolute; right: 10px; top: 9px; font-size: 12px; color: #6E655A">cm</span></div>
+          <button class="btn" style="justify-content: flex-start; padding: 0 10px" aria-haspopup="dialog" aria-label="Cor da borda: branco"><span style="width: 16px; height: 16px; border-radius: 4px; border: 1px solid #CFC5B6; background: #fff"></span>Branco</button>
+        </div>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #F7F4EE; border-radius: 10px">
+        <span style="font-size: 13px; color: #5A5248">Tamanho externo</span><span class="mono" style="font-weight: 500">{{extLabel}}</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <span class="lbl">Posição do canto superior esquerdo</span>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+          <div style="position: relative"><label for="px" style="position: absolute; left: 10px; top: 9px; font-size: 12px; color: #6E655A">X</label><input id="px" class="in mono" value="40,0" style="padding-left: 26px"></div>
+          <div style="position: relative"><label for="py" style="position: absolute; left: 10px; top: 9px; font-size: 12px; color: #6E655A">Y</label><input id="py" class="in mono" value="20,0" style="padding-left: 26px"></div>
+        </div>
+      </div>
+      <sc-if value="{{overlap}}" hint-placeholder-val="{{false}}">
+        <div style="display: flex; gap: 8px; padding: 10px 12px; border-radius: 10px; background: #FBE9E6; color: #8A1A12; font-size: 13px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true" style="flex: none; margin-top: 1px"><path d="M12 8v5M12 17h.01"></path><circle cx="12" cy="12" r="9"></circle></svg>Esta foto sobrepõe outra na parede.</div>
+      </sc-if>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <span class="lbl">Enquadramento</span>
+        <a href="Recorte.dc.html" class="btn" style="justify-content: flex-start"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M6 2v14a2 2 0 002 2h14"></path><path d="M18 22V8a2 2 0 00-2-2H2"></path></svg>Ajustar recorte</a>
+      </div>
+      <div style="margin-top: auto; display: flex; gap: 8px">
+        <button class="btn" style="flex: 1">Duplicar</button>
+        <button class="btn" style="flex: 1; color: #9F1D14">Remover</button>
+      </div>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"showGrid":{"editor":"boolean","default":true},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const s = this.state || {};
+    const size = s.size || '20 × 30';
+    const ori = s.ori || 'R';
+    const menuOpen = !!s.menuOpen;
+    const sizeOpen = !!s.sizeOpen;
+    const grupos = [
+      ['Padrão', ['10 × 15', '13 × 18', '15 × 21', '20 × 25', '20 × 30']],
+      ['Quadrados', ['13 × 13', '15 × 15']],
+      ['Grandes', ['30 × 40', '30 × 45', '40 × 50', '40 × 60', '50 × 60', '50 × 70', '60 × 80', '60 × 90', '70 × 100', '75 × 120']]
+    ];
+    // tamanho impresso (cm) + borda 2 cm por lado; escala do desenho 4 px/cm, limitada para caber na parede
+    const [a, b] = size.split(' × ').map(Number);
+    const sq = a === b;
+    const pw = sq || ori === 'R' ? a : b;
+    const ph = sq || ori === 'R' ? b : a;
+    const w = pw + 4, h = ph + 4;
+    const k = Math.min(4, 600 / w, 440 / h);
+    const fmt = (n) => n.toFixed(1).replace('.', ',');
+    const overB = 40 + w > 70;
+    const overC = overB && 20 + h > 45;
+    const red = '2px dashed #B42318';
+    return {
+      showGrid: this.props.showGrid ?? true,
+      menuOpen, menuExpanded: menuOpen ? 'true' : 'false',
+      toggleMenu: () => this.setState({ menuOpen: !menuOpen }),
+      sizeOpen, sizeExpanded: sizeOpen ? 'true' : 'false',
+      toggleSize: () => this.setState({ sizeOpen: !sizeOpen }),
+      sizeLabel: size,
+      groups: grupos.map(([nome, itens]) => ({ nome, itens: itens.map((label) => ({
+        label, isSel: label === size, sel: label === size ? 'true' : 'false', bg: label === size ? '#F3E1D8' : 'transparent',
+        pick: () => this.setState({ size: label, sizeOpen: false })
+      })) })),
+      sq,
+      oR: !sq && ori === 'R' ? 'on' : '', oP: !sq && ori === 'P' ? 'on' : '',
+      setR: () => this.setState({ ori: 'R' }), setP: () => this.setState({ ori: 'P' }),
+      selW: (w * k) + 'px', selH: (h * k) + 'px',
+      hR: (160 + w * k - 7) + 'px', hB: (80 + h * k - 7) + 'px',
+      lblY: (80 + h * k + 10) + 'px',
+      extLabel: fmt(w) + ' × ' + fmt(h) + ' cm',
+      outB: overB ? red : 'none', outC: overC ? red : 'none',
+      overlap: overB,
+      thumbs: [
+        { nome: 'IMG_2041.jpg', cls: 'p1', ring: '0 0 0 2px #B5532F' },
+        { nome: 'praia_2023.jpg', cls: 'p2', ring: 'none' },
+        { nome: 'serra_fina.jpg', cls: 'p3', ring: 'none' },
+        { nome: 'retrato_vo.jpg', cls: 'p4', ring: 'none' },
+        { nome: 'entardecer.webp', cls: 'p5', ring: 'none' },
+        { nome: 'casamento_01.jpg', cls: 'p6', ring: 'none' },
+        { nome: 'neblina.png', cls: 'p7', ring: 'none' },
+        { nome: 'festa_sao_joao.jpg', cls: 'p8', ring: 'none' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

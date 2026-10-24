@@ -1,0 +1,42 @@
+{
+  "name": "deco-wall",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.15.0"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "seed:test": "tsx tests/seed/run.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p apps/web/tsconfig.json",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "dev": "node scripts/dev.mjs",
+    "build": "vite build --config apps/web/vite.config.ts",
+    "start": "tsx apps/api/src/main.ts",
+    "e2e": "npm run build && playwright test"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.64.1",
+    "@types/node": "24.19.2",
+    "@vitest/coverage-v8": "5.0.5",
+    "eslint": "10.13.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "mongodb": "7.7.0",
+    "prettier": "3.9.10",
+    "sharp": "0.35.5",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.71.2",
+    "vitest": "5.0.5",
+    "zod": "4.6.7"
+  }
+}

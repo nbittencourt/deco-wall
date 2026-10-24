@@ -1,0 +1,23 @@
+{
+  "larguraCm": 300,
+  "alturaCm": 200,
+  "cantosPx": [
+    [
+      200,
+      150
+    ],
+    [
+      1400,
+      250
+    ],
+    [
+      1400,
+      1050
+    ],
+    [
+      200,
+      1150
+    ]
+  ],
+  "ordem": "sentido horário a partir do canto superior esquerdo do retângulo da parede"
+}
