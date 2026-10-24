@@ -1,7 +1,14 @@
-import { ImageOff, MoreHorizontal, Search } from 'lucide-react';
-import { BotaoEmBreve, CampoEmBreve } from '../componentes/proprios/BotaoEmBreve';
+import { formatarMetaProjeto } from '@deco-wall/domain';
+import { ImageOff, MoreHorizontal, Plus, Search } from 'lucide-react';
+import { useEffect, useState, type MouseEvent } from 'react';
+import { caminhoDoProjeto, navegarPadrao } from '../../app/navegacao';
+import { clienteHttp } from '../../infra/clienteApi';
+import type { ClienteApi, ResumoProjeto } from '../../infra/dto';
+import { CampoEmBreve } from '../componentes/proprios/BotaoEmBreve';
 import { ComDica } from '../componentes/proprios/ComDica';
+import { DialogoExcluirProjeto, DialogoRenomearProjeto } from '../componentes/proprios/DialogosProjeto';
 import { StatusApi } from '../componentes/proprios/StatusApi';
+import { Alert } from '../componentes/ui/alert';
 import { Button } from '../componentes/ui/button';
 import {
   DropdownMenu,
@@ -10,17 +17,62 @@ import {
   DropdownMenuTrigger,
 } from '../componentes/ui/dropdown-menu';
 
-// DESIGN §7 / protótipo 01: casca estática, sem dados reais. Ações ainda não implementadas ficam inativas (§7.1).
-const PROJETOS_EXEMPLO = [
-  { nome: 'Sala de estar', meta: '3 variantes · editado hoje, 14:35' },
-  { nome: 'Corredor', meta: '1 variante · editado em 12/10' },
-  { nome: 'Quarto', meta: '2 variantes · editado em 02/10' },
-];
+// Tela Projetos com dados reais (spec M1 §3.1; protótipo 01). Busca de projetos segue inativa (DV-03).
 
-// Função prevista e não implementada (DESIGN §7.1): o item fica aberto e não faz nada.
-const semEfeito = (evento: Event) => evento.preventDefault();
+export interface PropsProjetos {
+  api?: ClienteApi;
+  navegar?: (caminho: string) => void;
+  agora?: () => Date;
+}
 
-export function Projetos() {
+export function Projetos({
+  api = clienteHttp,
+  navegar = navegarPadrao,
+  agora = () => new Date(),
+}: PropsProjetos) {
+  const [projetos, setProjetos] = useState<ResumoProjeto[] | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [renomeando, setRenomeando] = useState<ResumoProjeto | null>(null);
+  const [excluindo, setExcluindo] = useState<ResumoProjeto | null>(null);
+  const [criando, setCriando] = useState(false);
+
+  useEffect(() => {
+    let ativo = true;
+    api
+      .listarProjetos()
+      .then((lista) => {
+        if (!ativo) return;
+        setProjetos(lista);
+        setErro(null);
+      })
+      .catch(() => {
+        if (ativo) setErro('Não foi possível carregar os projetos.');
+      });
+    return () => {
+      ativo = false;
+    };
+  }, [api]);
+
+  // A-02: cria "Projeto sem nome" na hora e abre o editor; o nome se muda depois.
+  const criarProjeto = async () => {
+    setCriando(true);
+    try {
+      const { projeto } = await api.criarProjeto();
+      navegar(caminhoDoProjeto(projeto._id));
+    } catch {
+      setErro('Não foi possível criar o projeto.');
+      setCriando(false);
+    }
+  };
+
+  const abrir = (evento: MouseEvent<HTMLAnchorElement>, id: string) => {
+    if (evento.ctrlKey || evento.metaKey || evento.shiftKey || evento.button !== 0) return;
+    evento.preventDefault();
+    navegar(caminhoDoProjeto(id));
+  };
+
+  const vazio = projetos !== null && projetos.length === 0;
+
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="flex h-14 items-center justify-between gap-6 border-b border-line-soft bg-surface px-6">
@@ -44,49 +96,110 @@ export function Projetos() {
               />
               <CampoEmBreve rotulo="Buscar projeto" placeholder="Buscar projeto" className="h-10 pl-9" />
             </div>
-            <BotaoEmBreve variant="default" size="lista">
+            <Button size="lista" disabled={criando} onClick={() => void criarProjeto()}>
+              <Plus aria-hidden="true" />
               Novo projeto
-            </BotaoEmBreve>
+            </Button>
           </div>
         </div>
 
-        <ul className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
-          {PROJETOS_EXEMPLO.map((projeto) => (
-            <li
-              key={projeto.nome}
-              className="flex flex-col overflow-hidden rounded-lg border border-line-soft bg-surface transition-shadow hover:shadow-md"
-            >
-              <div className="flex h-40 flex-col items-center justify-center gap-2 bg-paper text-ink-3">
-                <ImageOff className="size-6" aria-hidden="true" />
-                <span className="text-body-sm">Sem foto da parede</span>
-              </div>
-              <div className="flex items-start justify-between gap-2 p-4">
-                <div className="flex min-w-0 flex-col gap-0.5">
-                  <h2 className="text-display-sm truncate text-ink">{projeto.nome}</h2>
-                  <p className="text-body-sm text-ink-3">{projeto.meta}</p>
+        {erro && <Alert variant="alerta">{erro}</Alert>}
+
+        {vazio && (
+          <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-line p-12 text-center">
+            <h2 className="text-display-md text-ink">Nenhum projeto ainda</h2>
+            <p className="text-body-sm text-ink-2">Crie um projeto para começar pela foto da parede.</p>
+            <Button size="lista" disabled={criando} onClick={() => void criarProjeto()}>
+              <Plus aria-hidden="true" />
+              Novo projeto
+            </Button>
+          </div>
+        )}
+
+        {projetos && projetos.length > 0 && (
+          <ul className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
+            {projetos.map((projeto) => (
+              <li
+                key={projeto._id}
+                className="relative flex flex-col overflow-hidden rounded-lg border border-line-soft bg-surface transition-shadow hover:shadow-md"
+              >
+                <a
+                  href={caminhoDoProjeto(projeto._id)}
+                  aria-label={`Abrir ${projeto.nome}`}
+                  onClick={(evento) => abrir(evento, projeto._id)}
+                  className="flex flex-col"
+                >
+                  {projeto.thumbUrl ? (
+                    <img
+                      src={projeto.thumbUrl}
+                      alt={`Parede de ${projeto.nome}`}
+                      className="h-40 w-full bg-paper object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-40 flex-col items-center justify-center gap-2 bg-paper text-ink-3">
+                      <ImageOff className="size-6" aria-hidden="true" />
+                      <span className="text-body-sm">Sem foto da parede</span>
+                    </div>
+                  )}
+                  <div className="flex min-w-0 flex-col gap-0.5 p-4 pr-14">
+                    <h2 className="text-display-sm truncate text-ink">{projeto.nome}</h2>
+                    <p className="text-body-sm text-ink-3">
+                      {formatarMetaProjeto(
+                        {
+                          qtdVariantes: projeto.qtdVariantes,
+                          temParede: projeto.temParede,
+                          atualizadoEm: new Date(projeto.atualizadoEm),
+                        },
+                        agora(),
+                      )}
+                    </p>
+                  </div>
+                </a>
+                <div className="absolute right-3 bottom-3">
+                  <DropdownMenu>
+                    <ComDica texto="Mais ações">
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" aria-label={`Mais ações de ${projeto.nome}`}>
+                          <MoreHorizontal aria-hidden="true" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                    </ComDica>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onSelect={() => setRenomeando(projeto)}>Renomear</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => setExcluindo(projeto)} className="text-danger-ink">
+                        Excluir
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-                <DropdownMenu>
-                  <ComDica texto="Mais ações">
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" aria-label={`Mais ações de ${projeto.nome}`}>
-                        <MoreHorizontal aria-hidden="true" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                  </ComDica>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem aria-disabled="true" onSelect={semEfeito} className="text-ink-disabled">
-                      Renomear
-                    </DropdownMenuItem>
-                    <DropdownMenuItem aria-disabled="true" onSelect={semEfeito} className="text-ink-disabled">
-                      Excluir
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </li>
-          ))}
-        </ul>
+              </li>
+            ))}
+          </ul>
+        )}
       </main>
+
+      <DialogoRenomearProjeto
+        aberto={renomeando !== null}
+        nomeAtual={renomeando?.nome ?? ''}
+        onCancelar={() => setRenomeando(null)}
+        onConfirmar={async (nome) => {
+          if (!renomeando) return;
+          await api.renomearProjeto(renomeando._id, nome);
+          setProjetos((lista) => lista?.map((p) => (p._id === renomeando._id ? { ...p, nome } : p)) ?? null);
+          setRenomeando(null);
+        }}
+      />
+      <DialogoExcluirProjeto
+        aberto={excluindo !== null}
+        nome={excluindo?.nome ?? ''}
+        onCancelar={() => setExcluindo(null)}
+        onConfirmar={async () => {
+          if (!excluindo) return;
+          await api.excluirProjeto(excluindo._id);
+          setProjetos((lista) => lista?.filter((p) => p._id !== excluindo._id) ?? null);
+          setExcluindo(null);
+        }}
+      />
     </div>
   );
 }

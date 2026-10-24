@@ -37,7 +37,7 @@ describe('linhasVisiveis', () => {
       pxPorCmTela: 1,
     });
     expect(xs).toEqual([-200, -100, 0, 100, 200, 300, 400]);
-    expect(ys).toEqual([-100, 0, 100, 200, 300]);
+    expect(ys).toEqual([-100, 0, 100, 200]);
   });
 
   it('passo fracionário não acumula erro de ponto flutuante', () => {

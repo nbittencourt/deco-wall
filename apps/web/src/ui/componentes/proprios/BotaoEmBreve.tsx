@@ -28,22 +28,26 @@ const ESTILO_INATIVO = {
   outro: 'text-ink-disabled hover:bg-transparent',
 } as const;
 
-type BotaoEmBrevProps = Omit<BotaoProps, 'onClick'> & {
+type BotaoInativoProps = Omit<BotaoProps, 'onClick'> & {
   children?: ReactNode;
   // Obrigatório quando o botão só tem ícone (acessibilidade).
   rotuloIcone?: string;
+  // Por que o botão está inativo. Padrão: função de uma próxima versão (§7.1); por estado, a dica diz o que falta.
+  motivo?: string;
 };
 
 // Nenhum clique chega ao botão inativo, mesmo que alguém passe onClick por fora.
 const semEfeito = (evento: MouseEvent) => evento.preventDefault();
 
-export function BotaoEmBreve({
+// Controle indisponível: aria-disabled, foco e tooltip com o motivo (DESIGN §7.1).
+export function BotaoInativo({
   className,
   children,
   rotuloIcone,
+  motivo = TEXTO_EM_BREVE,
   variant = 'ghost',
   ...props
-}: BotaoEmBrevProps) {
+}: BotaoInativoProps) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -58,9 +62,14 @@ export function BotaoEmBreve({
           {children}
         </Button>
       </TooltipTrigger>
-      <Dica titulo={rotuloIcone}>{TEXTO_EM_BREVE}</Dica>
+      <Dica titulo={rotuloIcone}>{motivo}</Dica>
     </Tooltip>
   );
+}
+
+// Função prevista e ainda não implementada.
+export function BotaoEmBreve(props: Omit<BotaoInativoProps, 'motivo'>) {
+  return <BotaoInativo {...props} />;
 }
 
 // Campo de texto inativo (busca, "Linha forte a cada"): aceita foco, não aceita digitação.

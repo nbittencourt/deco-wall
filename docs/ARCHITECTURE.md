@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Versão | 0.6 |
+| Versão | 0.7 |
 | Data | 2026-10-24 |
 | Base | `docs/PRD.md` v0.11 |
 | Status | Decisões fechadas; modelo de dados em `docs/specs/M0-setup.md` §4 |
@@ -103,14 +103,14 @@ Consequências:
 
 | Opção | Prós | Contras |
 |---|---|---|
-| **Homografia própria (DLT) + warp CPU em Worker** | ~100 linhas testáveis, zero deps | Estimativa 1–3 s (validar no M1) |
+| **Homografia própria (DLT) + warp CPU em Worker** | ~100 linhas testáveis, zero deps | Medido no M1: warp de 0,9 s em 28 MP (ver ADR-16) |
 | Warp em WebGL | Rápido | Mais código |
 | OpenCV.js | Pronto | WASM de vários MB |
 | sharp no servidor | Já presente (ADR-05) | Só faz transformações afins — **não** faz perspectiva |
 
 Prévia sob demanda (RF-06): mesmo warp do Worker sobre a parede reduzida, saída ~320 px de largura; não é persistida nem enviada à API.
 
-Pipeline: 4 alças com lupa sobre a parede → validação (convexo, ordem, área) → `H` → resolução limitada pelo perfil da parede → recorte na margem **+100%** do retângulo de referência → warp bilinear no Worker → bitmap retificado enviado à API e salvo em `PASTA_FOTOS` (evita reprocessar). Plano B: WebGL se > 3 s.
+Pipeline: 4 alças com lupa sobre a parede → validação (convexo, ordem, área) → `H` → resolução limitada pelo perfil da parede → recorte na margem **+100%** do retângulo de referência → warp bilinear no Worker → bitmap retificado enviado à API e salvo em `PASTA_FOTOS` (evita reprocessar). Plano B (WebGL) descartado: o warp não é o gargalo (ADR-16).
 
 Margem e parede inteira (M1-03, 24/10): retifica-se a **foto inteira** projetada por `H`, cortada em até +100% de L e +100% de A **em cada lado** do retângulo de referência (no máximo 3L × 3A); fora da foto o bitmap é transparente. **Parede inteira** = retângulo envolvente da região com pixels da foto, em cm (base da área útil padrão, RN-33). O servidor recalcula `H` e a geometria com as funções do domínio (fonte da verdade) e confere as dimensões do bitmap recebido. Detalhes: `docs/specs/M1-parede-e-escala.md` §4.2.
 
@@ -261,6 +261,22 @@ Consequências: importar só os pesos usados (Newsreader 500 variável com `opsz
 
 Consequências: `strokeWidth` 1,6–1,8 e tamanho 16–18 px por padrão (DESIGN §6); ícone sem texto exige `aria-label`; ícones ausentes na biblioteca (ex.: imagem-cortada do placeholder) podem ser SVG próprio no mesmo estilo.
 
+### ADR-16 — Desempenho da retificação: o gargalo é a codificação WebP · **Decidido** (24/10, medição do M1; revisão do Nicholas pendente)
+
+Medição no Chromium (Worker com warp + codificação WebP; `performance.measure('deco:retificacao')`; máquina de desenvolvimento do Nicholas; E2E `tests/e2e/desempenho.spec.ts`):
+
+| Perfil / foto | Warp | Codificação WebP | Total |
+|---|---|---|---|
+| **Leve** (3072 px, 7 MP) | 0,19 s | 0,44 s | **0,7 s** ✓ |
+| **Alto** (6144 × 4608, 28 MP), foto sintética com gradiente | 0,9 s | 2,0 s | **3,0–3,2 s** (meta: 3 s) |
+| Alto, imagem com ruído forte (só encode, `convertToBlob`) | — | até 7 s (q 0,9) | > 7 s |
+
+- O warp (a parte que a ADR-04 previa como risco) custa ~0,9 s em 28 MP: **o plano B (WebGL) não resolve nada** — o que domina é o encoder WebP (libwebp), igual no Chromium e no `sharp` (7 s em Node para a mesma imagem ruidosa). Mover a codificação para o servidor não ajuda.
+- Leve e Médio (o uso normal; Leve é o padrão) cumprem os 3 s com folga. **Só o perfil Alto, com foto de 28 MP, fica no limite (≈ 3 s) ou acima dele (fotos com textura).**
+- Otimizações aplicadas: laço do warp sem alocações e com saída em `Uint8Array` (de 0,97 para ~0,78 s em Node).
+- **Decisão:** manter o pipeline da ADR-04 (Worker → WebP, servidor confere e grava) e a qualidade da ADR-05; o orçamento de 3 s (§8) vale para Leve e Médio. Para o Alto, o E2E guarda contra regressões com teto de 4,5 s na foto sintética e imprime o tempo; o app já mostra "Aplicando perspectiva…" com **Cancelar** (aborta o Worker).
+- **Opções para reduzir o Alto, se o Nicholas quiser** (cada uma muda a ADR-05 ou a arquitetura): (a) limitar o lado maior da retificada a 4096 px em qualquer perfil (÷2,25 nos dois custos); (b) qualidade WebP 0,8 só na retificada (de 3 a 5× mais rápido em imagens com ruído, arquivos 2× menores); (c) dividir o warp em 2–4 Workers (−0,6 s; exige `SharedArrayBuffer`, logo cabeçalhos COOP/COEP na API); (d) JPEG quando a retificada não tem transparência (0,2 s, mas fora do `.webp` do modelo de dados).
+
 ## 6. Estrutura do repositório
 
 > **Fonte única de caminhos de arquivos e pastas do projeto.** Outros documentos (DESIGN, specs) não definem caminhos; quando mencionarem um, vale o que está aqui. Em divergência, prevalece esta seção.
@@ -298,40 +314,56 @@ deco-wall/
         styles/
           theme.css         # tokens (@theme) + variáveis do shadcn — DESIGN §2.1, §3–5
           fonts.ts          # imports @fontsource (ADR-14)
-        app/                # store, ações (casos de uso), portas
-        infra/              # cliente HTTP
-          workers/          # retificação de perspectiva (prévia e completa)
+        app/                # store do editor (zustand + immer), contexto, navegação, aviso ao sair
+          store.ts          # fatias `documento` e `ui`; ações nomeadas (ADR-03)
+          StoreContext.tsx  avisoAoSair.ts  navegacao.ts
+        infra/              # cliente HTTP e Worker
+          dto.ts            # formatos da API, porta `ClienteApi` e `ErroApi`
+          clienteApi.ts     # implementação com fetch (upload com progresso por XMLHttpRequest)
+          retificacao.ts    # cliente do Worker (prévia e retificação completa)
+          workers/
+            retificar.worker.ts   # warp + codificação WebP fora da thread da UI (ADR-04)
         ui/
           canvas/
             theme.ts        # cores/medidas do canvas Konva — DESIGN §2.2
-          paineis/
+            Palco.tsx       # único módulo que usa o Konva: camadas, zoom/pan, alças, lupa
+            cena.ts         # cenas em dados (sem Konva): parede, área útil, perspectiva, calibração
+            useImagem.ts
+          paineis/          # Composição, Perspectiva, Calibração, Área útil, BarraModo, CamposAreaUtil
           telas/            # Projetos, Editor, Comparação, /dev/ui
+            editor/         # HeaderEditor, Biblioteca, ToolbarCanvas, EstadoVazio, cenas.ts
+              modos/        # ModoPerspectiva, ModoCalibracao, ModoAreaUtil, LayoutModo
           componentes/
             ui/             # componentes shadcn/ui (gerados)
-            proprios/       # StatusSalvamento, ChipEscala, Miniatura, CampoCm…
+            proprios/       # StatusSalvamento, ChipEscala, Miniatura, CampoCm, NomeProjeto, DialogosProjeto…
         lib/                # utilitários de UI (cn, etc.)
   api/
     src/
       main.ts
+      app.ts                # monta a API (rotas, multipart, erros); usado por main.ts e pelos testes
+      contexto.ts  erros.ts
       config.ts             # leitura/validação do .env
-      rotas/
-      servicos/             # imagens (sharp), projetos, purga
-      repositorios/         # MongoDB
+      rotas/                # projetos, parede (upload, escala, arquivos), variantes (hard save), saude
+      servicos/             # projetos, parede, variantes, imagem (sharp), reparo (A-18); purga no M4
+      repositorios/         # MongoDB (conexão e conversão ObjectId ↔ string hex)
       migracoes/            # 0001-inicial…
-      armazenamento/        # PASTA_FOTOS
+      armazenamento/        # PASTA_FOTOS (inclui gravação em duas fases)
   packages/
     domain/
       src/                  # tipos, schemas Zod, RN, geometria, homografia, snap, desenho, formatadores
+        arquivos.ts  projetos.ts   # validação de arquivo de imagem e de nome de projeto
         geometria/          # homografia, quadrilátero, viewport, grid
-        escala/             # calibração linear, retificação, warp, parede inteira, área útil
+        escala/             # calibração linear, retificação, warp, parede inteira, área útil, padrões, referência
         templates/
           catalogo.ts       # catálogo de templates (constante; fonte: docs/specs/templates.md)
   tests/
-    e2e/                    # Playwright: smoke, rede, controles inativos, spike Konva
+    e2e/                    # Playwright: smoke, rede, projetos, parede e escala, salvamento, desempenho (ajudantes.ts)
     fixtures/
       imagens/
       paredes/
       dominio.ts            # exemplos válidos do modelo (builders para testes)
+      api.ts                # app Fastify de teste + atalhos de requisição (multipart, escala, variante)
+      paredes.ts            # cantos e medidas da parede em perspectiva (300 × 200 cm)
       banco-teste.ts        # banco parede-fotos-test; ObjectId ↔ string hex
     spikes/                 # spikes de risco (sharp: EXIF → WebP Leve)
     seed/                   # seed do banco de teste
@@ -365,7 +397,7 @@ Arquivos de dados fora do repositório: `PASTA_FOTOS` (definida no `.env`; estru
 
 | Risco | Mitigação |
 |---|---|
-| Warp em CPU lento | Medir no M1; plano B WebGL |
+| Warp em CPU lento | Medido no M1: 0,9 s em 28 MP; o gargalo é a codificação WebP (ADR-16) |
 | `sharp` falhar ao instalar no Windows | Binários pré-compilados; validar no M0 |
 | Mongo fora do ar | Checagem na inicialização; aviso na UI; autosave com nova tentativa |
 | `PASTA_FOTOS` inválida ou sem permissão | Validação na inicialização |
@@ -375,7 +407,7 @@ Arquivos de dados fora do repositório: `PASTA_FOTOS` (definida no `.env`; estru
 
 ## 10. Decisões pendentes
 
-1. Modelo de dados em discussão em `docs/specs/M0-setup.md` §4 e §8.
+1. Desempenho do perfil Alto (28 MP): decisão do Nicholas sobre as opções da ADR-16.
 
 ## 11. Referências
 

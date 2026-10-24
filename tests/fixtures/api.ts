@@ -1,7 +1,7 @@
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { calcularRetificacao, PERFIS, type Pt } from '@deco-wall/domain';
+import { calcularRetificacao, ordenarCantos, PERFIS, type Pt } from '@deco-wall/domain';
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import type { Db, MongoClient } from 'mongodb';
 import sharp from 'sharp';
@@ -194,8 +194,10 @@ export async function aplicarPerspectivaApi(
   };
   let bitmap = opcoes.bitmap;
   if (!bitmap) {
+    // O servidor ordena os cantos antes de calcular; o bitmap de teste segue a mesma ordem.
     const esperado = dimensoesEsperadas({
       ...perspectiva,
+      cantosPx: ordenarCantos(perspectiva.cantosPx),
       larguraImagemPx: opcoes.larguraImagemPx,
       alturaImagemPx: opcoes.alturaImagemPx,
     });

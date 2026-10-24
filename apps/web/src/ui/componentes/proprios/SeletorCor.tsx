@@ -11,25 +11,50 @@ export const CORES_PRONTAS = [
   { nome: 'Madeira escura', hex: '#5C3A21' },
 ] as const;
 
-export function SeletorCor({ valor, onChange }: { valor: string; onChange?: (hex: string) => void }) {
+interface PropsSeletorCor {
+  valor: string;
+  onChange?: (hex: string) => void;
+  // Padrão: as cores da borda (DV-08). O grid usa as suas (A-08).
+  cores?: readonly { nome: string; hex: string }[];
+  titulo?: string;
+  // Nome acessível do botão (ex.: "Cor das linhas").
+  rotulo?: string;
+  // Função prevista e não implementada (DESIGN §7.1): aria-disabled e o popover não abre.
+  inativo?: boolean;
+}
+
+export function SeletorCor({
+  valor,
+  onChange,
+  cores = CORES_PRONTAS,
+  titulo = 'Cor da borda',
+  rotulo,
+  inativo = false,
+}: PropsSeletorCor) {
   const id = useId();
-  const pronta = CORES_PRONTAS.find((cor) => cor.hex.toUpperCase() === valor.toUpperCase());
-  const rotulo = pronta ? pronta.nome : valor.toUpperCase();
+  const pronta = cores.find((cor) => cor.hex.toUpperCase() === valor.toUpperCase());
+  const nomeCor = pronta ? pronta.nome : valor.toUpperCase();
 
   return (
-    <Popover>
-      <PopoverTrigger className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-md border border-input bg-surface px-3 text-sm text-ink">
+    <Popover open={inativo ? false : undefined}>
+      <PopoverTrigger
+        aria-label={rotulo}
+        aria-disabled={inativo || undefined}
+        className={`inline-flex h-9 items-center gap-2 rounded-md border border-input bg-surface px-3 text-sm ${
+          inativo ? 'cursor-default text-ink-disabled' : 'cursor-pointer text-ink'
+        }`}
+      >
         <span
           aria-hidden="true"
           className="size-4 rounded-sm ring-1 ring-line"
           style={{ backgroundColor: valor }}
         />
-        <span>{rotulo}</span>
+        <span>{nomeCor}</span>
       </PopoverTrigger>
       <PopoverContent className="w-56">
-        <p className="text-label mb-2">Cor da borda</p>
+        <p className="text-label mb-2">{titulo}</p>
         <div role="group" aria-label="Cores prontas" className="grid grid-cols-6 gap-1.5">
-          {CORES_PRONTAS.map((cor) => (
+          {cores.map((cor) => (
             <button
               key={cor.hex}
               type="button"

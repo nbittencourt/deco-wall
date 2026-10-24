@@ -128,7 +128,9 @@ describe('PUT /api/projetos/:id/parede/escala — linear (RF-10, RF-12)', () => 
     expect((res.json() as RespostaEscala).variantesAlteradas).toEqual([]);
     expect((await obter(p.id)).variantes[0]!.areaUtil).toEqual(ajustada);
     // 900 px / 150 cm = 6 px/cm.
-    const escala = (res.json() as RespostaEscala).projeto.parede!.escala as { homografia: number[] };
+    const escala = (res.json() as RespostaEscala).projeto.parede!.escala as unknown as {
+      homografia: number[];
+    };
     expect(escala.homografia[0]).toBeCloseTo(1 / 6, 9);
   });
 
@@ -279,7 +281,7 @@ describe('PUT /api/projetos/:id/parede/escala — perspectiva (RF-05, ADR-04)', 
       cantosPx: [br!, tl!, bl!, tr!],
     });
     expect(res.statusCode).toBe(200);
-    const escala = (res.json() as RespostaEscala).projeto.parede!.escala as {
+    const escala = (res.json() as RespostaEscala).projeto.parede!.escala as unknown as {
       perspectiva: { cantosPx: unknown };
     };
     expect(escala.perspectiva.cantosPx).toEqual([tl, tr, br, bl]);

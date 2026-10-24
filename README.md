@@ -2,7 +2,7 @@
 
 App web local para simular a decoração de uma parede com fotos: carrega uma foto da parede, calibra a escala em cm, envia fotos para uma biblioteca e posiciona as fotos com grid, snap e medidas. Tudo roda na sua máquina (navegador, servidor Node e MongoDB local).
 
-Requisitos em `docs/PRD.md`; arquitetura em `docs/ARCHITECTURE.md`; especificação do marco atual em `docs/specs/M0-setup.md`.
+Requisitos em `docs/PRD.md`; arquitetura em `docs/ARCHITECTURE.md`; especificações dos marcos em `docs/specs/` (M0 e M1 implementados).
 
 ## Pré-requisitos
 
@@ -55,7 +55,9 @@ npm run seed:test     # recria o banco parede-fotos-test com dados de teste
 
 `npm run seed:test` usa o mesmo servidor de `MONGODB_URI`, mas grava no banco `parede-fotos-test` (apagado e recriado a cada execução). As fotos de teste vão para uma pasta temporária, cujo caminho é impresso no fim.
 
-Páginas de desenvolvimento: `/dev/ui` (fundação de design, pranchas 00 e 17) e `/dev/spike-konva` (spike do canvas).
+Rotas da interface: `/` (Projetos), `/projetos/<id>` (editor) e `/dev/ui` (fundação de design, pranchas 00 e 17).
+
+Os testes de API e o E2E usam o mesmo banco `parede-fotos-test`: não rode `npm run test` e `npm run e2e` ao mesmo tempo.
 
 ## Estrutura
 

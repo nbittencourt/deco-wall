@@ -2,16 +2,16 @@
 
 | Campo | Valor |
 |---|---|
-| Versão | 0.2 |
+| Versão | 0.3 |
 | Data | 2026-10-24 |
-| Base | `docs/PRD.md` v0.11 · `docs/ARCHITECTURE.md` v0.6 · `docs/DESIGN.md` v0.3 + protótipos 01, 02, 04, 04a, 05, 11, 13 · `docs/specs/M0-setup.md` v0.6 |
-| Status | **Pronta para implementação** — decisões e premissas revisadas; começa só após o aceite do M0 (MS-01) e a liberação do Nicholas. |
+| Base | `docs/PRD.md` v0.11 · `docs/ARCHITECTURE.md` v0.7 · `docs/DESIGN.md` v0.3 + protótipos 01, 02, 04, 04a, 05, 11, 13 · `docs/specs/M0-setup.md` v0.6 |
+| Status | **Implementada (24/10); aguardando a validação do Nicholas** — testes escritos antes (commit vermelho) e implementação em seguida; ver §12. |
 
 ## 0. Pré-requisitos
 
 | # | Item | Bloqueia | Situação |
 |---|---|---|---|
-| PR-M1-01 | **Aceite do M0**: validação visual de `/dev/ui` e das cascas (T6d, T10; aceites 10 e 11 do M0) e commits por tarefa do M0. | T1 | ⏳ pendente |
+| PR-M1-01 | **Aceite do M0**: validação visual de `/dev/ui` e das cascas (T6d, T10; aceites 10 e 11 do M0) e commits por tarefa do M0. | T1 | ✅ 24/10 (M0 aceito; commit `M0 implementado`) |
 | PR-M1-02 | Lacunas e contradições da §0.1 decididas. | T1 | ✅ 24/10 |
 | PR-M1-03 | Revisão das premissas da §0.2 pelo Nicholas. | T1 | ✅ 24/10 |
 
@@ -98,7 +98,7 @@ Entregar o início do fluxo do usuário: criar e gerenciar projetos, carregar a 
 | **Parede sem escala** | Foto da parede (EXIF aplicado), sem grid; `Alert` de aviso "Defina a escala da parede para posicionar fotos." com "Corrigir perspectiva" (primário) e "Calibrar com uma medida" | Escala: "Não definida" | Área útil inativo |
 | **Com escala** | Parede (retificada ou não) em cm, grid, área útil (DESIGN §2.2), rótulo "0,0" na origem | Composição completo (§3.7) | Tudo do M1 ativo |
 
-Coluna Biblioteca no M1: título, contador oculto, "Carregar fotos", busca e filtros inativos (A-15); texto "Defina a escala da parede para posicionar fotos." enquanto não há escala (RF-13).
+Coluna Biblioteca no M1: título, contador oculto, "Carregar fotos", busca e filtros inativos (A-15); enquanto não há escala, o texto "As fotos ficam disponíveis depois que a escala da parede for definida." (RF-13). O aviso "Defina a escala da parede para posicionar fotos." fica só no `Alert` do canvas (§3.2), para não repetir a frase na tela.
 
 Header (DESIGN §7 e protótipo 03a): no M1 funcionam voltar (A-20), nome do projeto (edição inline, A-02), Área útil, Perspectiva, Calibrar, chip de escala, Parede (M1-05), Grid, Snap (A-15) e Salvar. O status de salvamento fica só na barra de status (o texto completo não cabe no header). Em 1280 px, Área útil, Perspectiva, Calibrar e Parede ficam no menu "Parede ▾".
 
@@ -170,6 +170,8 @@ Mudanças de grid (painel ou toggle do header) alteram a variante.
 - Sem escala, a parede é desenhada em px da imagem (1 unidade = 1 px), sem grid.
 - Toolbar: zoom − / % / +, "Ajustar à tela" (A-06); demais botões inativos (A-15).
 - Ao redor da parede: `--color-stage`; nos modos Perspectiva e Calibração: `--color-stage-dark`.
+- **Gancho de teste:** o Palco publica `window.__deco.paraTela(x, y)`, que converte um ponto do conteúdo atual (px da foto nos modos Perspectiva e Calibração; cm no editor e na Área útil) em coordenadas da página. Os E2E usam o mouse real do Playwright para arrastar alças que não existem no DOM. Só existe com o enquadramento pronto.
+- Alças, rótulos e lupa ficam numa segunda camada em px de tela (tamanho constante em qualquer zoom); a cena (parede, grid, área útil) fica na camada em unidades do conteúdo.
 
 ## 4. Domínio e algoritmos
 
@@ -199,7 +201,7 @@ Mudanças de grid (painel ou toggle do header) alteram a variante.
 6. Codificação no Worker: `OffscreenCanvas.convertToBlob({ type: 'image/webp', quality })` com a qualidade do perfil.
 7. O **servidor recalcula** `H` e a geometria com as mesmas funções do domínio a partir de `cantosPx`, medidas e dimensões da parede (fonte da verdade). Ele confere as dimensões do bitmap enviado (±1 px; senão 422), grava `paredes/<id>.retificada.webp` e grava `parede.escala` e `parede.retificada`.
 
-Desempenho: perfil Alto (6144 px) ≤ 3 s no Chromium (ARCHITECTURE §8). Medido na T4. Se não atingir, para e registra uma ADR para o plano B (WebGL) antes de seguir.
+Desempenho: perfil Alto (6144 px) ≤ 3 s no Chromium (ARCHITECTURE §8). Medido: Leve 0,7 s ✓; Alto (28 MP) 3,0–3,2 s, com o gargalo na codificação WebP e não no warp — ver **ADR-16** (plano B de WebGL descartado; opções de redução para o Nicholas decidir).
 
 ## 5. API (M1)
 
@@ -286,3 +288,27 @@ Dependências novas, já previstas nas ADRs: `zustand` e `immer` (ADR-03), `bson
 | `docs/DESIGN.md` v0.3 | §7.1: botão "Parede" ativo sem fotos (M1-05) e controles inativos por estado (A-16) |
 | `docs/specs/M0-setup.md` | DV-07: a miniatura não é mais regenerada com a retificada (A-17) |
 | `MEMORY.md` | Decisões M1-01 a M1-08 e premissas alteradas na revisão |
+
+## 12. Registro da implementação (24/10)
+
+**Forma de trabalho.** TDD em dois commits (instrução do Nicholas): primeiro todos os testes do M1, vermelhos por módulos ausentes (`test(m1): …`); depois a implementação, com tudo verde (`feat(m1): …`). Isso substitui o commit por tarefa da §10; os pontos de validação da T4 e da T8 foram dispensados (o Nicholas valida no fim, na T12).
+
+| Item | Resultado |
+|---|---|
+| Testes | Vitest: domínio, API (integração com MongoDB e arquivos), web (store, cliente, painéis, diálogos, Projetos, Editor com o palco trocado por um marcador). E2E (Playwright): projetos, perspectiva, calibração linear, área útil, zoom, salvamento (Ctrl+S, `beforeunload`, 409 entre abas), troca de parede, upload, desempenho, rede. |
+| Dependências novas | `zustand` 5.0.16 e `immer` 11.2.9 (previstas na §6); `@fastify/multipart` 10.1.6 (citado na ADR-13; **aprovado pelo Nicholas** em 24/10). `bson` não foi necessário. |
+| Desempenho (aceite 12) | Leve 0,7 s ✓. Alto 3,0–3,2 s, no limite: **não atingido de forma folgada** → ADR-16 registrada. |
+
+**Decisões de implementação** (o que a spec não fixava):
+
+- Servidor e Worker usam as mesmas funções do domínio; o servidor ordena os cantos, recalcula `H` e confere o bitmap (±1 px). A parede inteira é derivada **da parede gravada** por uma só função (`paredeInteira`), no servidor (área útil inicial) e na web (aviso de "fora da parede"), sem risco de divergir por arredondamento.
+- Upload e escala: os arquivos novos vão para `tmp/` e só trocam o definitivo depois que o `updateOne` com `projetos.revisao` aceita (409 não deixa rastro; arquivos substituídos são apagados depois). Formato decidido pelo conteúdo (sharp), não pela extensão; dimensões depois da rotação EXIF.
+- A web adota as revisões das variantes devolvidas em `variantesAlteradas` (senão o próximo *hard save* daria 409 contra si mesmo).
+- Status de salvamento: "Salvo às hh:mm" depois de salvar ("Salvo" ao abrir) e "Salvando…" durante a gravação.
+- O palco troca a prévia da perspectiva por geração sob demanda no Worker, a partir da foto reduzida (≤ 1600 px).
+- Controles inativos por estado usam `BotaoInativo` (tooltip com o motivo); `BotaoEmBreve` continua sendo o caso "próxima versão".
+- Variante: o seletor mostra só a "Base" e o selo "1 sem foto" saiu do header (sem placeholders até o M4).
+- ESLint e Prettier ignoram `.claude/` (worktrees de outras sessões do Claude contaminavam o `tsconfigRootDir`).
+- Fora do desfazer (M1-04), sem rascunho/recuperação (M3), sem snap com efeito (M2): como na spec.
+
+**Pendências do M1:** validação do Nicholas (T12); decisão sobre o desempenho do perfil Alto (ADR-16); chunk JS de ~917 kB sem divisão (o Konva entra no pacote principal).

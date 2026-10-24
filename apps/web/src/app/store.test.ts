@@ -209,7 +209,9 @@ describe('salvarVariante (hard save, §3.8)', () => {
   it('mostra "salvando" enquanto a requisição não termina', async () => {
     let concluir!: (v: { revisao: number; salvaEm: string }) => void;
     const { store } = await aberto(undefined, {
-      salvarVariante: vi.fn(() => new Promise((resolve) => (concluir = resolve))),
+      salvarVariante: vi.fn(
+        () => new Promise<{ revisao: number; salvaEm: string }>((resolve) => (concluir = resolve)),
+      ),
     });
     store.getState().alterarGrid({ passoCm: 10 });
     const salvando = store.getState().salvarVariante();
@@ -228,7 +230,9 @@ describe('salvarVariante (hard save, §3.8)', () => {
   it('não dispara dois salvamentos ao mesmo tempo', async () => {
     let concluir!: (v: { revisao: number; salvaEm: string }) => void;
     const { store, api } = await aberto(undefined, {
-      salvarVariante: vi.fn(() => new Promise((resolve) => (concluir = resolve))),
+      salvarVariante: vi.fn(
+        () => new Promise<{ revisao: number; salvaEm: string }>((resolve) => (concluir = resolve)),
+      ),
     });
     store.getState().alterarGrid({ passoCm: 10 });
     const a = store.getState().salvarVariante();

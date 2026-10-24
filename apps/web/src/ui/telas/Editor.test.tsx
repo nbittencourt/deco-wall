@@ -328,7 +328,7 @@ describe('parede com escala', () => {
       'Adicionar',
       'Carregar fotos',
     ]) {
-      expect(screen.getByRole('button', { name }).getAttribute('aria-disabled'), nome).toBe('true');
+      expect(screen.getByRole('button', { name: nome }).getAttribute('aria-disabled'), nome).toBe('true');
     }
   });
 });

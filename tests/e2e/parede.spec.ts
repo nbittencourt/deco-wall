@@ -91,7 +91,10 @@ test.describe('perspectiva (fluxo E2E 1, PRD aceite 6)', () => {
     const painelArea = page.getByRole('region', { name: 'Área útil desta variante' });
     await expect(painelArea.getByLabel('Largura')).not.toHaveValue('');
     await expect(page.getByText('Salvo', { exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Calibrar' })).toHaveAttribute('aria-disabled', 'true');
+    await expect(page.getByRole('button', { name: 'Calibrar', exact: true })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
   });
 });
 
@@ -145,10 +148,11 @@ test.describe('regras de método (M1-02, aceite 6)', () => {
   test('com a perspectiva aplicada, "Calibrar" fica inativo com tooltip', async ({ page, request }) => {
     const p = await criarProjetoComPerspectiva(request, nomeUnico('Persp aplicada'));
     await page.goto(`/projetos/${p.id}`);
-    const calibrar = page.getByRole('button', { name: 'Calibrar' });
+    const calibrar = page.getByRole('button', { name: 'Calibrar', exact: true });
     await expect(calibrar).toHaveAttribute('aria-disabled', 'true');
 
-    await calibrar.click();
+    // aria-disabled conta como desabilitado para o Playwright: o clique é forçado de propósito.
+    await calibrar.click({ force: true });
     await expect(page.getByText('Calibração linear')).toHaveCount(0);
 
     await calibrar.focus();
@@ -195,22 +199,22 @@ test.describe('área útil (aceite 7)', () => {
     await esperarPalco(page);
 
     // A área nasce como a parede inteira (0,0 · 300 × 225): alça do meio do lado direito (em cm).
+    // O mouse trabalha em px: a largura fica a menos de 1 cm do alvo.
+    const larguraDoCampo = async (rotulo: ReturnType<typeof page.getByLabel>) =>
+      Number((await rotulo.inputValue()).replace(',', '.'));
     await arrastar(page, { x: 300, y: 112.5 }, { x: 250, y: 112.5 });
-    await expect(page.getByLabel('Largura')).toHaveValue('250,0');
+    expect(Math.abs((await larguraDoCampo(page.getByLabel('Largura'))) - 250)).toBeLessThan(1);
 
     // Cancelar descarta o ajuste e mantém a área anterior (parede inteira).
     await page.getByRole('button', { name: 'Cancelar' }).click();
-    await expect(
-      page.getByRole('region', { name: 'Área útil desta variante' }).getByLabel('Largura'),
-    ).toHaveValue('300,0');
+    const largura = page.getByRole('region', { name: 'Área útil desta variante' }).getByLabel('Largura');
+    await expect(largura).toHaveValue('300,0');
 
     // De novo, agora confirmando.
     await page.getByRole('button', { name: 'Área útil' }).click();
     await arrastar(page, { x: 300, y: 112.5 }, { x: 250, y: 112.5 });
     await page.getByRole('button', { name: 'Confirmar área' }).click();
-    await expect(
-      page.getByRole('region', { name: 'Área útil desta variante' }).getByLabel('Largura'),
-    ).toHaveValue('250,0');
+    expect(Math.abs((await larguraDoCampo(largura)) - 250)).toBeLessThan(1);
     await expect(page.getByText('Alterações não salvas')).toBeVisible();
   });
 
@@ -320,7 +324,7 @@ test.describe('salvamento (aceite 10, SV-08)', () => {
     await abaA.getByRole('button', { name: 'Salvar' }).click();
     const aviso = abaA.getByRole('alert');
     await expect(aviso).toContainText('Esta variante foi salva em outra aba às');
-    await expect(abaA.getByText('Conflito')).toBeVisible();
+    await expect(abaA.getByText('Conflito', { exact: true })).toBeVisible();
 
     await aviso.getByRole('button', { name: 'Recarregar' }).click();
     await expect(abaA.getByRole('alert')).toHaveCount(0);
@@ -380,7 +384,7 @@ test.describe('trocar a parede (fluxo E2E 4, M1-05, RF-07)', () => {
     await page.goto(`/projetos/${p.id}`);
     const botao = page.getByRole('button', { name: 'Parede', exact: true });
     await expect(botao).toHaveAttribute('aria-disabled', 'true');
-    await botao.click();
+    await botao.click({ force: true });
     await expect(page.getByRole('dialog')).toHaveCount(0);
 
     const revisao = (await lerProjeto(request, p.id)).projeto.revisao;

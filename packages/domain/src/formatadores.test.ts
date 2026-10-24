@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   formatarCm,
+  formatarCmCurto,
   formatarData,
   formatarDimensao,
   formatarEditadoEm,
@@ -18,6 +19,12 @@ describe('formatadores pt-BR (DESIGN §8)', () => {
     expect(formatarCm(0.5)).toBe('0,5');
     expect(formatarCm(120)).toBe('120,0');
     expect(formatarCm(24.04)).toBe('24,0');
+  });
+
+  it('formatarCmCurto tira a casa decimal quando o valor é inteiro', () => {
+    expect(formatarCmCurto(5)).toBe('5');
+    expect(formatarCmCurto(2.5)).toBe('2,5');
+    expect(formatarCmCurto(10.04)).toBe('10');
   });
 
   it('formatarDimensao junta largura e altura com × e unidade', () => {

@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useId, type KeyboardEvent } from 'react';
 import { Input } from '../ui/input';
 import { cn } from '../../../lib/utils';
 
@@ -11,6 +11,9 @@ export function CampoCm({
   prefixo,
   sufixo = 'cm',
   inativo = false,
+  erro,
+  onBlur,
+  onKeyDown,
   className,
 }: {
   rotulo: string;
@@ -20,6 +23,10 @@ export function CampoCm({
   sufixo?: string;
   // Função prevista e não implementada (DESIGN §7.1): aria-disabled, sem digitação.
   inativo?: boolean;
+  // Mensagem de validação sob o campo (ex.: "Faixa válida: 5,0 a 280,0 cm.").
+  erro?: string;
+  onBlur?: () => void;
+  onKeyDown?: (evento: KeyboardEvent<HTMLInputElement>) => void;
   className?: string;
 }) {
   const id = useId();
@@ -41,6 +48,10 @@ export function CampoCm({
           aria-disabled={inativo || undefined}
           readOnly={inativo}
           onChange={(evento) => onChange?.(evento.target.value)}
+          onBlur={onBlur}
+          onKeyDown={onKeyDown}
+          aria-invalid={erro ? true : undefined}
+          aria-describedby={erro ? `${id}-erro` : undefined}
           className={cn(
             'h-9 font-mono text-medida tabular-nums',
             prefixo ? 'pl-8' : '',
@@ -54,6 +65,11 @@ export function CampoCm({
           </span>
         )}
       </div>
+      {erro && (
+        <p id={`${id}-erro`} className="text-xs text-danger-ink">
+          {erro}
+        </p>
+      )}
     </div>
   );
 }
