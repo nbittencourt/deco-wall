@@ -92,7 +92,7 @@ Consequências:
 - Camadas: Parede (estática, cacheada) · Grid (1 `Shape` com `sceneFunc`, só linhas visíveis) · Fotos (1 `Group` por foto: `Rect` borda + `Image` com `crop`; snap em `dragBoundFunc`) · Overlay (seleção, destaques RN-11/12, ferramentas; nunca exportada).
 - Comparação (ADR-12): dois `Stage` lado a lado compartilhando o mesmo estado de viewport.
 
-### ADR-03 — Estado no cliente: Zustand + Immer + histórico próprio · **Decidido** (revisada em 25/10: sem `zundo`)
+### ADR-03 — Estado no cliente: Zustand + Immer + zundo · **Decidido** — revisão de 25/10 (histórico próprio, sem `zundo`) **Proposta**, aguarda o Nicholas
 
 - Fatias: `documento` (projeto aberto), `ui` (seleção, ferramenta, viewport, variantes em comparação), `biblioteca` (lista global de imagens, vinda da API).
 - **Histórico por variante** (ADR-12): uma pilha de desfazer/refazer por variante, mantida em memória enquanto o projeto está aberto; não persistida; limite 100 passos por variante. **Implementação (M2-02):** pilha própria de instantâneos (`packages/domain/src/historico.ts`, pura e testada), guardada na store fora do que é desfeito. O `zundo` foi descartado: ele mescla o estado só no primeiro nível, então desfazer substituiria `documento` inteiro (projeto, revisões, status de salvamento) porque o conteúdo desfazível vive aninhado em `documento.variante`; os passos precisam ser por intenção (explícitos) e por variante (M3); e sai uma dependência (P4).

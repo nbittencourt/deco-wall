@@ -2,6 +2,7 @@ import { BORDA_PADRAO, GRID_PADRAO } from '@deco-wall/domain';
 import { ObjectId } from 'mongodb';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
+  aplicarLinearApi,
   criarAppTeste,
   criarProjetoApi,
   criarProjetoComEscalaApi,
@@ -307,5 +308,38 @@ describe('PUT /api/projetos/:pid/variantes/:id — fotos (M2-06, RN-08, RN-13, D
     // A imagem não usada não ganhou o projeto.
     const parada = await t.db.collection('imagens').findOne({ _id: new ObjectId(imagem._id) });
     expect(parada!.projetos).toHaveLength(1);
+  });
+});
+
+describe('recalibrar mantém as fotos (PRD aceite 5, RN-10, RN-35)', () => {
+  it('refazer a escala linear não muda posição, tamanho, borda nem recorte das fotos, nem a área útil', async () => {
+    const { projeto, base, imagem } = await comEscalaEImagem();
+    const fotos = [
+      foto({ imagemId: imagem._id, xCm: 40, yCm: 30 }),
+      foto({
+        _id: idFixture(102),
+        imagemId: imagem._id,
+        xCm: 90.5,
+        yCm: 12.3,
+        tamanho: { sugeridoId: null, larguraCm: 21, alturaCm: 29.7 },
+        borda: { larguraCm: 1.5, cor: '#5C3A21' },
+        recorte: { offsetX: -0.4, offsetY: 0 },
+      }),
+    ];
+    const salvo = await salvarVarianteApi(t.app, projeto._id, base._id, corpo(base, { fotos }));
+    expect(salvo.statusCode).toBe(200);
+
+    // Outra medida de referência: a escala (px/cm) muda, os valores em cm das fotos não.
+    const re = await aplicarLinearApi(t.app, projeto._id, {
+      revisaoBase: projeto.revisao,
+      comprimentoCm: 100,
+    });
+    expect(re.statusCode).toBe(200);
+
+    const depois = (await t.app.inject({ method: 'GET', url: `/api/projetos/${projeto._id}` })).json() as {
+      variantes: VarianteJson[];
+    };
+    expect(depois.variantes[0]!.fotos).toEqual(fotos);
+    expect(depois.variantes[0]!.areaUtil).toEqual(areaUtil());
   });
 });

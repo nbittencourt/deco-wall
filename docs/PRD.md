@@ -72,14 +72,14 @@ Prioridade: **P0** = obrigatório na v1 · **P1** = desejável na v1. Demais ite
 |---|---|---|---|
 | RF-10 | Calibração linear: usuário desenha um segmento e informa o comprimento real em cm. | P0 | I |
 | RF-12 | Exibir a escala (px/cm) e permitir recalibrar a qualquer momento. | P0 | I |
-| RF-13 | Exigir calibração antes de incluir fotos — carregar na biblioteca e posicioná-las na parede (ver RN-08). | P0 | I |
+| RF-13 | Exigir calibração antes de incluir fotos — carregar na biblioteca e posicioná-las na parede (ver RN-08). | P0 | I/P |
 | RF-14 | Aviso de precisão: medidas assumem parede plana; recomendar referência ≥ 1 m. | P0 | I |
 
 ### 5.3 Biblioteca de fotos (global)
 
 | ID | Requisito | Prior. | Origem |
 |---|---|---|---|
-| RF-20 | Upload de fotos individual ou em lote (seleção de arquivos, de pasta ou drag-and-drop), feito a partir de um projeto. Os arquivos entram numa fila e o envio começa por ação explícita, depois de escolhido o perfil. | P0 | U/D |
+| RF-20 | Upload de fotos individual ou em lote (seleção de arquivos, de pasta ou drag-and-drop), feito a partir de um projeto. Os arquivos entram numa fila e o envio começa por ação explícita, depois de escolhido o perfil. | P0 | U/D/P |
 | RF-21 | Progresso por arquivo no upload em lote; falhas listadas sem interromper o lote. | P0 | I |
 | RF-22 | Miniaturas com nome original do arquivo e orientação natural detectada. | P0 | I |
 | RF-23 | Indicar quais fotos já estão na variante ativa (e quantas vezes). | P1 | I |
@@ -162,9 +162,9 @@ Prioridade: **P0** = obrigatório na v1 · **P1** = desejável na v1. Demais ite
 | RN-13 | A mesma imagem pode ser usada várias vezes na composição. | Decidido |
 | RN-14 | Enquadramento: *cover* centralizado por padrão; o usuário apenas desloca o recorte (sem zoom adicional na v1), em um **modo de recorte** (botão "Ajustar recorte" ou duplo clique; Enter conclui, Esc cancela; 1 passo de desfazer). | Decidido |
 | RN-15 | Grid: passo padrão 5 cm (opções 1, 2, 5, 10 cm ou personalizado); visível e snap ligados por padrão. | Decidido |
-| RN-16 | Teclado: seta move 1 cm; Shift + seta move 5 cm. Com snap ligado, seta vai à próxima linha do grid na direção e Shift + seta avança 5 linhas. | Decidido |
+| RN-16 | Teclado: seta move 1 cm; Shift + seta move 5 cm. Com snap ligado, seta vai à próxima linha do grid na direção e Shift + seta avança 5 linhas. | Proposto (M2) |
 | RN-17 | Vários projetos persistidos; um projeto aberto por vez; excluir projeto pede confirmação. | Decidido |
-| RN-18 | Desfazer/refazer **por variante**, até 100 passos (mínimo 50), mantido enquanto o projeto está aberto (não persistido). Entram no histórico: fotos (todas as ações), área útil e borda padrão. Ficam de fora: mudanças na parede (upload, troca, perspectiva, calibração), que gravam ao confirmar o modo, e os ajustes do grid (auxílio de visão). | Decidido |
+| RN-18 | Desfazer/refazer **por variante**, até 100 passos (mínimo 50), mantido enquanto o projeto está aberto (não persistido). Entram no histórico: fotos (todas as ações), área útil e borda padrão. Ficam de fora: mudanças na parede (upload, troca, perspectiva, calibração), que gravam ao confirmar o modo, e os ajustes do grid (auxílio de visão). | Proposto (M2) |
 | RN-19 | Exportação: opção de incluir ou não o grid; nunca inclui handles de seleção nem destaques de alerta. Exceção: placeholders saem como retângulo vermelho hachurado semitransparente. | Decidido |
 | RN-20 | Arquivos não suportados na pasta são ignorados, com aviso da quantidade ignorada. | Decidido |
 | RN-28 | Tamanho personalizado: escolhido em "Personalizado…", editado no modo de recorte (largura × altura); 5 a 150 cm por lado, passo 0,1 cm; mudar o tamanho recentraliza o recorte (*cover*); orientação troca largura e altura; tamanhos quadrados não têm orientação; personalizado igual a um sugerido é tratado como o sugerido. | Decidido |
@@ -175,7 +175,7 @@ Prioridade: **P0** = obrigatório na v1 · **P1** = desejável na v1. Demais ite
 | RN-33 | Área útil: após aplicar perspectiva/calibração, padrão = parede inteira (região com pixels da foto — ARCHITECTURE ADR-04), gravada já na primeira escala, com confirmação e redimensionamento pelo usuário (cancelar mantém a parede inteira); posição e tamanho livres a 0,1 cm, sem snap, mínimo 5 cm por lado, dentro da parede inteira; editável pelo botão "Área útil" (alteração da variante: entra no desfazer e no salvamento). Contorno tracejado e exterior esmaecido; nada disso sai na exportação. | Decidido |
 | RN-34 | Foto fora da área útil recebe o mesmo destaque de RN-12 e conta como alerta; não bloqueia o movimento. Grid continua na parede inteira. | Decidido |
 | RN-35 | Variante nova (vazia, duplicada ou de template) copia a área útil da variante ativa; a "Base" nasce com a parede inteira. Refazer perspectiva preserva as áreas em cm (aviso se ficarem fora da parede). | Decidido |
-| RN-36 | Alertas de posição: tolerância de 0,05 cm; **sobreposição** = interseção dos tamanhos externos com largura e altura acima da tolerância (fotos encostadas não se sobrepõem); **fora** = qualquer parte do tamanho externo além da parede inteira ("Fora da parede", prevalece) ou da área útil ("Fora da área útil"). Nunca bloqueiam. | Decidido |
+| RN-36 | Alertas de posição: tolerância de 0,05 cm; **sobreposição** = interseção dos tamanhos externos com largura e altura acima da tolerância (fotos encostadas não se sobrepõem); **fora** = qualquer parte do tamanho externo além da parede inteira ("Fora da parede", prevalece) ou da área útil ("Fora da área útil"). Nunca bloqueiam. | Proposto (M2) |
 | RN-21 | Os arquivos originais do usuário nunca são alterados nem guardados pelo app; só a versão processada é armazenada. O perfil é definido no upload e é definitivo — outro peso exige novo upload. | Decidido |
 | RN-22 | Biblioteca global, sem autenticação: imagens carregadas em qualquer projeto ficam disponíveis em todos. | Decidido |
 | RN-23 | Todo projeto tem ao menos 1 variante. Novo projeto nasce com a variante vazia **"Base"**. | Decidido |

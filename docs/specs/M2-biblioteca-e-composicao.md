@@ -5,7 +5,7 @@
 | Versão | 0.2 (implementada; decisões e premissas aguardam revisão do Nicholas) |
 | Data | 2026-10-25 |
 | Base | `docs/PRD.md` v0.11 · `docs/ARCHITECTURE.md` v0.7 · `docs/DESIGN.md` v0.3 + protótipos 03, 03a, 03b, 07, 16 · `docs/specs/M0-setup.md` v0.6 · `docs/specs/M1-parede-e-escala.md` v0.3 |
-| Status | **Implementada (25/10), aguardando a validação visual do Nicholas.** Ele liberou o M2 sem revisar a spec; as decisões da §0.1 e as premissas da §0.2 foram tomadas com o padrão mais conservador dos documentos e seguem marcadas para revisão. Registro da implementação na §12. |
+| Status | **Implementada (25/10), aguardando a revisão e a validação visual do Nicholas.** Ele liberou o M2 sem revisar a spec; as decisões da §0.1 e as premissas da §0.2 foram tomadas com o padrão mais conservador dos documentos e seguem marcadas para revisão. Registro da implementação na §12. |
 
 ## 0. Pré-requisitos
 
@@ -96,7 +96,7 @@ Entregar a parte central do uso: enviar fotos para a biblioteca global (individu
 - **Arrastar**: botão esquerdo sobre a foto; o canto superior esquerdo externo é encaixado no grid quando o snap está ligado (B-02); o Konva move o nó e a store só muda no `dragend` (B-03). Arrastar o fundo continua sendo pan.
 - **Teclado** (RN-16, M2-09), com a foto selecionada e o foco fora de campos de texto: setas movem; `Esc` desseleciona; `Ctrl+Z` / `Ctrl+Shift+Z` / `Ctrl+Y` desfazem e refazem.
 - **Soltar da biblioteca** (M2-04): `dragover` aceita a miniatura; `drop` converte o ponto da página em cm (`PalcoApi.dePaginaParaConteudo`).
-- Imagem ainda carregando: retângulo `sand`. Imagem que falha ao carregar: retângulo `sand` com ícone de imagem quebrada e o nome (a foto continua selecionável e movível).
+- Imagem ainda carregando: retângulo `sand`. Imagem que não está na biblioteca (ou que falha ao carregar): fica o retângulo `sand`; a foto continua selecionável e movível, e o painel mostra "Imagem indisponível".
 - Hook de teste (estende o da M1 §3.9): `window.__deco.paraTela(x, y)`, `window.__deco.dePagina(x, y)` e `window.__deco.retanguloDaFoto(id)` → `{ x, y, largura, altura }` em px da página do **tamanho externo**.
 
 ### 3.4 Painel da foto (protótipo 03; DESIGN §7)
@@ -125,8 +125,8 @@ Passa a mostrar: Fotos N · Área total (bounding box, ou "—") · Sobreposiç�
 ### 3.7 Header, toolbar e barra de status
 
 - **Desfazer / Refazer** funcionam (inativos, por estado, quando a pilha está vazia: dica "Nada para desfazer." / "Nada para refazer."). `Salvar` não limpa as pilhas (SV-10).
-- **Toolbar**: Adicionar, Duplicar, Trazer para frente, Enviar para trás funcionam; Duplicar e as de ordem ficam inativas sem foto selecionada ("Selecione uma foto."); "Adicionar" segue M2-04.
-- **Barra de status**: à esquerda "Nenhuma foto selecionada" ou o nome da foto com `X 112,5 · Y 40,0 cm`; no centro a dica de teclado (M2-09); à direita o status de salvamento.
+- **Toolbar**: Adicionar, Duplicar, Trazer para frente, Enviar para trás funcionam; Duplicar e as de ordem ficam inativas sem foto selecionada ("Selecione uma foto na parede."); "Adicionar" segue M2-04.
+- **Barra de status**: à esquerda "Nenhuma foto selecionada" ou a posição da foto selecionada (`X 112,5 · Y 40,0 cm`); no centro a dica de teclado (M2-09); à direita o status de salvamento.
 - Sem escala (M2-01): o editor se comporta como no M1.
 
 ## 4. Domínio
@@ -229,7 +229,8 @@ TDD como no M1: os testes de domínio, API e store entram primeiro, vermelhos (`
 
 | Item | Resultado |
 |---|---|
-| Testes | Vitest: domínio (tamanho, geometria, alertas, recorte, composição, histórico; cobertura 97,4% das instruções e 93,5% dos ramos), API (imagens, salvamento com fotos), web (store, fila de upload, filtros, painéis da foto e do recorte, biblioteca, diálogo de envio, teclado, recorte). Playwright: `biblioteca.spec.ts` e `composicao.spec.ts` cobrem os aceites 1, 2, 2a, 3, 4, 7, 9, 10 e 12 do PRD, os alertas, o recorte e a rede. |
+| Testes | Vitest: domínio (tamanho, geometria, alertas, recorte, composição, histórico; cobertura 97,4% das instruções e 93,5% dos ramos), API (imagens, salvamento com fotos), web (store, fila de upload, filtros, painéis da foto e do recorte, biblioteca, diálogo de envio, teclado, recorte). Playwright: `biblioteca.spec.ts` e `composicao.spec.ts` cobrem os aceites 1, 2, 2a, 3, 4, 7, 9 e 10 do PRD, os alertas, o recorte e a rede. O aceite 5 (recalibrar mantém as fotos) tem teste de API. O aceite 12 (desfazer na variante A não altera a B) fica **parcial**: a pilha é por variante, mas a independência só é verificável no M3, com mais de uma variante. |
+| Orçamento de arrasto (RNF-03) | Sonda do Playwright (`desempenho.spec.ts`): com 40 fotos de 10 × 15 cm e borda, o arrasto longo mede **60 fps** (quadro médio 16,7 ms, p95 16,7 ms) no Chromium headless da máquina de desenvolvimento; o teste só guarda contra regressões grosseiras (média ≤ 33 ms). |
 | Dependências novas | `bson` 7.3.3 (ADR-07; a mesma versão que o driver do MongoDB já instala) para os ids das fotos no navegador. `zundo` **não** entrou (M2-02, ADR-03 revista). |
 | Desempenho | O pacote JS da web foi de ~917 kB para ~1.016 kB (o `bson` entra no pacote principal; sem divisão de código, como já pendia no M1). |
 
