@@ -130,19 +130,24 @@ Pedido original do Nicholas:
 | 2026-10-24 | M2-06: M2 desenha e edita placeholders (sem recorte); associação no M4. M2-07: "Excluídas" visível e inativo até o M4. M2-08: Trazer para frente / Enviar para trás andam uma posição por clique. | Decidido |
 | 2026-10-24 | M2-09: mudar tamanho ou orientação recentraliza o recorte. M2-10: mudar a borda mantém o canto sup.-esq. externo. M2-11: foto mantém ≥ 1 cm dentro da parede inteira nos movimentos do usuário (nunca ao refazer a escala). M2-12: com snap, X/Y digitados também encaixam. | Decidido |
 | 2026-10-24 | Premissas A-01 a A-29 da spec M2 revisadas (spec v0.3, pronta). Alteradas: A-03 duplo clique na miniatura não adiciona (só botão "Adicionar" ou arrastar); A-12 pill "Sobreposição" na foto da camada superior; A-13 bounding box com toggle "Área total" na toolbar (padrão ligado, não persistido); A-17 soltar arquivos sobre a Biblioteca abre o diálogo com eles aguardando "Enviar"; A-19 arquivos de sistema contam como ignorados (RN-20). Confirmadas: foto nova no centro da área útil, setas agrupadas < 1 s, borda até 20 cm, linha "Fora da área" no painel, `GET /api/config` com `uploadMaxMb` (resolve o limite fixo do M1), TDD em dois commits como no M1. | Decidido |
+| 2026-10-25 | **M2 implementado sobre outra spec.** O branch `claude/m2-implementation-8f6bef` partiu da `main` (`c89ddd7`) sem a spec v0.3, que estava só em `claude/m2-specification-dcc0e1`. A sessão escreveu uma spec própria (v0.2: M2-01 a M2-09 e B-01 a B-15, com outro sentido) e alterou PRD (RF-13, RF-20, RN-36 novo), DESIGN e ADR-03. O Nicholas apontou as divergências: duplo clique adicionando, pill de sobreposição em todas as fotos. A v0.3 entrou na `main` (`8488184`) e foi mesclada na implementação (`3ac18f1`) com os documentos da `main`; a v0.2 e as mudanças de documento dela estão descartadas. Lacunas na spec M2 §13, tarefas de ajuste T14 a T23 (§9). | Feito |
+| 2026-10-25 | M2-13: o desfazer volta ao `zundo` (ADR-03); a pilha própria `historico.ts` sai e a store é reestruturada para isolar `{ fotos, areaUtil, bordaPadrao }`; se o `zundo` não servir, parar e perguntar. M2-14: saem os acréscimos da implementação no salvamento (422 sem escala, imagem excluída, `_id` repetido) e o RN-36; o salvamento só confere imagens inexistentes (§5). M2-15: domínio em `composicao/` e `biblioteca/` (spec §4.1); `fotos/` sai. | Decidido |
+| 2026-10-25 | Dependência nova do M2: `bson` 7.3.3 no `apps/web` (ADR-07; mesma versão do driver do MongoDB). | Decidido |
 
 ## Questões em aberto
 
 - **ADR-16 (desempenho do perfil Alto, 28 MP, ≈ 3 s):** o Nicholas decide depois entre as opções da ADR (limitar a retificada a 4096 px, WebP 0,8 só na retificada, vários Workers, JPEG sem transparência). Até lá vale a decisão provisória: pipeline atual, teto de 4,5 s no E2E do Alto. Não bloqueia o M2.
 - Status HTTP de `/api/saude` quando algum componente está em erro: o teste verifica só o corpo. Definir na T5.
+- **Queda do servidor no painel de preview (25/10, relatada pela sessão de implementação):** o `npm start` iniciado pelo painel do Claude saiu com o código 3221226505 (0xC0000409) no primeiro `GET /api/imagens/:id/arquivo`; o mesmo build iniciado à mão serviu os arquivos normalmente. Causa desconhecida, não reproduzida.
 
 ## Status
 
 - Fase atual: **M1 aceito pelo Nicholas (24/10).** Verde: Vitest 589 testes (domínio, API, web), Playwright 35/35, typecheck, lint e `format:check`. Cobertura do domínio: instruções 97,7%, ramos 92,4%, linhas 99,1%.
 - Desempenho da retificação (E2E `desempenho.spec.ts`): **Leve 0,7 s**; **Alto (6144 × 4608) 3,0–3,2 s** (warp 0,9 s + WebP 2,0 s). Meta de 3 s não folgada no Alto: ver ADR-16 e a decisão pendente.
 - Entregue no M1: projetos (criar, listar, abrir, renomear, excluir), upload da parede (perfis, EXIF, troca sem fotos), modo Perspectiva (alças prontas, lupa, prévia sob demanda, retificação no Worker), calibração linear, área útil, grid, zoom/pan, salvamento manual (Ctrl+S, `beforeunload`, 409 entre abas), reparo na inicialização (A-18).
-- Próximo: M2 (spec v0.3 pronta, `docs/specs/M2-biblioteca-e-composicao.md`); começa com a liberação do Nicholas.
-- Pendências: decisão sobre o Alto (ADR-16); limite de upload no browser fixo em 50 MB (resolvido no M2 pela A-28, `GET /api/config`); chunk JS de ~917 kB (Konva no pacote principal, sem code-splitting); status HTTP de `/api/saude` com componente em erro (questão em aberto).
+- **M2 (25/10): implementado sobre outra spec e em ajuste à spec v0.4** (`docs/specs/M2-biblioteca-e-composicao.md`): 38 lacunas (§13), tarefas T14 a T23 (§9). Antes do ajuste: Vitest 808, Playwright 65/65, arraste com 40 fotos a 60 fps, cobertura do domínio 97,4% / 93,5% (§12.3).
+- Próximo: T14 (testes vermelhos do ajuste) e depois T15 a T23; aceite do M2 na T13.
+- Pendências: decisão sobre o Alto (ADR-16); limite de upload no browser fixo em 50 MB (resolvido no M2 pela A-28, `GET /api/config`); chunk JS de ~1.016 kB depois do M2 (Konva e `bson` no pacote principal, sem code-splitting); status HTTP de `/api/saude` com componente em erro (questão em aberto).
 
 ## Histórico
 
@@ -164,3 +169,4 @@ Pedido original do Nicholas:
 - 2026-10-24 — Spec M1 v0.1 (rascunho) com 8 decisões (M1-01 a M1-08) e 20 premissas; PRD v0.11, ARCHITECTURE v0.6, DESIGN v0.3.
 - 2026-10-24 — M1 implementado: domínio (geometria e escala), API (projetos, parede, escala, salvamento), web (store, palco Konva, modos, painéis) e E2E; ARCHITECTURE v0.7 (ADR-16, estrutura), spec M1 v0.3 (§12).
 - 2026-10-24 — Spec M2 v0.1 (rascunho) em `docs/specs/M2-biblioteca-e-composicao.md`, escrita em paralelo ao M1: 12 decisões (M2-01 a M2-12, tomadas no mesmo dia; spec v0.2) e 29 premissas revisadas (spec v0.3, pronta); PRD v0.12, DESIGN v0.4, ARCHITECTURE v0.8 e spec M0 atualizados (§11). Regra nova no `CLAUDE.md`: spec de marco usa só a documentação, sem ler código.
+- 2026-10-25 — M2 implementado (T1 a T12) sobre uma spec própria da sessão de implementação (v0.2). Spec v0.3 mesclada na `main` e na implementação; spec M2 v0.4 com o registro da implementação (§12), as decisões M2-13 a M2-15, as lacunas (§13) e as tarefas T14 a T23; ARCHITECTURE §6 com os arquivos de web e API do M2.

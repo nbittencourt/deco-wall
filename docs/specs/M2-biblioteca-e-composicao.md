@@ -2,10 +2,10 @@
 
 | Campo | Valor |
 |---|---|
-| Versão | 0.3 |
-| Data | 2026-10-24 |
+| Versão | 0.4 (registro da implementação, lacunas e tarefas de ajuste — §9, §12, §13) |
+| Data | 2026-10-25 |
 | Base | `docs/PRD.md` v0.12 · `docs/ARCHITECTURE.md` v0.8 · `docs/DESIGN.md` v0.4 + protótipos 03, 03a, 03b, 07, 11, 16 · `docs/specs/M0-setup.md` v0.6 · `docs/specs/M1-parede-e-escala.md` v0.3 (implementada e aceita) |
-| Status | **Pronta para implementação** — decisões e premissas revisadas (24/10); M1 aceito. Começa com a liberação do Nicholas. |
+| Status | **Pronta para implementação** — decisões e premissas revisadas (24/10); M1 aceito. A implementação de 25/10 seguiu outra spec (§12) e está em ajuste a esta pelas tarefas T14 a T23. |
 
 ## 0. Pré-requisitos
 
@@ -337,11 +337,27 @@ Dependências novas, já previstas nas ADRs: `zundo` (ADR-03) e `bson` (ADR-07).
 | T10 | Web: modo de recorte e tamanho personalizado | T9 |
 | T11 | Web: desfazer/refazer (zundo), atalhos, status pós-desfazer, área útil e borda padrão no histórico | T9 |
 | T12 | Web: painel Composição (A-14), barra de status, ativação dos controles do header e da toolbar (§2) | T9, T11 |
-| T13 | E2E + desempenho + README + `MEMORY.md` | todas |
+| T13 | E2E + desempenho + README + `MEMORY.md` | todas, inclusive T14 a T23 |
+
+**Tarefas de ajuste (25/10).** A implementação de T1 a T12 seguiu outra spec (§12). As tarefas abaixo levam o código a esta spec. Cada linha da §13 está em uma tarefa. Os itens marcados "Verificar" na §13 são conferidos na tarefa indicada e corrigidos se divergirem. A T13 fica por último.
+
+| # | Tarefa | Depende de |
+|---|---|---|
+| T14 | **Testes vermelhos do ajuste (A-29).** Corrigir os testes que fixam o comportamento da outra spec (por exemplo: duplo clique adiciona, pill em todas as fotos, envio explícito, bounding box só com 2 fotos, Carregar fotos inativo sem escala, 422 sem escala) e escrever os testes que faltam para cada linha "Diverge" da §13, nos níveis da §7. Um commit `test(m2): …` com esses testes vermelhos e o resto verde. | — |
+| T15 | **Domínio na estrutura da §4.1 (M2-15).** Levar `fotos/` e `historico.ts` para `composicao/` e `biblioteca/`, com as funções e os nomes da tabela da §4.1, e apagar `fotos/`. Acrescentar ou corrigir: `limitarPosicao` (M2-11), snap nos campos X/Y (M2-12), cascata de até 10 tentativas (A-04), `filtrarBiblioteca` só pelo estado salvo (M2-05), que sai de `apps/web/src/app/biblioteca.ts`, validação por extensão **e** tipo, com arquivos de sistema contados como ignorados (A-19), e as constantes da §4.1. Cobertura do domínio ≥ 90%. | T14 |
+| T16 | **Desfazer com `zundo` (M2-13, ADR-03).** Instalar o `zundo` (ainda não está no projeto) com versão exata registrada no `MEMORY.md`. Reestruturar a store para que a parte desfazível da variante (`{ fotos, areaUtil, bordaPadrao }`) fique isolada, com uma pilha por variante e limite de 100. Também: setas seguidas agrupadas (A-08), status depois de desfazer (A-26) e ciclo de vida do histórico (A-27). **Se o `zundo` não servir, parar e perguntar ao Nicholas, sem alternativa por conta própria.** | T15 |
+| T17 | **API (M2-14, §5, A-28).** Retirar as recusas que esta spec não tem: salvar sem escala, imagem excluída e `_id` repetido. O 422 fica só para imagem inexistente, com `{ erro, detalhes: { imagensInexistentes } }`; imagem excluída conta como existente. Imagem ilegível → 415 "Não foi possível ler a imagem.". Falha do `$addToSet` vai para o log sem derrubar o salvamento. `GET /api/config` → `{ uploadMaxMb }`. Conferir o upload abortado sem rastro. | T14 |
+| T18 | **Web — Biblioteca (§3.1).** Duplo clique sem ação (A-03); "Carregar fotos" ativo sem escala (A-20) e o texto da §3.1; estados vazios por filtro; contador do filtro ativo (A-01); miniatura de 92 px com tooltip (A-02); filtros pelo estado salvo e recarga da biblioteca depois de salvar (M2-05). | T15, T17 |
+| T19 | **Web — Diálogo Carregar fotos (§3.2).** Envio na hora; "Aguardando" e **Enviar** só para arquivos soltos sobre a Biblioteca; qualidade travada até fechar o diálogo (A-17); estados e textos da A-18; limite real de upload, também na parede (A-28). | T17, T18 |
+| T20 | **Web — Canvas (§3.3, §3.7, ARCHITECTURE §6).** Pill "Sobreposição" só na foto da camada superior (A-12); toggle "Área total" e bounding box com 1 foto (A-13); "Imagem indisponível" no canvas (A-16); placeholders (M2-06); no modo de recorte, as outras fotos a 35% e sem interação (A-11); posição ao vivo no arraste (A-07). Konva só no `Palco.tsx`: se o arquivo ficar grande demais, propor ao Nicholas a mudança da §6 antes de dividir. | T15, T16 |
+| T21 | **Web — Painéis, toolbar e barra de status.** X/Y com o limite M2-11 e o snap M2-12; ordem inativa no topo e no fundo (M2-08); tooltip do Remover (M2-04); seletor de tamanho (A-10); textos de alerta e cabeçalho de placeholder (A-15, M2-06); linhas do painel Composição (A-14); textos da barra de status (M2-01, §3.10); Desfazer, Refazer, Salvar e Ctrl+S inativos durante o recorte (A-11). | T16, T20 |
+| T22 | **Referências no código.** Comentários e nomes de teste citam IDs da outra spec: M2-01 a M2-09, com outro sentido, e B-01 a B-15 (74 ocorrências em 35 arquivos em 25/10). Citam também o RN-36, que não existe (M2-14; 5 ocorrências em 25/10). Trocar pelos IDs desta spec ou do PRD; ao fim, `grep -rnE "B-[01][0-9]|RN-36"` em `apps`, `packages` e `tests` não acha nada. | T15 a T21 |
+| T23 | **E2E e desempenho que faltam (§7).** Completar os 13 cenários E2E da §7 (incluindo o 8, alertas com pills e contagens, e o 13, rede); medir o upload de 50 fotos Leve (≤ 1 s por foto) e a memória com 40 fotos no Leve (< 300 MB); registrar os números no `MEMORY.md`. | T18 a T21 |
 
 ## 10. Forma de trabalho
 
 - Conforme a A-29: TDD em dois commits, como no M1 — `test(m2): …` com todos os testes vermelhos e `feat(m2): …` com a implementação e tudo verde (`typecheck`, `lint`, `test`, `e2e`). A ordem da §9 continua sendo a ordem de implementação. Status no `MEMORY.md` ao fim.
+- **Ajuste (T14 a T23):** mesmo TDD. A T14 é o commit vermelho, e as demais vêm em commits `fix(m2): …` com tudo verde. Comportamento que esta spec não define não é inventado: **pergunte ao Nicholas** (a origem das divergências está na §12).
 - Validação do Nicholas na **T13** (aceite do M2).
 
 ## 11. Alterações feitas em outros documentos (24/10)
@@ -355,3 +371,68 @@ Aplicadas depois da revisão das premissas, com o branch atualizado com a `main`
 | `docs/ARCHITECTURE.md` | §6: pastas `packages/domain/src/composicao/` e `packages/domain/src/biblioteca/`; ADR-03: escopo do histórico (M2-03). |
 | `docs/specs/M0-setup.md` | DM-05: momentos da associação (upload e salvamento) e filtros pelo estado salvo (M2-05). |
 | `MEMORY.md` | Decisões M2-01 a M2-12 (registradas em 24/10) e premissas alteradas na revisão. |
+
+## 12. Registro da implementação (25/10)
+
+**Origem das divergências.** O branch `claude/m2-implementation-8f6bef` foi criado a partir da `main` em `c89ddd7`. Esta spec só existia no branch `claude/m2-specification-dcc0e1`, que ainda não estava na `main`. A sessão de implementação escreveu então uma spec própria (v0.2, commit `0de7f75`), com decisões M2-01 a M2-09 e premissas B-01 a B-15 diferentes destas, e implementou T1 a T12 sobre ela. Também alterou PRD, DESIGN e ARCHITECTURE: RF-13, RF-20, um RN-36 novo e a ADR-03 sem `zundo`. Em 25/10 o Nicholas apontou as divergências. Esta spec entrou na `main` (`8488184`) e foi mesclada na implementação (`3ac18f1`), e os documentos ficaram exatamente como na `main`. **A v0.2 está descartada.** Os IDs M2-01 a M2-09 citados no código têm o sentido da v0.2 até a T22.
+
+### 12.1 Decisões de 25/10 (Nicholas)
+
+| # | Conflito | Decisão |
+|---|---|---|
+| M2-13 | A implementação trocou o `zundo` por uma pilha própria (`packages/domain/src/historico.ts`). O motivo dado: o `zundo` mescla o estado só no primeiro nível, e desfazer substituiria o `documento` inteiro. | **Vale a ADR-03: `zundo`.** A store é reestruturada para isolar a parte desfazível (§4.7). A pilha própria sai. Se o `zundo` se mostrar inviável, a implementação para e pergunta (T16). |
+| M2-14 | O servidor passou a recusar (422) salvar fotos sem escala, com imagem excluída ou com `_id` repetido, e o PRD ganhou um RN-36 (tolerância dos alertas). | **Saem todos os acréscimos.** O salvamento só confere se as imagens existem (§5), e a imagem excluída fica para o M4. O RN-36 não entra: a tolerância já está no §4.5. |
+| M2-15 | O domínio ficou em `fotos/` (tamanho, geometria, alertas, recorte, composição) e `historico.ts`. | **Vale a §4.1:** `composicao/` e `biblioteca/`, com as funções e os nomes da tabela (T15). |
+
+### 12.2 O que já atende a esta spec
+
+M2-01 (seta e Shift + seta, com e sem snap); M2-02 (atalhos); M2-03 (escopo do desfazer e limite de 100; o mecanismo muda na T16); M2-07 ("Excluídas" inativo); M2-09 (recentraliza o recorte); M2-10 (canto fixo na borda); A-05 (miniatura não arrasta sem escala); A-21 (botão Parede considera fotos não salvas); A-23 (schemas Zod e `$jsonSchema` sem mudança); A-24; adicionar por botão e por arraste (A-04, exceto o limite de tentativas); modo de recorte com Concluir em 1 passo (§3.5; teste em `apps/web/src/app/store-composicao.test.ts`); upload no servidor com EXIF, lado maior por perfil, miniatura de 256 px, recusa sem rastro em `tmp/` e cache imutável (§5; testes em `apps/api/src/rotas/imagens.test.ts`); `bson` para os ids das fotos. Os itens sem teste citado foram conferidos no código.
+
+### 12.3 Números antes do ajuste
+
+Vitest 808 testes, Playwright 65/65, typecheck, lint e `format:check` verdes. Esses testes cobrem também o comportamento da v0.2 (T14). Cobertura do domínio: 97,4% das instruções e 93,5% dos ramos. Arraste com 40 fotos de 10 × 15 com borda: 60 fps (quadro médio 16,7 ms) no Chromium headless. Dependência nova: `bson` 7.3.3, a mesma do driver do MongoDB. Pacote JS da web: de ~917 kB para ~1.016 kB.
+
+## 13. Lacunas da implementação (25/10)
+
+Comparação desta spec com o código de `claude/m2-implementation-8f6bef` em `3ac18f1`. **Diverge**: confirmado no código. **Verificar**: não conferido, e a tarefa confere. O comportamento exigido é o do item citado; a coluna do meio só descreve o código atual.
+
+| # | Item | Hoje no código | Situação | Tarefa |
+|---|---|---|---|---|
+| L-01 | A-03 | Duplo clique na miniatura adiciona a foto (`apps/web/src/ui/telas/editor/Biblioteca.tsx:166`). | Diverge | T18 |
+| L-02 | A-12 | Pill "Sobreposição" em todas as fotos envolvidas (`apps/web/src/ui/canvas/FotosKonva.tsx:375`). O contorno tracejado em todas está certo. Posição das pills "Fora…" a conferir. | Diverge | T20 |
+| L-03 | A-13 | Sem o toggle "Área total"; bounding box só com 2 fotos ou mais (`FotosKonva.tsx:346`). | Diverge | T20 |
+| L-04 | A-20, §3.1 | "Carregar fotos" inativo sem escala (`Biblioteca.tsx:91`); texto "As fotos ficam disponíveis depois que a escala da parede for definida." (`Biblioteca.tsx:143`). | Diverge | T18 |
+| L-05 | §3.1 | Estados vazios "Nenhuma foto na biblioteca ainda." e "Nenhuma foto neste filtro." (`Biblioteca.tsx:150`), em vez dos três textos por filtro. | Diverge | T18 |
+| L-06 | A-01 | O contador mostra o total da biblioteca (`imagens.length`), não o do filtro ativo. | Diverge | T18 |
+| L-07 | A-02 | Miniatura de 88 px (`Biblioteca.tsx:176`) com a orientação escrita abaixo; falta o tooltip com nome e orientação natural. | Diverge | T18 |
+| L-08 | M2-05 | Projeto e Variante incluem fotos não salvas (`apps/web/src/app/biblioteca.ts:14`); a biblioteca só é carregada ao abrir o editor (`Editor.tsx:48`), não depois de salvar. | Diverge | T15, T18 |
+| L-09 | A-17, A-18 | Os arquivos sempre esperam "Enviar N fotos" (`DialogoUpload.tsx:262`). A qualidade trava só durante o lote. Estados Aguardando · Enviando · Concluída · Falhou · Cancelada: não há "Processando…" nem os motivos da A-18. | Diverge | T19 |
+| L-10 | A-28 | Sem `GET /api/config`; 50 MB fixos no browser (`EstadoVazio.tsx:10` e upload de fotos). | Diverge | T17, T19 |
+| L-11 | A-19 | Aceita por tipo, ou por extensão quando o tipo vem vazio (`packages/domain/src/arquivos.ts:21`); a spec pede extensão **e** tipo. Contagem de arquivos de sistema como ignorados a conferir. | Diverge | T15, T19 |
+| L-12 | M2-11, A-25 | Sem limite de posição: a foto pode ir para longe da parede por arraste, setas, campos e duplicar. | Diverge | T15, T21 |
+| L-13 | M2-12 | X/Y digitados não encaixam no grid. | Diverge | T15, T21 |
+| L-14 | A-04 | Cascata de até 1000 tentativas (`packages/domain/src/fotos/composicao.ts:69`), em vez de 10. | Diverge | T15 |
+| L-15 | A-08 | Cada toque de seta é um passo de desfazer: não há agrupamento < 1 s. | Diverge | T16 |
+| L-16 | A-26 | Desfazer sempre marca "Alterações não salvas", mesmo voltando ao último salvo. | Diverge | T16 |
+| L-17 | A-27 | Descarte do histórico depois de um 409 e na troca da parede; manutenção ao refazer a escala. | Verificar | T16 |
+| L-18 | M2-13, ADR-03, §4.7 | Pilha própria `historico.ts`, sem `zundo`. | Diverge | T16 |
+| L-19 | M2-15, §4.1 | Domínio em `fotos/` e `historico.ts`, com outros nomes de função. | Diverge | T15 |
+| L-20 | M2-14, §5 | Salvamento recusa sem escala, imagem excluída e `_id` repetido (`apps/api/src/servicos/variantes.ts:30`); o 422 não traz `detalhes.imagensInexistentes`. | Diverge | T17 |
+| L-21 | §5 | Imagem ilegível responde 415 "Formato não suportado. Use JPG, PNG ou WEBP." (`apps/api/src/servicos/imagem.ts`), não "Não foi possível ler a imagem.". | Diverge | T17 |
+| L-22 | §5 | Falha do `$addToSet` depois do `updateOne` faz o salvamento responder erro (`servicos/variantes.ts:110`); a spec manda registrar no log e seguir. | Diverge | T17 |
+| L-23 | §5 | Upload abortado apaga os temporários e não insere documento. | Verificar | T17 |
+| L-24 | M2-06 | Placeholder (`imagemId: null`) aparece como "Imagem indisponível" (`apps/web/src/ui/telas/editor/cenas.ts:30`): falta o desenho da DESIGN §2.2, "Ajustar recorte" inativo com tooltip, cabeçalho "Sem foto" e a linha "Sem foto". | Diverge | T20, T21 |
+| L-25 | A-16 | "Imagem indisponível" só no painel; no canvas fica só o retângulo `sand`, sem ícone e sem texto. | Diverge | T20 |
+| L-26 | A-11 | Ctrl+S salva durante o modo de recorte (`Editor.tsx:71`; `salvarVariante` não confere o modo). As outras fotos ficam sob o véu do quadro, em vez de 35% e sem interação. | Diverge | T20, T21 |
+| L-27 | A-07 | Posição ao vivo na barra de status durante o arraste (a store só muda no `dragend`). | Verificar | T20 |
+| L-28 | A-06, A-09 | Arrastar foto não selecionada a seleciona e move; Esc no campo restaura o valor. | Verificar | T20, T21 |
+| L-29 | M2-08 | "Trazer para frente" e "Enviar para trás" não ficam inativos no topo e no fundo da pilha (`ToolbarCanvas.tsx:93`, `:100`). | Diverge | T21 |
+| L-30 | M2-04 | "Remover" sem o tooltip "Tira a foto desta variante. A imagem continua na biblioteca.". | Diverge | T21 |
+| L-31 | A-10 | Gatilho do seletor sem "cm"; sem o tooltip "Quadrado: sem orientação". Orientação ao sair de um quadrado a conferir. | Diverge | T21 |
+| L-32 | A-14 | "Fora dos limites n" (`PainelComposicao.tsx:92`) em vez de "Fora da área N fotos"; "Sobreposições" sem "N fotos"; sem a linha "Sem foto". | Diverge | T21 |
+| L-33 | A-15 | Alertas "Esta foto passa dos limites da parede/área útil." (`PainelFoto.tsx:65`) em vez de "Esta foto está fora da parede/área útil.". | Diverge | T21 |
+| L-34 | M2-01, §3.10 | Barra de status "Setas movem 1 passo do grid · …" (`Editor.tsx:259`) em vez de "Setas: 1 passo do grid · Shift + setas: 5 passos". Sem o texto do modo de recorte. | Diverge | T21 |
+| L-35 | ARCHITECTURE §6 | O Konva também é usado em `apps/web/src/ui/canvas/FotosKonva.tsx`; a §6 diz que `Palco.tsx` é o único módulo com Konva. | Diverge | T20 |
+| L-36 | A-29, §7 | Os testes de componente e os E2E foram escritos junto das telas, não vermelhos antes. Falta medir o upload de 50 fotos e a memória. | Diverge | T14, T23 |
+| L-37 | — | Comentários e testes citam IDs da v0.2 com outro sentido (74 ocorrências em 35 arquivos) e o RN-36, que não existe. | Diverge | T22 |
+| L-38 | A-05 | "Adicionar" inativo sem miniatura selecionada, com "Selecione uma foto na biblioteca." (sem teste). | Verificar | T21 |

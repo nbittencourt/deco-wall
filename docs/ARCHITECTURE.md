@@ -318,6 +318,8 @@ deco-wall/
         app/                # store do editor (zustand + immer), contexto, navegação, aviso ao sair
           store.ts          # fatias `documento` e `ui`; ações nomeadas (ADR-03)
           StoreContext.tsx  avisoAoSair.ts  navegacao.ts
+          uploadLote.ts     # M2: fila de upload (3 em paralelo, cancelar, tentar de novo), sem React
+          arquivosSoltos.ts # M2: arquivos e pastas soltos com o mouse
         infra/              # cliente HTTP e Worker
           dto.ts            # formatos da API, porta `ClienteApi` e `ErroApi`
           clienteApi.ts     # implementação com fetch (upload com progresso por XMLHttpRequest)
@@ -330,13 +332,13 @@ deco-wall/
             Palco.tsx       # único módulo que usa o Konva: camadas, zoom/pan, alças, lupa
             cena.ts         # cenas em dados (sem Konva): parede, área útil, perspectiva, calibração
             useImagem.ts
-          paineis/          # Composição, Perspectiva, Calibração, Área útil, BarraModo, CamposAreaUtil
+          paineis/          # Composição, Perspectiva, Calibração, Área útil, Foto, Recorte, BarraModo, CamposAreaUtil
           telas/            # Projetos, Editor, Comparação, /dev/ui
-            editor/         # HeaderEditor, Biblioteca, ToolbarCanvas, EstadoVazio, cenas.ts
-              modos/        # ModoPerspectiva, ModoCalibracao, ModoAreaUtil, LayoutModo
+            editor/         # HeaderEditor, Biblioteca, DialogoUpload, ToolbarCanvas, EstadoVazio, cenas.ts
+              modos/        # ModoPerspectiva, ModoCalibracao, ModoAreaUtil, ModoRecorte, LayoutModo
           componentes/
             ui/             # componentes shadcn/ui (gerados)
-            proprios/       # StatusSalvamento, ChipEscala, Miniatura, CampoCm, NomeProjeto, DialogosProjeto…
+            proprios/       # StatusSalvamento, ChipEscala, Miniatura, CampoCm, SeletorTamanho, NomeProjeto, DialogosProjeto…
         lib/                # utilitários de UI (cn, etc.)
   api/
     src/
@@ -345,7 +347,7 @@ deco-wall/
       contexto.ts  erros.ts
       config.ts             # leitura/validação do .env
       rotas/                # projetos, parede (upload, escala, arquivos), variantes (hard save), saude; imagens e config (M2)
-      servicos/             # projetos, parede, variantes, imagem (sharp), reparo (A-18); purga no M4
+      servicos/             # projetos, parede, variantes, imagem (sharp), imagens (biblioteca — M2), reparo (A-18); purga no M4
       repositorios/         # MongoDB (conexão e conversão ObjectId ↔ string hex)
       migracoes/            # 0001-inicial…
       armazenamento/        # PASTA_FOTOS (inclui gravação em duas fases)
@@ -360,7 +362,7 @@ deco-wall/
         templates/
           catalogo.ts       # catálogo de templates (constante; fonte: docs/specs/templates.md)
   tests/
-    e2e/                    # Playwright: smoke, rede, projetos, parede e escala, salvamento, desempenho (ajudantes.ts)
+    e2e/                    # Playwright: smoke, rede, projetos, parede e escala, salvamento, desempenho, biblioteca, composição (ajudantes.ts)
     fixtures/
       imagens/
       paredes/
