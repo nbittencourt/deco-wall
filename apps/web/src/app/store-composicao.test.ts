@@ -447,7 +447,17 @@ describe('modo de recorte (RN-14, RN-28, DESIGN §7.0)', () => {
       fotoId: id,
       tamanho: { sugeridoId: '10x15', larguraCm: 10, alturaCm: 15 },
       offset: { offsetX: 0, offsetY: 0 },
+      personalizado: false,
     });
+  });
+
+  it('"Personalizado…" abre o modo com os campos de largura e altura visíveis (RN-28)', async () => {
+    const { estado } = await aberto();
+    const id = estado().adicionarFoto(hex(1))!;
+    estado().abrirRecorte(id, { personalizado: true });
+    expect(estado().ui.recorte!.personalizado).toBe(true);
+    estado().atualizarRecorte({ personalizado: false });
+    expect(estado().ui.recorte!.personalizado).toBe(false);
   });
 
   it('o rascunho não mexe na foto; Concluir grava tamanho e recorte em um único passo', async () => {

@@ -21,6 +21,7 @@ export function ModoAreaUtil() {
   const projeto = useEditor((s) => s.documento.projeto)!;
   const variante = useEditor((s) => s.documento.variante)!;
   const contexto = useEditor((s) => s.ui.contextoAreaUtil);
+  const imagens = useEditor((s) => s.biblioteca.imagens);
   const { interior, metodo } = dadosDaParede(projeto);
 
   const [area, setArea] = useState<AreaUtil | null>(() => variante.areaUtil ?? interior);
@@ -32,7 +33,7 @@ export function ModoAreaUtil() {
   useAtalhosDoModo({ podeConfirmar: area !== null, onConfirmar: aoConfirmar, onCancelar: aoCancelar });
 
   if (!interior || !area) return null;
-  const cena = cenaDaAreaUtil(cenaDaParede(projeto, variante), area, setArea);
+  const cena = cenaDaAreaUtil(cenaDaParede(projeto, variante, imagens), area, setArea);
 
   return (
     <LayoutModo

@@ -4,7 +4,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '../componentes/ui/tooltip';
 import { PainelComposicao, type PropsPainelComposicao } from './PainelComposicao';
 
-// Painel direito "Composição" no M1 (spec M1 §3.7, A-08, A-13 a A-15; protótipo 11).
+// Painel direito "Composição" (spec M1 §3.7, A-08, A-13 a A-15; spec M2 §3.6, B-05, B-14; protótipo 11).
 
 beforeAll(() => {
   globalThis.ResizeObserver ??= class {
@@ -26,6 +26,9 @@ function montar(sobrescrita: Partial<PropsPainelComposicao> = {}) {
     areaUtil: AREA,
     paredeInteira: PAREDE,
     grid: GRID,
+    resumo: { quantidade: 0, caixa: null, comSobreposicao: 0, foraDosLimites: 0 },
+    bordaPadrao: { larguraCm: 0, cor: '#FFFFFF' },
+    onAlterarBordaPadrao: vi.fn(),
     onRecalibrar: vi.fn(),
     onAjustarAreaUtil: vi.fn(),
     onAlterarAreaUtil: vi.fn(),
@@ -43,7 +46,7 @@ function montar(sobrescrita: Partial<PropsPainelComposicao> = {}) {
 const secao = (nome: string) => within(screen.getByRole('region', { name: nome }));
 
 describe('seções', () => {
-  it('título e as quatro seções do M1', () => {
+  it('título e as quatro seções', () => {
     montar();
     expect(screen.getByRole('heading', { level: 2, name: 'Composição' })).toBeTruthy();
     for (const nome of ['Escala', 'Área útil desta variante', 'Borda padrão', 'Grid']) {
@@ -51,11 +54,28 @@ describe('seções', () => {
     }
   });
 
-  it('resumo: 0 fotos e área total "—" (fotos entram no M2)', () => {
+  it('resumo sem fotos: 0 fotos, área total "—" e sem linhas de alerta', () => {
     montar();
     expect(screen.getByText('Fotos')).toBeTruthy();
     expect(screen.getByText('Área total')).toBeTruthy();
     expect(screen.getByText('—')).toBeTruthy();
+    expect(screen.queryByText('Sobreposições')).toBeNull();
+    expect(screen.queryByText('Fora dos limites')).toBeNull();
+  });
+
+  it('resumo com fotos: quantidade, bounding box e alertas só quando maiores que zero (RF-62, B-14)', () => {
+    montar({
+      resumo: {
+        quantidade: 3,
+        caixa: { xCm: 10, yCm: 10, larguraCm: 90, alturaCm: 47 },
+        comSobreposicao: 2,
+        foraDosLimites: 1,
+      },
+    });
+    expect(screen.getByText('3')).toBeTruthy();
+    expect(screen.getByText('90,0 × 47,0 cm')).toBeTruthy();
+    expect(screen.getByText('Sobreposições')).toBeTruthy();
+    expect(screen.getByText('Fora dos limites')).toBeTruthy();
   });
 });
 
@@ -147,10 +167,26 @@ describe('Área útil desta variante (A-13, A-14)', () => {
   });
 });
 
-describe('Borda padrão (M2)', () => {
-  it('visível e inativa até o M2 (DESIGN §7.1)', () => {
-    montar();
-    expect(secao('Borda padrão').getByLabelText('Largura').getAttribute('aria-disabled')).toBe('true');
+describe('Borda padrão (RN-03, M2)', () => {
+  it('mostra a largura e a cor atuais', () => {
+    montar({ bordaPadrao: { larguraCm: 2, cor: '#C8A27A' } });
+    expect((secao('Borda padrão').getByLabelText('Largura') as HTMLInputElement).value).toBe('2,0');
+    expect(secao('Borda padrão').getByRole('button', { name: 'Cor da borda padrão' }).textContent).toContain(
+      'Madeira clara',
+    );
+  });
+
+  it('a largura aplica em Enter e fora da faixa mostra a faixa válida sem aplicar', () => {
+    const props = montar();
+    const campo = secao('Borda padrão').getByLabelText('Largura');
+    fireEvent.change(campo, { target: { value: '1,5' } });
+    fireEvent.keyDown(campo, { key: 'Enter' });
+    expect(props.onAlterarBordaPadrao).toHaveBeenCalledWith({ larguraCm: 1.5 });
+
+    fireEvent.change(campo, { target: { value: '25' } });
+    fireEvent.keyDown(campo, { key: 'Enter' });
+    expect(screen.getByText('Entre 0,0 e 20,0 cm.')).toBeTruthy();
+    expect(props.onAlterarBordaPadrao).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -22,6 +22,8 @@ export const CORES_CANVAS = {
   vagaOpacidade: 0.8,
   pillMedida: '#B5532F',
   pillMedidaTexto: '#FFFFFF',
+  // Foto cuja imagem ainda não carregou (ou não está na biblioteca).
+  fotoSemImagem: '#EFEAE1',
 } as const;
 
 export const MEDIDAS_CANVAS = {

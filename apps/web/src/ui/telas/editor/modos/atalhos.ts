@@ -13,6 +13,8 @@ export function useAtalhosDoModo(opcoes: {
 
   useEffect(() => {
     const aoTeclar = (evento: KeyboardEvent) => {
+      // Esc que já fechou um menu ou seletor (Radix) não cancela o modo.
+      if (evento.defaultPrevented) return;
       if (evento.key === 'Escape') {
         evento.preventDefault();
         atual.current.onCancelar();

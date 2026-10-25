@@ -1,5 +1,12 @@
-import { formatarHora, type Perfil } from '@deco-wall/domain';
-import { useEffect, useRef, useState } from 'react';
+import {
+  calcularAlertas,
+  formatarCm,
+  formatarHora,
+  resumoDaComposicao,
+  type DirecaoSeta,
+  type Perfil,
+} from '@deco-wall/domain';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAvisoAoSair } from '../../app/avisoAoSair';
 import { navegarPadrao } from '../../app/navegacao';
 import { ProvedorStore, useEditor, useStoreEditor } from '../../app/StoreContext';
@@ -13,17 +20,20 @@ import { StatusSalvamento } from '../componentes/proprios/StatusSalvamento';
 import { Alert } from '../componentes/ui/alert';
 import { Button } from '../componentes/ui/button';
 import { PainelComposicao } from '../paineis/PainelComposicao';
-import { Biblioteca } from './editor/Biblioteca';
+import { PainelFoto } from '../paineis/PainelFoto';
+import { Biblioteca, TIPO_ARRASTO_IMAGEM } from './editor/Biblioteca';
 import { cenaDaParede, dadosDaParede } from './editor/cenas';
 import { EstadoVazio } from './editor/EstadoVazio';
 import { HeaderEditor } from './editor/HeaderEditor';
 import { ModoAreaUtil } from './editor/modos/ModoAreaUtil';
 import { ModoCalibracao } from './editor/modos/ModoCalibracao';
 import { ModoPerspectiva } from './editor/modos/ModoPerspectiva';
+import { ModoRecorte } from './editor/modos/ModoRecorte';
 import { ToolbarCanvas } from './editor/ToolbarCanvas';
 
-// Editor da parede (DESIGN §7, protótipos 02, 03 e 11; spec M1 §3.2, §3.3, §3.8). Header, três colunas e
-// barra de status; os modos Perspectiva, Calibração e Área útil trocam o header por uma barra escura.
+// Editor da parede (DESIGN §7, protótipos 02, 03 e 11; spec M1 §3.2, §3.3, §3.8; spec M2 §3). Header, três
+// colunas e barra de status; os modos Perspectiva, Calibração, Área útil e Recorte trocam o header por uma
+// barra escura.
 
 export interface PropsEditor {
   projetoId: string;
@@ -35,16 +45,17 @@ export function Editor({ projetoId, api = clienteHttp, navegar = navegarPadrao }
   const [store] = useState(() => criarStoreEditor(api));
   useEffect(() => {
     void store.getState().abrirProjeto(projetoId);
+    void store.getState().carregarBiblioteca();
   }, [store, projetoId]);
 
   return (
     <ProvedorStore store={store}>
-      <EditorConteudo navegar={navegar} />
+      <EditorConteudo api={api} navegar={navegar} />
     </ProvedorStore>
   );
 }
 
-function EditorConteudo({ navegar }: { navegar: (caminho: string) => void }) {
+function EditorConteudo({ api, navegar }: { api: ClienteApi; navegar: (caminho: string) => void }) {
   const store = useStoreEditor();
   const projeto = useEditor((s) => s.documento.projeto);
   const variante = useEditor((s) => s.documento.variante);
@@ -86,18 +97,35 @@ function EditorConteudo({ navegar }: { navegar: (caminho: string) => void }) {
   if (modo === 'perspectiva') return <ModoPerspectiva />;
   if (modo === 'calibracao') return <ModoCalibracao />;
   if (modo === 'area-util') return <ModoAreaUtil />;
-  return <EditorNormal navegar={navegar} />;
+  if (modo === 'recorte') return <ModoRecorte />;
+  return <EditorNormal api={api} navegar={navegar} />;
 }
 
-function EditorNormal({ navegar }: { navegar: (caminho: string) => void }) {
+// Elementos em que as setas, Esc e Ctrl+Z são do próprio elemento (texto, menus, controles com roving focus).
+const SELETOR_CAMPO =
+  'input, textarea, select, [contenteditable="true"], [role="slider"], [role="radio"], [role="tab"], [role="menuitem"], [role="option"], [role="combobox"], [role="spinbutton"]';
+
+const DIRECOES: Record<string, DirecaoSeta> = {
+  ArrowLeft: 'esquerda',
+  ArrowRight: 'direita',
+  ArrowUp: 'cima',
+  ArrowDown: 'baixo',
+};
+
+function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: string) => void }) {
   const store = useStoreEditor();
   const projeto = useEditor((s) => s.documento.projeto)!;
   const variante = useEditor((s) => s.documento.variante)!;
+  const imagens = useEditor((s) => s.biblioteca.imagens);
   const sujo = useEditor((s) => s.documento.sujo);
   const salvamento = useEditor((s) => s.documento.salvamento);
   const conflito = useEditor((s) => s.documento.conflito);
   const erroSalvamento = useEditor((s) => s.documento.erroSalvamento);
   const avisoAreaUtilFora = useEditor((s) => s.ui.avisoAreaUtilFora);
+  const selecaoId = useEditor((s) => s.ui.selecaoId);
+  const bibliotecaSelecaoId = useEditor((s) => s.ui.bibliotecaSelecaoId);
+  const podeDesfazer = useEditor((s) => s.podeDesfazer());
+  const podeRefazer = useEditor((s) => s.podeRefazer());
 
   const palco = useRef<PalcoApi>(null);
   const [estadoPalco, setEstadoPalco] = useState<EstadoPalco>({ zoomPercentual: 100, gridOculto: false });
@@ -111,6 +139,45 @@ function EditorNormal({ navegar }: { navegar: (caminho: string) => void }) {
   const parede = projeto.parede;
   const dados = dadosDaParede(projeto);
   const temFotos = variante.fotos.length > 0;
+  const selecionada = variante.fotos.find((f) => f._id === selecaoId);
+
+  // Teclado da composição (RN-16, M2-09, B-07). As setas só movem com uma foto selecionada e o foco fora de
+  // campos; menus e diálogos abertos têm prioridade.
+  useEffect(() => {
+    const aoTeclar = (evento: KeyboardEvent) => {
+      if (evento.defaultPrevented) return;
+      const alvo = evento.target as HTMLElement | null;
+      if (alvo?.closest(SELETOR_CAMPO)) return;
+      const estado = store.getState();
+
+      if (evento.ctrlKey || evento.metaKey) {
+        const tecla = evento.key.toLowerCase();
+        if (tecla === 'z') {
+          evento.preventDefault();
+          if (evento.shiftKey) estado.refazer();
+          else estado.desfazer();
+        } else if (tecla === 'y') {
+          evento.preventDefault();
+          estado.refazer();
+        }
+        return;
+      }
+
+      if (document.querySelector('[role="dialog"], [role="menu"], [role="listbox"]')) return;
+      if (evento.key === 'Escape') {
+        estado.selecionarFoto(null);
+        return;
+      }
+      const direcao = DIRECOES[evento.key];
+      const id = estado.ui.selecaoId;
+      if (direcao && id) {
+        evento.preventDefault();
+        estado.moverPorSeta(id, direcao, evento.shiftKey);
+      }
+    };
+    window.addEventListener('keydown', aoTeclar);
+    return () => window.removeEventListener('keydown', aoTeclar);
+  }, [store]);
 
   const aoEscolherArquivo = async (arquivo: File, perfil: Perfil) => {
     setErroEnvio(null);
@@ -152,7 +219,45 @@ function EditorNormal({ navegar }: { navegar: (caminho: string) => void }) {
     setDialogoTroca(true);
   };
 
-  const cena = parede && !trocando ? cenaDaParede(projeto, variante) : null;
+  const cena =
+    parede && !trocando
+      ? cenaDaParede(projeto, variante, imagens, {
+          selecaoId,
+          interativa: true,
+          onSelecionar: (id) => store.getState().selecionarFoto(id),
+          onMoverFoto: (id, xCm, yCm) => store.getState().moverFoto(id, xCm, yCm),
+          onAbrirRecorte: (id) => store.getState().abrirRecorte(id),
+        })
+      : null;
+
+  const alertas = useMemo(
+    () => calcularAlertas(variante.fotos, dados.interior, variante.areaUtil),
+    [variante.fotos, dados.interior, variante.areaUtil],
+  );
+  const resumo = useMemo(
+    () => resumoDaComposicao(variante.fotos, dados.interior, variante.areaUtil),
+    [variante.fotos, dados.interior, variante.areaUtil],
+  );
+
+  // "Adicionar" (M2-04): precisa de escala e de uma foto escolhida na biblioteca.
+  const motivoAdicionar =
+    dados.metodo === null
+      ? 'Defina a escala primeiro.'
+      : bibliotecaSelecaoId === null
+        ? 'Selecione uma foto na biblioteca.'
+        : undefined;
+
+  const aoSoltarNoCanvas = (evento: React.DragEvent) => {
+    const imagemId = evento.dataTransfer.getData(TIPO_ARRASTO_IMAGEM);
+    if (!imagemId) return;
+    evento.preventDefault();
+    const ponto = palco.current?.dePaginaParaConteudo(evento.clientX, evento.clientY);
+    if (ponto) store.getState().adicionarFoto(imagemId, ponto);
+  };
+
+  const dicaDeTeclas = variante.grid.snap
+    ? 'Setas movem 1 passo do grid · Shift + setas: 5 passos'
+    : 'Setas movem 1 cm · Shift + setas: 5 cm';
 
   return (
     <div className="flex h-dvh min-w-[1280px] flex-col">
@@ -167,6 +272,10 @@ function EditorNormal({ navegar }: { navegar: (caminho: string) => void }) {
         grid={variante.grid}
         gridOculto={estadoPalco.gridOculto}
         salvando={salvamento.tipo === 'salvando'}
+        podeDesfazer={podeDesfazer}
+        podeRefazer={podeRefazer}
+        onDesfazer={() => store.getState().desfazer()}
+        onRefazer={() => store.getState().refazer()}
         onVoltar={aoVoltar}
         onAlterarGrid={(parcial) => store.getState().alterarGrid(parcial)}
         onSalvar={() => void salvar()}
@@ -177,11 +286,29 @@ function EditorNormal({ navegar }: { navegar: (caminho: string) => void }) {
       />
 
       <div className="flex min-h-0 flex-1">
-        <Biblioteca temEscala={dados.metodo !== null} />
+        <Biblioteca api={api} temEscala={dados.metodo !== null} />
 
         <section className="flex min-w-0 flex-1 flex-col">
-          <ToolbarCanvas zoomPercentual={estadoPalco.zoomPercentual} palco={palco} comPalco={cena !== null} />
-          <div className="relative min-h-0 flex-1 bg-stage">
+          <ToolbarCanvas
+            zoomPercentual={estadoPalco.zoomPercentual}
+            palco={palco}
+            comPalco={cena !== null}
+            motivoAdicionar={motivoAdicionar}
+            temSelecao={selecionada !== undefined}
+            onAdicionar={() => store.getState().adicionarFotoSelecionada()}
+            onDuplicar={() => selecaoId && store.getState().duplicarFoto(selecaoId)}
+            onTrazerParaFrente={() => selecaoId && store.getState().trazerParaFrente(selecaoId)}
+            onEnviarParaTras={() => selecaoId && store.getState().enviarParaTras(selecaoId)}
+          />
+          <div
+            className="relative min-h-0 flex-1 bg-stage"
+            onDragOver={(e) => {
+              if (!e.dataTransfer.types.includes(TIPO_ARRASTO_IMAGEM)) return;
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'copy';
+            }}
+            onDrop={aoSoltarNoCanvas}
+          >
             {cena ? (
               <Palco ref={palco} cena={cena} onEstado={setEstadoPalco} />
             ) : (
@@ -257,23 +384,54 @@ function EditorNormal({ navegar }: { navegar: (caminho: string) => void }) {
         </section>
 
         <aside className="flex w-80 shrink-0 flex-col gap-[18px] overflow-y-auto border-l border-line-soft bg-surface p-5">
-          <PainelComposicao
-            escala={{ metodo: dados.metodo, pxPorCm: dados.pxPorCm }}
-            areaUtil={dados.metodo ? variante.areaUtil : null}
-            paredeInteira={dados.interior}
-            grid={variante.grid}
-            onRecalibrar={() =>
-              store.getState().definirModo(dados.metodo === 'perspectiva' ? 'perspectiva' : 'calibracao')
-            }
-            onAjustarAreaUtil={() => store.getState().definirModo('area-util')}
-            onAlterarAreaUtil={(area) => store.getState().definirAreaUtil(area)}
-            onAlterarGrid={(parcial) => store.getState().alterarGrid(parcial)}
-          />
+          {selecionada ? (
+            <PainelFoto
+              // A chave refaz os campos ao trocar de foto.
+              key={selecionada._id}
+              foto={selecionada}
+              imagem={imagens.find((i) => i._id === selecionada.imagemId)}
+              alertas={alertas.get(selecionada._id)}
+              onTrocarTamanho={(tamanho) => store.getState().trocarTamanho(selecionada._id, tamanho)}
+              onTrocarOrientacao={(o) => store.getState().trocarOrientacao(selecionada._id, o)}
+              onAlterarBorda={(parcial) => store.getState().alterarBordaDaFoto(selecionada._id, parcial)}
+              onMover={(x, y) => store.getState().moverFoto(selecionada._id, x, y)}
+              onAjustarRecorte={() => store.getState().abrirRecorte(selecionada._id)}
+              onPersonalizado={() => store.getState().abrirRecorte(selecionada._id, { personalizado: true })}
+              onDuplicar={() => store.getState().duplicarFoto(selecionada._id)}
+              onRemover={() => store.getState().removerFoto(selecionada._id)}
+            />
+          ) : (
+            <PainelComposicao
+              escala={{ metodo: dados.metodo, pxPorCm: dados.pxPorCm }}
+              areaUtil={dados.metodo ? variante.areaUtil : null}
+              paredeInteira={dados.interior}
+              grid={variante.grid}
+              resumo={resumo}
+              bordaPadrao={variante.bordaPadrao}
+              onAlterarBordaPadrao={(parcial) => store.getState().alterarBordaPadrao(parcial)}
+              onRecalibrar={() =>
+                store.getState().definirModo(dados.metodo === 'perspectiva' ? 'perspectiva' : 'calibracao')
+              }
+              onAjustarAreaUtil={() => store.getState().definirModo('area-util')}
+              onAlterarAreaUtil={(area) => store.getState().definirAreaUtil(area)}
+              onAlterarGrid={(parcial) => store.getState().alterarGrid(parcial)}
+            />
+          )}
         </aside>
       </div>
 
-      <footer className="flex h-8 shrink-0 items-center justify-between border-t border-line-soft bg-surface px-4">
-        <span className="text-body-sm text-ink-2">Nenhuma foto selecionada</span>
+      <footer className="flex h-8 shrink-0 items-center gap-4 border-t border-line-soft bg-surface px-4">
+        <span className="min-w-0 truncate text-body-sm text-ink-2">
+          {selecionada ? (
+            <span className="font-mono text-medida">
+              X {formatarCm(selecionada.xCm)} · Y {formatarCm(selecionada.yCm)} cm
+            </span>
+          ) : (
+            'Nenhuma foto selecionada'
+          )}
+        </span>
+        {selecionada && <span className="text-xs text-ink-3">{dicaDeTeclas}</span>}
+        <span className="flex-1" />
         <StatusSalvamento estado={salvamento} />
       </footer>
 

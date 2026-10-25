@@ -15,8 +15,9 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../componentes/ui/select';
 import { Toggle } from '../../componentes/ui/toggle';
 
-// Header do editor (DESIGN §7, protótipo 03a). No M1 funcionam: voltar, nome, Área útil, Perspectiva, Calibrar,
-// chip de escala, Parede, Grid, Snap e Salvar. O status de salvamento fica só na barra de status.
+// Header do editor (DESIGN §7, protótipo 03a). Funcionam: voltar, nome, Área útil, Perspectiva, Calibrar,
+// chip de escala, Parede, Grid, Snap, Desfazer, Refazer (M2) e Salvar. O status de salvamento fica só na
+// barra de status.
 
 export const MOTIVO_SEM_PAREDE = 'Carregue a foto da parede primeiro.';
 export const MOTIVO_SEM_ESCALA = 'Defina a escala primeiro.';
@@ -34,6 +35,11 @@ export interface PropsHeaderEditor {
   // O grid está ligado, mas o passo na tela ficou abaixo de 4 px (A-07).
   gridOculto: boolean;
   salvando: boolean;
+  // M2 (RF-70): as pilhas de desfazer e refazer da variante.
+  podeDesfazer: boolean;
+  podeRefazer: boolean;
+  onDesfazer: () => void;
+  onRefazer: () => void;
   onVoltar: () => void;
   onAlterarGrid: (parcial: Partial<Grid>) => void;
   onSalvar: () => void;
@@ -65,11 +71,35 @@ function BotaoParede({ item }: { item: ItemParede }) {
   );
 }
 
-function AcaoIcone({ rotulo, icone: Icone }: { rotulo: string; icone: typeof Undo2 }) {
+// Desfazer e Refazer: inativos, pelo estado, quando a pilha está vazia (a dica diz o motivo).
+function AcaoHistorico({
+  rotulo,
+  atalho,
+  icone: Icone,
+  ativa,
+  motivo,
+  onAtivar,
+}: {
+  rotulo: string;
+  atalho: string;
+  icone: typeof Undo2;
+  ativa: boolean;
+  motivo: string;
+  onAtivar: () => void;
+}) {
+  if (!ativa) {
+    return (
+      <BotaoInativo size="icon" variant="ghost" rotuloIcone={rotulo} motivo={motivo}>
+        <Icone aria-hidden="true" />
+      </BotaoInativo>
+    );
+  }
   return (
-    <BotaoEmBreve size="icon" variant="ghost" rotuloIcone={rotulo}>
-      <Icone aria-hidden="true" />
-    </BotaoEmBreve>
+    <ComDica texto={`${rotulo} (${atalho})`}>
+      <Button size="icon" variant="ghost" aria-label={rotulo} onClick={onAtivar}>
+        <Icone aria-hidden="true" />
+      </Button>
+    </ComDica>
   );
 }
 
@@ -200,8 +230,22 @@ export function HeaderEditor(props: PropsHeaderEditor) {
 
       <Divisor />
 
-      <AcaoIcone rotulo="Desfazer" icone={Undo2} />
-      <AcaoIcone rotulo="Refazer" icone={Redo2} />
+      <AcaoHistorico
+        rotulo="Desfazer"
+        atalho="Ctrl+Z"
+        icone={Undo2}
+        ativa={props.podeDesfazer}
+        motivo="Nada para desfazer."
+        onAtivar={props.onDesfazer}
+      />
+      <AcaoHistorico
+        rotulo="Refazer"
+        atalho="Ctrl+Shift+Z"
+        icone={Redo2}
+        ativa={props.podeRefazer}
+        motivo="Nada para refazer."
+        onAtivar={props.onRefazer}
+      />
 
       <div className="flex-1" />
 

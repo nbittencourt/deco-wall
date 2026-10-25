@@ -1,14 +1,18 @@
 import {
   CORES_GRID,
   formatarCm,
+  formatarDimensao,
   lerCm,
+  LIMITE_BORDA_CM,
   LIMITE_PASSO_GRID_CM,
   PASSOS_GRID_CM,
   type AreaUtil,
+  type Borda,
   type Grid,
 } from '@deco-wall/domain';
 import { useId, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { BotaoInativo, CampoEmBreve } from '../componentes/proprios/BotaoEmBreve';
+import { CampoCmEditavel } from '../componentes/proprios/CampoCmEditavel';
 import { CampoCm } from '../componentes/proprios/CampoCm';
 import { ChipEscala } from '../componentes/proprios/ChipEscala';
 import { SeletorCor } from '../componentes/proprios/SeletorCor';
@@ -17,7 +21,7 @@ import { Switch } from '../componentes/ui/switch';
 import { ToggleGroup, ToggleGroupItem } from '../componentes/ui/toggle-group';
 import { CamposAreaUtil } from './CamposAreaUtil';
 
-// Painel direito sem seleção, no que o M1 entrega (spec M1 §3.7; protótipo 11).
+// Painel direito sem seleção (spec M1 §3.7 e spec M2 §3.6; protótipo 11).
 
 export interface PropsPainelComposicao {
   escala: { metodo: 'perspectiva' | 'linear' | null; pxPorCm: number | null };
@@ -25,6 +29,10 @@ export interface PropsPainelComposicao {
   areaUtil: AreaUtil | null;
   paredeInteira: AreaUtil | null;
   grid: Grid;
+  // M2: resumo da composição (RF-62, B-05, B-14) e borda padrão das fotos novas (RN-03).
+  resumo: { quantidade: number; caixa: AreaUtil | null; comSobreposicao: number; foraDosLimites: number };
+  bordaPadrao: Borda;
+  onAlterarBordaPadrao: (parcial: Partial<Borda>) => void;
   onRecalibrar: () => void;
   onAjustarAreaUtil: () => void;
   onAlterarAreaUtil: (area: AreaUtil) => void;
@@ -54,6 +62,9 @@ export function PainelComposicao({
   areaUtil,
   paredeInteira,
   grid,
+  resumo,
+  bordaPadrao,
+  onAlterarBordaPadrao,
   onRecalibrar,
   onAjustarAreaUtil,
   onAlterarAreaUtil,
@@ -65,9 +76,23 @@ export function PainelComposicao({
 
       <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-body-sm">
         <dt className="text-ink-2">Fotos</dt>
-        <dd className="text-right font-mono text-medida text-ink">0</dd>
+        <dd className="text-right font-mono text-medida text-ink">{resumo.quantidade}</dd>
         <dt className="text-ink-2">Área total</dt>
-        <dd className="text-right font-mono text-medida text-ink">—</dd>
+        <dd className="text-right font-mono text-medida text-ink">
+          {resumo.caixa ? formatarDimensao(resumo.caixa.larguraCm, resumo.caixa.alturaCm) : '—'}
+        </dd>
+        {resumo.comSobreposicao > 0 && (
+          <>
+            <dt className="text-ink-2">Sobreposições</dt>
+            <dd className="text-right font-mono text-medida text-danger-ink">{resumo.comSobreposicao}</dd>
+          </>
+        )}
+        {resumo.foraDosLimites > 0 && (
+          <>
+            <dt className="text-ink-2">Fora dos limites</dt>
+            <dd className="text-right font-mono text-medida text-danger-ink">{resumo.foraDosLimites}</dd>
+          </>
+        )}
       </dl>
 
       <Secao titulo="Escala">
@@ -103,9 +128,25 @@ export function PainelComposicao({
 
       <Secao titulo="Borda padrão">
         <div className="flex items-end gap-2">
-          <CampoCm rotulo="Largura" valor="0,0" inativo className="flex-1" />
-          <SeletorCor valor="#FFFFFF" inativo />
+          <CampoCmEditavel
+            rotulo="Largura"
+            valor={bordaPadrao.larguraCm}
+            className="flex-1"
+            onConfirmar={(cm) => {
+              if (cm < LIMITE_BORDA_CM.min || cm > LIMITE_BORDA_CM.max) {
+                return `Entre ${formatarCm(LIMITE_BORDA_CM.min)} e ${formatarCm(LIMITE_BORDA_CM.max)} cm.`;
+              }
+              onAlterarBordaPadrao({ larguraCm: cm });
+              return null;
+            }}
+          />
+          <SeletorCor
+            valor={bordaPadrao.cor}
+            rotulo="Cor da borda padrão"
+            onChange={(cor) => onAlterarBordaPadrao({ cor })}
+          />
         </div>
+        <p className="text-xs text-ink-3">Vale para as próximas fotos que você adicionar.</p>
       </Secao>
 
       <SecaoGrid grid={grid} onAlterarGrid={onAlterarGrid} />

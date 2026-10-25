@@ -4,8 +4,8 @@ import { LIMITE_HISTORICO } from './constantes';
 // A store mantém uma pilha por variante e decide quando registrar um passo (um por intenção do usuário).
 
 export interface Historico<T> {
-  passado: readonly T[];
-  futuro: readonly T[];
+  passado: T[];
+  futuro: T[];
 }
 
 export function criarHistorico<T>(): Historico<T> {

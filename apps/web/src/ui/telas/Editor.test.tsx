@@ -120,6 +120,8 @@ async function montar({ parede, areaUtil = null, fotos = [], api = {} }: Cenario
     enviarParede: vi.fn(),
     aplicarCalibracao: vi.fn(),
     aplicarPerspectiva: vi.fn(),
+    listarImagens: vi.fn(async () => []),
+    enviarImagem: vi.fn(),
     salvarVariante: vi.fn(async () => ({ revisao: 2, salvaEm: SALVA_EM })),
     ...api,
   } as unknown as ClienteApi;
@@ -317,19 +319,33 @@ describe('parede com escala', () => {
     await waitFor(() => expect(screen.queryByText('Ajuste onde as fotos podem ficar.')).toBeNull());
   });
 
-  it('controles do M2 em diante continuam visíveis e inativos (A-15)', async () => {
+  it('controles do M3 em diante continuam visíveis e inativos (B-13)', async () => {
+    await montar({ parede: PAREDE_LINEAR, areaUtil: AREA_LINEAR });
+    for (const nome of ['Exportar', 'Comparar', 'Templates']) {
+      expect(screen.getByRole('button', { name: nome }).getAttribute('aria-disabled'), nome).toBe('true');
+    }
+  });
+
+  it('sem foto escolhida ou selecionada, as ações da composição ficam inativas pelo estado (M2)', async () => {
     await montar({ parede: PAREDE_LINEAR, areaUtil: AREA_LINEAR });
     for (const nome of [
-      'Exportar',
-      'Comparar',
-      'Templates',
       'Desfazer',
       'Refazer',
       'Adicionar',
-      'Carregar fotos',
+      'Duplicar',
+      'Trazer para frente',
+      'Enviar para trás',
     ]) {
       expect(screen.getByRole('button', { name: nome }).getAttribute('aria-disabled'), nome).toBe('true');
     }
+  });
+
+  it('"Carregar fotos" fica ativo com escala e inativo sem escala (M2-01)', async () => {
+    await montar({ parede: PAREDE_LINEAR, areaUtil: AREA_LINEAR });
+    expect(screen.getByRole('button', { name: 'Carregar fotos' }).getAttribute('aria-disabled')).toBeNull();
+    cleanup();
+    await montar({ parede: PAREDE_SEM_ESCALA });
+    expect(screen.getByRole('button', { name: 'Carregar fotos' }).getAttribute('aria-disabled')).toBe('true');
   });
 });
 

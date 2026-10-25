@@ -318,6 +318,8 @@ deco-wall/
           store.ts          # fatias `documento` e `ui`; ações nomeadas (ADR-03)
           StoreContext.tsx  avisoAoSair.ts  navegacao.ts
           uploadLote.ts     # fila de upload (3 em paralelo, cancelar, tentar de novo), sem React — M2
+          biblioteca.ts     # filtros da biblioteca (Todas · Projeto · Variante) — M2
+          arquivosSoltos.ts # arquivos e pastas soltos com o mouse — M2
         infra/              # cliente HTTP e Worker
           dto.ts            # formatos da API, porta `ClienteApi` e `ErroApi`
           clienteApi.ts     # implementação com fetch (upload com progresso por XMLHttpRequest)
@@ -330,7 +332,7 @@ deco-wall/
             Palco.tsx       # único módulo que usa o Konva: camadas, zoom/pan, alças, lupa
             cena.ts         # cenas em dados (sem Konva): parede, área útil, perspectiva, calibração
             useImagem.ts
-            FotoNode.tsx    # nó Konva de uma foto na parede (borda + imagem com crop) — M2
+            FotosKonva.tsx  # fotos no Konva: nós, seleção, alertas, bounding box e modo de recorte — M2
           paineis/          # Composição, Perspectiva, Calibração, Área útil, Foto, Recorte, BarraModo, CamposAreaUtil
           telas/            # Projetos, Editor, Comparação, /dev/ui
             editor/         # HeaderEditor, Biblioteca, DialogoUpload, ToolbarCanvas, EstadoVazio, cenas.ts

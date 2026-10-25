@@ -82,6 +82,8 @@ export interface RascunhoRecorte {
   fotoId: string;
   tamanho: Tamanho;
   offset: OffsetRecorte;
+  // Mostra os campos Largura × Altura (RN-28): tamanho personalizado, ou "Personalizado…" escolhido.
+  personalizado: boolean;
 }
 
 export interface Ui {
@@ -160,8 +162,8 @@ export interface EstadoEditor {
   enviarParaTras(id: string): void;
 
   // ---- M2: modo de recorte (RN-14, RN-28) ----
-  abrirRecorte(fotoId: string): void;
-  atualizarRecorte(parcial: { tamanho?: Tamanho; offset?: OffsetRecorte }): void;
+  abrirRecorte(fotoId: string, opcoes?: { personalizado?: boolean }): void;
+  atualizarRecorte(parcial: { tamanho?: Tamanho; offset?: OffsetRecorte; personalizado?: boolean }): void;
   concluirRecorte(): void;
   cancelarRecorte(): void;
 
@@ -642,11 +644,16 @@ export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): Sto
 
         // ---- M2: modo de recorte ----
 
-        abrirRecorte(fotoId) {
+        abrirRecorte(fotoId, opcoes = {}) {
           const foto = get().documento.variante?.fotos.find((f) => f._id === fotoId);
           if (!foto || get().ui.modo !== 'editor') return;
           set((estado) => {
-            estado.ui.recorte = { fotoId, tamanho: { ...foto.tamanho }, offset: { ...foto.recorte } };
+            estado.ui.recorte = {
+              fotoId,
+              tamanho: { ...foto.tamanho },
+              offset: { ...foto.recorte },
+              personalizado: opcoes.personalizado ?? foto.tamanho.sugeridoId === null,
+            };
             estado.ui.selecaoId = fotoId;
             estado.ui.modo = 'recorte';
           });
@@ -662,6 +669,7 @@ export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): Sto
               rascunho.offset = { offsetX: 0, offsetY: 0 };
             }
             if (parcial.offset) rascunho.offset = { ...parcial.offset };
+            if (parcial.personalizado !== undefined) rascunho.personalizado = parcial.personalizado;
           });
         },
 

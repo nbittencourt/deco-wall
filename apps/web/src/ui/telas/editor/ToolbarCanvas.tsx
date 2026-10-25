@@ -1,41 +1,105 @@
 import { BringToFront, Copy, Maximize, Plus, SendToBack, ZoomIn, ZoomOut } from 'lucide-react';
-import { BotaoEmBreve } from '../../componentes/proprios/BotaoEmBreve';
+import type { ReactNode } from 'react';
+import { BotaoInativo } from '../../componentes/proprios/BotaoEmBreve';
 import { ComDica } from '../../componentes/proprios/ComDica';
 import { Button } from '../../componentes/ui/button';
 import type { PalcoApi } from '../../canvas/cena';
 
-// Toolbar do canvas (DESIGN §7): ações da composição ficam inativas até o M2; o zoom já funciona.
-function AcaoIcone({ rotulo, icone: Icone }: { rotulo: string; icone: typeof Copy }) {
-  return (
-    <BotaoEmBreve size="icon" variant="ghost" rotuloIcone={rotulo}>
-      <Icone aria-hidden="true" />
-    </BotaoEmBreve>
-  );
+// Toolbar do canvas (DESIGN §7): ações da composição (M2) e zoom. Sem o que a ação precisa, o botão fica
+// inativo e a dica diz o que falta (DESIGN §7.1).
+
+interface AcaoProps {
+  rotulo: string;
+  icone: typeof Copy;
+  // Por que está inativa; undefined = ativa.
+  motivo?: string;
+  onAtivar: () => void;
+  somenteIcone?: boolean;
 }
+
+function Acao({ rotulo, icone: Icone, motivo, onAtivar, somenteIcone = false }: AcaoProps) {
+  const conteudo: ReactNode = (
+    <>
+      <Icone aria-hidden="true" />
+      {!somenteIcone && rotulo}
+    </>
+  );
+  const rotuloIcone = somenteIcone ? rotulo : undefined;
+  if (motivo) {
+    return (
+      <BotaoInativo
+        variant="ghost"
+        size={somenteIcone ? 'icon' : 'default'}
+        className={somenteIcone ? undefined : 'px-2'}
+        rotuloIcone={rotuloIcone}
+        motivo={motivo}
+      >
+        {conteudo}
+      </BotaoInativo>
+    );
+  }
+  const botao = (
+    <Button
+      variant="ghost"
+      size={somenteIcone ? 'icon' : 'default'}
+      className={somenteIcone ? undefined : 'px-2'}
+      aria-label={rotuloIcone}
+      onClick={onAtivar}
+    >
+      {conteudo}
+    </Button>
+  );
+  return somenteIcone ? <ComDica texto={rotulo}>{botao}</ComDica> : botao;
+}
+
+export interface PropsToolbarCanvas {
+  zoomPercentual: number;
+  palco: React.RefObject<PalcoApi | null>;
+  // Sem parede não há o que enquadrar: os controles de zoom ficam sem efeito.
+  comPalco: boolean;
+  // "Adicionar" precisa de escala e de uma foto escolhida na biblioteca (M2-01, M2-04).
+  motivoAdicionar?: string;
+  // Duplicar e ordem precisam de uma foto selecionada na parede.
+  temSelecao: boolean;
+  onAdicionar: () => void;
+  onDuplicar: () => void;
+  onTrazerParaFrente: () => void;
+  onEnviarParaTras: () => void;
+}
+
+const MOTIVO_SEM_SELECAO = 'Selecione uma foto na parede.';
 
 export function ToolbarCanvas({
   zoomPercentual,
   palco,
   comPalco,
-}: {
-  zoomPercentual: number;
-  palco: React.RefObject<PalcoApi | null>;
-  // Sem parede não há o que enquadrar: os controles de zoom ficam sem efeito.
-  comPalco: boolean;
-}) {
+  motivoAdicionar,
+  temSelecao,
+  onAdicionar,
+  onDuplicar,
+  onTrazerParaFrente,
+  onEnviarParaTras,
+}: PropsToolbarCanvas) {
+  const motivoSelecao = temSelecao ? undefined : MOTIVO_SEM_SELECAO;
   return (
     <div className="flex h-11 shrink-0 items-center gap-1 border-b border-line-soft bg-surface-muted px-3">
-      <BotaoEmBreve variant="ghost" className="px-2">
-        <Plus aria-hidden="true" />
-        Adicionar
-      </BotaoEmBreve>
-      <BotaoEmBreve variant="ghost" className="px-2">
-        <Copy aria-hidden="true" />
-        Duplicar
-      </BotaoEmBreve>
+      <Acao rotulo="Adicionar" icone={Plus} motivo={motivoAdicionar} onAtivar={onAdicionar} />
+      <Acao rotulo="Duplicar" icone={Copy} motivo={motivoSelecao} onAtivar={onDuplicar} />
       <span aria-hidden="true" className="mx-1 h-6 w-px bg-line" />
-      <AcaoIcone rotulo="Trazer para frente" icone={BringToFront} />
-      <AcaoIcone rotulo="Enviar para trás" icone={SendToBack} />
+      <Acao
+        somenteIcone
+        rotulo="Trazer para frente"
+        icone={BringToFront}
+        motivo={motivoSelecao}
+        onAtivar={onTrazerParaFrente}
+      />
+      <Acao
+        somenteIcone
+        rotulo="Enviar para trás"
+        icone={SendToBack}
+        motivo={motivoSelecao}
+        onAtivar={onEnviarParaTras}
+      />
       <div className="flex-1" />
       <ComDica texto="Diminuir zoom">
         <Button
