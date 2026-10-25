@@ -120,6 +120,7 @@ Pedido original do Nicholas:
 | 2026-10-24 | Dependências do M1 fixadas: `zustand` 5.0.16, `immer` 11.2.9 (spec §6) e `@fastify/multipart` 10.1.6 (ADR-13; **aprovado pelo Nicholas** quando perguntado). `bson` não foi necessário. | Decidido |
 | 2026-10-24 | **ADR-16:** medido no Chromium, o gargalo da retificação é a codificação WebP, não o warp (Leve 0,7 s; Alto/28 MP 3,0–3,2 s; imagem ruidosa até 7 s só no encode). Plano B de WebGL descartado. Orçamento de 3 s vale para Leve e Médio; o E2E do Alto guarda com teto de 4,5 s. **Decisão do Nicholas pendente** (opções na ADR-16: limitar a 4096 px, WebP 0,8 na retificada, vários Workers, JPEG sem transparência). | Pendente |
 | 2026-10-24 | Parede inteira derivada da parede gravada por uma só função do domínio (`paredeInteira`), no servidor e na web. Servidor ordena os cantos, recalcula `H` e confere o bitmap (±1 px); arquivos novos só trocam o definitivo depois do `updateOne` com revisão (409 sem rastro). Web adota as revisões de `variantesAlteradas`. | Decidido |
+| 2026-10-24 | **M1 aceito pelo Nicholas** (validação visual, T12). A decisão sobre o perfil Alto (ADR-16) continua pendente. | Feito |
 | 2026-10-24 | Pan com botão do meio e Espaço + arrastar funciona também sobre a área útil (camadas sem escuta com Espaço; `Konva.dragButtons = [0]`). Status "Salvo às hh:mm" / "Salvando…"; texto da Biblioteca sem escala diferente do `Alert` do canvas (evita a frase duplicada); selo "1 sem foto" fora do header até o M4; palco publica `window.__deco.paraTela` para os E2E. ESLint e Prettier ignoram `.claude/` (worktrees de outras sessões). Spike do Konva e `/editor` removidos (A-01). | Decidido |
 
 ## Questões em aberto
@@ -128,10 +129,10 @@ Pedido original do Nicholas:
 
 ## Status
 
-- Fase atual: **M1 implementado (24/10), aguardando a validação do Nicholas (T12).** Verde: Vitest 589 testes (domínio, API, web), Playwright 35/35, typecheck, lint e `format:check`. Cobertura do domínio: instruções 97,7%, ramos 92,4%, linhas 99,1%.
+- Fase atual: **M1 aceito pelo Nicholas (24/10).** Verde: Vitest 589 testes (domínio, API, web), Playwright 35/35, typecheck, lint e `format:check`. Cobertura do domínio: instruções 97,7%, ramos 92,4%, linhas 99,1%.
 - Desempenho da retificação (E2E `desempenho.spec.ts`): **Leve 0,7 s**; **Alto (6144 × 4608) 3,0–3,2 s** (warp 0,9 s + WebP 2,0 s). Meta de 3 s não folgada no Alto: ver ADR-16 e a decisão pendente.
 - Entregue no M1: projetos (criar, listar, abrir, renomear, excluir), upload da parede (perfis, EXIF, troca sem fotos), modo Perspectiva (alças prontas, lupa, prévia sob demanda, retificação no Worker), calibração linear, área útil, grid, zoom/pan, salvamento manual (Ctrl+S, `beforeunload`, 409 entre abas), reparo na inicialização (A-18).
-- Próximo: aceite do M1 e, depois, a spec do M2 (MS-01).
+- Próximo: spec do M2 (MS-01), com o M1 aceito.
 - Pendências: decisão sobre o Alto (ADR-16); limite de upload no browser fixo em 50 MB (spec §3.3 pede `UPLOAD_MAX_MB`: o servidor respeita o `.env`, a web não o conhece); chunk JS de ~917 kB (Konva no pacote principal, sem code-splitting); status HTTP de `/api/saude` com componente em erro (questão em aberto).
 
 ## Histórico

@@ -5,7 +5,7 @@
 | Versão | 0.3 |
 | Data | 2026-10-24 |
 | Base | `docs/PRD.md` v0.11 · `docs/ARCHITECTURE.md` v0.7 · `docs/DESIGN.md` v0.3 + protótipos 01, 02, 04, 04a, 05, 11, 13 · `docs/specs/M0-setup.md` v0.6 |
-| Status | **Implementada (24/10); aguardando a validação do Nicholas** — testes escritos antes (commit vermelho) e implementação em seguida; ver §12. |
+| Status | **Implementada e aceita pelo Nicholas (24/10)** — testes escritos antes (commit vermelho) e implementação em seguida; ver §12. |
 
 ## 0. Pré-requisitos
 
@@ -313,4 +313,4 @@ Dependências novas, já previstas nas ADRs: `zustand` e `immer` (ADR-03), `bson
 
 **Limitação conhecida:** o browser confere o tamanho do arquivo com 50 MB fixos (o servidor usa `UPLOAD_MAX_MB` do `.env`); expor o valor à web fica para depois.
 
-**Pendências do M1:** validação do Nicholas (T12); decisão sobre o desempenho do perfil Alto (ADR-16); chunk JS de ~917 kB sem divisão (o Konva entra no pacote principal).
+**Pendências do M1:** decisão sobre o desempenho do perfil Alto (ADR-16); chunk JS de ~917 kB sem divisão (o Konva entra no pacote principal).
