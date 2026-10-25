@@ -1,5 +1,7 @@
 /// <reference lib="dom" />
 import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { calcularRetificacao, PERFIS, type Pt } from '../../packages/domain/src/index';
 import type { APIRequestContext, Page } from '@playwright/test';
 import sharp from 'sharp';
@@ -151,4 +153,71 @@ export async function lerProjeto(request: APIRequestContext, id: string) {
       fotos: unknown[];
     }[];
   };
+}
+
+// ---- M2: biblioteca e composição ----
+
+const PASTA_IMAGENS = fileURLToPath(new URL('../fixtures/imagens/', import.meta.url));
+export const caminhoImagem = (nome: string) => join(PASTA_IMAGENS, nome);
+
+export interface ImagemE2E {
+  _id: string;
+  nomeOriginal: string;
+  perfil: string;
+  projetos: string[];
+}
+
+// Envia uma imagem da fixture para a biblioteca pela API (quando o upload em si não é o que se testa).
+export async function enviarImagem(
+  request: APIRequestContext,
+  projetoId: string,
+  nome = 'retrato.jpg',
+  perfil = 'leve',
+): Promise<ImagemE2E> {
+  const res = await request.post('/api/imagens', {
+    multipart: {
+      perfil,
+      projetoId,
+      arquivo: { name: nome, mimeType: 'image/jpeg', buffer: await readFile(caminhoImagem(nome)) },
+    },
+  });
+  return (await res.json()) as ImagemE2E;
+}
+
+interface PalcoFotos {
+  idsDasFotos(): string[];
+  retanguloDaFoto(id: string): { x: number; y: number; largura: number; altura: number } | null;
+}
+
+export async function idsDasFotos(page: Page): Promise<string[]> {
+  await esperarPalco(page);
+  return page.evaluate(() => (window as unknown as { __deco: PalcoFotos }).__deco.idsDasFotos());
+}
+
+// Tamanho externo da foto na página (px).
+export async function retanguloDaFoto(page: Page, id: string) {
+  await esperarPalco(page);
+  return page.evaluate(
+    (alvo) => (window as unknown as { __deco: PalcoFotos }).__deco.retanguloDaFoto(alvo),
+    id,
+  );
+}
+
+// px de tela por cm de conteúdo no zoom atual.
+export async function pxPorCmNaTela(page: Page): Promise<number> {
+  const a = await paraTela(page, { x: 0, y: 0 });
+  const b = await paraTela(page, { x: 100, y: 0 });
+  return (b.x - a.x) / 100;
+}
+
+// Centro da foto na página.
+export async function centroDaFoto(page: Page, id: string): Promise<Pt> {
+  const r = await retanguloDaFoto(page, id);
+  if (!r) throw new Error(`Foto ${id} não está na cena.`);
+  return { x: r.x + r.largura / 2, y: r.y + r.altura / 2 };
+}
+
+export async function lerCampo(page: Page, rotulo: string): Promise<number> {
+  const texto = await page.getByLabel(rotulo, { exact: true }).inputValue();
+  return Number(texto.replace(',', '.'));
 }

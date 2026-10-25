@@ -92,7 +92,7 @@ export function PainelFoto({
           <span className="text-label">Tamanho</span>
           <SeletorTamanho
             valor={foto.tamanho.sugeridoId ?? VALOR_PERSONALIZADO}
-            texto={`${formatarTamanho(foto.tamanho)} cm`}
+            texto={formatarTamanho(foto.tamanho)}
             onEscolherSugerido={(id) =>
               onTrocarTamanho(tamanhoSugerido(id, orientacao === 'paisagem' ? 'paisagem' : 'retrato'))
             }
@@ -123,6 +123,7 @@ export function PainelFoto({
         <div className="grid grid-cols-2 items-end gap-2">
           <CampoCmEditavel
             rotulo="Largura da borda"
+            rotuloOculto
             valor={foto.borda.larguraCm}
             onConfirmar={(cm) => {
               if (cm < LIMITE_BORDA_CM.min || cm > LIMITE_BORDA_CM.max) return MENSAGEM_BORDA;
@@ -150,6 +151,7 @@ export function PainelFoto({
         <div className="grid grid-cols-2 gap-2">
           <CampoCmEditavel
             rotulo="X"
+            rotuloOculto
             prefixo="X"
             valor={foto.xCm}
             onConfirmar={(cm) => {
@@ -159,6 +161,7 @@ export function PainelFoto({
           />
           <CampoCmEditavel
             rotulo="Y"
+            rotuloOculto
             prefixo="Y"
             valor={foto.yCm}
             onConfirmar={(cm) => {

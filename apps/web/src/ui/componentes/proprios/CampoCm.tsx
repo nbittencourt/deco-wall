@@ -12,6 +12,7 @@ export function CampoCm({
   sufixo = 'cm',
   inativo = false,
   erro,
+  rotuloOculto = false,
   onBlur,
   onKeyDown,
   className,
@@ -25,6 +26,8 @@ export function CampoCm({
   inativo?: boolean;
   // Mensagem de validação sob o campo (ex.: "Faixa válida: 5,0 a 280,0 cm.").
   erro?: string;
+  // O rótulo continua para leitores de tela, mas some da tela (quando o prefixo ou o título já dizem tudo).
+  rotuloOculto?: boolean;
   onBlur?: () => void;
   onKeyDown?: (evento: KeyboardEvent<HTMLInputElement>) => void;
   className?: string;
@@ -32,7 +35,7 @@ export function CampoCm({
   const id = useId();
   return (
     <div className={cn('flex flex-col gap-1', className)}>
-      <label htmlFor={id} className="text-label">
+      <label htmlFor={id} className={rotuloOculto ? 'sr-only' : 'text-label'}>
         {rotulo}
       </label>
       <div className="relative">

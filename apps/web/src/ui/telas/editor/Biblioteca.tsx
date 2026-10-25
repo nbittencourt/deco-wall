@@ -138,14 +138,16 @@ export function Biblioteca({
 
       {erro && <p className="text-body-sm text-danger-ink">{erro}</p>}
 
+      {!temEscala && (
+        <p className="text-body-sm text-ink-2">
+          As fotos ficam disponíveis depois que a escala da parede for definida.
+        </p>
+      )}
+
       {visiveis.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-line p-6 text-center">
           <p className="text-body-sm text-ink-2">
-            {imagens.length === 0
-              ? temEscala
-                ? 'Nenhuma foto na biblioteca ainda.'
-                : 'As fotos ficam disponíveis depois que a escala da parede for definida.'
-              : 'Nenhuma foto neste filtro.'}
+            {imagens.length === 0 ? 'Nenhuma foto na biblioteca ainda.' : 'Nenhuma foto neste filtro.'}
           </p>
         </div>
       ) : (

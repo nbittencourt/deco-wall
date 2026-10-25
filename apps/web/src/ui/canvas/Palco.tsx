@@ -73,6 +73,7 @@ declare global {
       paraTela: (x: number, y: number) => { x: number; y: number };
       dePagina: (x: number, y: number) => { x: number; y: number };
       retanguloDaFoto: (id: string) => { x: number; y: number; largura: number; altura: number } | null;
+      idsDasFotos: () => string[];
     };
   }
 }
@@ -108,6 +109,9 @@ export function Palco({ cena, onEstado, ref }: PropsPalco) {
   const [espaco, setEspaco] = useState(false);
   // Foto em arrasto: o contorno e os alertas acompanham o mouse antes de a store saber (B-03).
   const [arrasto, setArrasto] = useState<Arrasto | null>(null);
+  // Os rótulos do canvas são medidos na hora de criar o texto: sem a fonte mono pronta, a largura sai errada
+  // e o rótulo é cortado. Quando ela carrega, a camada de rótulos é refeita.
+  const [fonteMono, setFonteMono] = useState(false);
   const cenaAtual = useRef(cena);
   const ultimoEstado = useRef<EstadoPalco | null>(null);
 
@@ -115,6 +119,18 @@ export function Palco({ cena, onEstado, ref }: PropsPalco) {
     vpAtual.current = vp;
     cenaAtual.current = cena;
   });
+
+  useEffect(() => {
+    let ativo = true;
+    const fontes = typeof document === 'undefined' ? undefined : document.fonts;
+    void fontes
+      ?.load("500 11px 'IBM Plex Mono'")
+      .then(() => ativo && setFonteMono(true))
+      .catch(() => undefined);
+    return () => {
+      ativo = false;
+    };
+  }, []);
 
   // Tamanho do contêiner.
   useEffect(() => {
@@ -210,6 +226,10 @@ export function Palco({ cena, onEstado, ref }: PropsPalco) {
         const atual = vpAtual.current;
         if (!retangulo || !atual) return { x: Number.NaN, y: Number.NaN };
         return deTela(atual, { x: x - retangulo.left, y: y - retangulo.top });
+      },
+      idsDasFotos: () => {
+        const atualCena = cenaAtual.current;
+        return 'fotos' in atualCena ? atualCena.fotos.map((f) => f.id) : [];
       },
       retanguloDaFoto: (id) => {
         const atualCena = cenaAtual.current;
@@ -314,7 +334,7 @@ export function Palco({ cena, onEstado, ref }: PropsPalco) {
               onSoltar={() => setArrasto(null)}
             />
           </Layer>
-          <Layer listening={!espaco}>
+          <Layer key={String(fonteMono)} listening={!espaco}>
             <Sobreposicao cena={cena} vp={vp} tela={tela} arrasto={arrasto} />
           </Layer>
         </Stage>

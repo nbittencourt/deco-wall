@@ -412,8 +412,11 @@ export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): Sto
         },
 
         confirmarAreaUtil(area) {
+          const antes = get().documento.alteracoes;
           get().definirAreaUtil(area);
           set((estado) => {
+            // Confirmar sempre conta como alteração da variante (M1 §3.6), mesmo com a área igual à gravada.
+            if (estado.documento.alteracoes === antes) sujar(estado);
             estado.ui.modo = 'editor';
             estado.ui.avisoAreaUtilFora = false;
           });

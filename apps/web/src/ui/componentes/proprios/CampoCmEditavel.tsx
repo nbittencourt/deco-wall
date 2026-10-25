@@ -10,6 +10,7 @@ export function CampoCmEditavel({
   onConfirmar,
   prefixo,
   sufixo,
+  rotuloOculto,
   className,
 }: {
   rotulo: string;
@@ -17,6 +18,7 @@ export function CampoCmEditavel({
   onConfirmar: (valorCm: number) => string | null;
   prefixo?: string;
   sufixo?: string;
+  rotuloOculto?: boolean;
   className?: string;
 }) {
   const [texto, setTexto] = useState(formatarCm(valor));
@@ -68,6 +70,7 @@ export function CampoCmEditavel({
       erro={erro}
       prefixo={prefixo}
       sufixo={sufixo}
+      rotuloOculto={rotuloOculto}
       className={className}
       onChange={setTexto}
       onBlur={aplicar}

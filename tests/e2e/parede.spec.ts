@@ -7,6 +7,7 @@ import {
   criarProjeto,
   criarProjetoComEscalaLinear,
   criarProjetoComPerspectiva,
+  enviarImagem,
   esperarPalco,
   lerProjeto,
   paraTela,
@@ -404,6 +405,8 @@ test.describe('trocar a parede (fluxo E2E 4, M1-05, RF-07)', () => {
     request,
   }) => {
     const p = await criarProjetoComEscalaLinear(request, nomeUnico('Com fotos'));
+    // M2-06: a foto precisa de uma imagem da biblioteca.
+    const imagem = await enviarImagem(request, p.id);
     const atual = (await lerProjeto(request, p.id)).variantes[0]!;
     const salvar = await request.put(`/api/projetos/${p.id}/variantes/${p.varianteId}`, {
       data: {
@@ -415,7 +418,7 @@ test.describe('trocar a parede (fluxo E2E 4, M1-05, RF-07)', () => {
         fotos: [
           {
             _id: 'a'.repeat(24),
-            imagemId: 'b'.repeat(24),
+            imagemId: imagem._id,
             imagemAnteriorId: null,
             tamanho: { sugeridoId: '20x30', larguraCm: 20, alturaCm: 30 },
             xCm: 40,

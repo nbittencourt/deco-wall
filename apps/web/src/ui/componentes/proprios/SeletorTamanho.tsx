@@ -42,7 +42,7 @@ export function SeletorTamanho({
         else onEscolherSugerido(novo);
       }}
     >
-      <SelectTrigger aria-label={rotulo} className="font-mono text-medida">
+      <SelectTrigger aria-label={rotulo} className="px-2.5 font-mono text-[12px] whitespace-nowrap">
         <SelectValue>{texto}</SelectValue>
       </SelectTrigger>
       <SelectContent dicaRolagem="Role para ver mais tamanhos" className="w-[220px]">

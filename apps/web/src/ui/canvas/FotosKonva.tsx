@@ -257,7 +257,8 @@ export function CamadaRecorte({ cena }: { cena: CenaRecorte }) {
 
 // IBM Plex Mono tem avanço de 0,6 em: a 11 px, 6,6 px por caractere. Serve para alinhar rótulos sem medir.
 const LARGURA_CARACTERE_PX = MEDIDAS_CANVAS.fonteMedidaPx * 0.6;
-const PADDING_PILL_PX = 8;
+// O Konva só aceita o mesmo padding nos quatro lados.
+const PADDING_PILL_PX = 5;
 const PREFIXO_ICONE = '   ';
 
 function larguraDoPill(texto: string, icone: boolean): number {
@@ -289,16 +290,13 @@ function Pill({
         fontFamily={FONTE_MONO}
         fontSize={MEDIDAS_CANVAS.fonteMedidaPx}
         fill={CORES_CANVAS.pillMedidaTexto}
-        paddingLeft={PADDING_PILL_PX}
-        paddingRight={PADDING_PILL_PX}
-        paddingTop={3}
-        paddingBottom={3}
+        padding={PADDING_PILL_PX}
       />
       {icone && (
         <>
-          <Circle x={14} y={9.5} radius={4.5} stroke="#FFFFFF" strokeWidth={1.2} />
-          <Line points={[14, 7.5, 14, 10.2]} stroke="#FFFFFF" strokeWidth={1.2} lineCap="round" />
-          <Circle x={14} y={12} radius={0.6} fill="#FFFFFF" />
+          <Circle x={12} y={10.5} radius={4.5} stroke="#FFFFFF" strokeWidth={1.2} />
+          <Line points={[12, 8.5, 12, 11.2]} stroke="#FFFFFF" strokeWidth={1.2} lineCap="round" />
+          <Circle x={12} y={13} radius={0.6} fill="#FFFFFF" />
         </>
       )}
     </Label>
