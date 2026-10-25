@@ -2,9 +2,9 @@
 
 | Campo | Valor |
 |---|---|
-| Versão | 0.7 |
+| Versão | 0.8 |
 | Data | 2026-10-24 |
-| Base | `docs/PRD.md` v0.11 |
+| Base | `docs/PRD.md` v0.12 |
 | Status | Decisões fechadas; modelo de dados em `docs/specs/M0-setup.md` §4 |
 
 > **Objetivo deste arquivo:** registrar a arquitetura e cada decisão técnica (ADR) com critérios, alternativas avaliadas e consequências. Toda escolha de biblioteca ou componente nova entra aqui antes de entrar no código.
@@ -95,7 +95,7 @@ Consequências:
 ### ADR-03 — Estado no cliente: Zustand + Immer + zundo · **Decidido**
 
 - Fatias: `documento` (projeto aberto), `ui` (seleção, ferramenta, viewport, variantes em comparação), `biblioteca` (lista global de imagens, vinda da API).
-- **Histórico por variante** (ADR-12): uma pilha de desfazer/refazer por variante, mantida em memória enquanto o projeto está aberto; não persistida; limite 100 passos por variante.
+- **Histórico por variante** (ADR-12): uma pilha de desfazer/refazer por variante, mantida em memória enquanto o projeto está aberto; não persistida; limite 100 passos por variante. Entram as fotos, a área útil e a borda padrão; o grid, a seleção, o modo e o viewport ficam fora (spec M2, M2-03).
 - Um passo por intenção do usuário: arrastar grava só no `dragend`; campos numéricos com debounce.
 - Mutações só por ações nomeadas (casos de uso) que delegam às regras do domínio.
 
@@ -236,7 +236,8 @@ Rotas iniciais (detalhar com o modelo de dados):
 | Recurso | Operações |
 |---|---|
 | `/api/imagens` | upload (lote, com perfil), listar, obter metadados, excluir |
-| `/api/imagens/:id/arquivo` | render / thumb |
+| `/api/imagens/:id/arquivo` | render / thumb (cache imutável — RN-21) |
+| `/api/config` | valores do `.env` que a web precisa (`uploadMaxMb`) — spec M2, A-28 |
 | `/api/projetos` | listar, criar, obter, renomear, excluir |
 | `/api/projetos/:id/parede` | upload da parede, salvar calibração/perspectiva, upload do bitmap retificado |
 | `/api/projetos/:id/variantes` | criar, duplicar, renomear, excluir, salvar (autosave) |
@@ -343,7 +344,7 @@ deco-wall/
       app.ts                # monta a API (rotas, multipart, erros); usado por main.ts e pelos testes
       contexto.ts  erros.ts
       config.ts             # leitura/validação do .env
-      rotas/                # projetos, parede (upload, escala, arquivos), variantes (hard save), saude
+      rotas/                # projetos, parede (upload, escala, arquivos), variantes (hard save), saude; imagens e config (M2)
       servicos/             # projetos, parede, variantes, imagem (sharp), reparo (A-18); purga no M4
       repositorios/         # MongoDB (conexão e conversão ObjectId ↔ string hex)
       migracoes/            # 0001-inicial…
@@ -354,6 +355,8 @@ deco-wall/
         arquivos.ts  projetos.ts   # validação de arquivo de imagem e de nome de projeto
         geometria/          # homografia, quadrilátero, viewport, grid
         escala/             # calibração linear, retificação, warp, parede inteira, área útil, padrões, referência
+        composicao/         # M2: tamanho, foto, snap, teclado, limites, recorte, alertas, bounding box, ordem
+        biblioteca/         # M2: orientação natural e filtros da biblioteca
         templates/
           catalogo.ts       # catálogo de templates (constante; fonte: docs/specs/templates.md)
   tests/

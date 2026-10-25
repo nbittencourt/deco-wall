@@ -95,7 +95,7 @@ migracoes (controle de versão do schema)
 | DM-02 | Parede embutida no projeto (1:1). | Decidido |
 | DM-03 | Variantes em coleção própria, ligadas ao projeto. Todo projeto nasce com a variante **"Base"**. | Decidido |
 | DM-04 | Fotos posicionadas embutidas na variante (ordem do array = z-index). | Decidido |
-| DM-05 | "Fotos do projeto" = imagens **carregadas no projeto** ou **usadas em qualquer variante** dele. Mantido no campo `imagens.projetos` (lista de projetos associados): entra no upload feito no projeto e ao posicionar a foto numa variante; sai em "remover do projeto". | Decidido |
+| DM-05 | "Fotos do projeto" = imagens **carregadas no projeto** ou **usadas em qualquer variante** dele. Mantido no campo `imagens.projetos` (lista de projetos associados): entra no upload feito no projeto e no salvamento manual da variante que usa a imagem (`$addToSet`, no servidor); sai em "remover do projeto". Os filtros "Neste projeto" e "Nesta variante" refletem o estado salvo (spec M2, M2-05). | Decidido |
 | DM-06 | Salvamento manual (*hard save*) e automático (*soft save*) separados, com detecção de conflito — ver §4.9. | Decidido |
 | DM-07 | Validação de estrutura em **duas camadas**: Zod na API (fonte única, em `packages/domain`) **e** validador `$jsonSchema` no Mongo (`validationLevel: strict`, `validationAction: error`), **gerado a partir dos schemas Zod** por um conversor próprio (string hex → `objectId`, data → `date`, enums, limites). Teste garante que as duas camadas aceitam e rejeitam os mesmos casos. | Decidido |
 | DM-08 | Medidas em cm arredondadas a 0,1 cm (1 mm). | Decidido |

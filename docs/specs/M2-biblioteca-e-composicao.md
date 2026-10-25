@@ -4,7 +4,7 @@
 |---|---|
 | Versão | 0.3 |
 | Data | 2026-10-24 |
-| Base | `docs/PRD.md` v0.11 · `docs/ARCHITECTURE.md` v0.7 · `docs/DESIGN.md` v0.3 + protótipos 03, 03a, 03b, 07, 11, 16 · `docs/specs/M0-setup.md` v0.6 · `docs/specs/M1-parede-e-escala.md` v0.3 (implementada e aceita) |
+| Base | `docs/PRD.md` v0.12 · `docs/ARCHITECTURE.md` v0.8 · `docs/DESIGN.md` v0.4 + protótipos 03, 03a, 03b, 07, 11, 16 · `docs/specs/M0-setup.md` v0.6 · `docs/specs/M1-parede-e-escala.md` v0.3 (implementada e aceita) |
 | Status | **Pronta para implementação** — decisões e premissas revisadas (24/10); M1 aceito. Começa com a liberação do Nicholas. |
 
 ## 0. Pré-requisitos
@@ -14,7 +14,7 @@
 | PR-M2-01 | **Aceite do M1** (§8 da spec M1). | T1 | ✅ 24/10 (M1 aceito; ADR-16 pendente, não bloqueia o M2) |
 | PR-M2-02 | Lacunas e contradições da §0.1 decididas. | T1 | ✅ 24/10 |
 | PR-M2-03 | Revisão das premissas da §0.2 pelo Nicholas. | T1 | ✅ 24/10 |
-| PR-M2-04 | Alterações da §11 aplicadas ao PRD, à DESIGN, à ARCHITECTURE e à spec M0, depois da revisão das premissas e com este branch atualizado com a `main` (o M1 alterou ARCHITECTURE, DESIGN e `MEMORY.md`). | T1 | ⏳ pendente |
+| PR-M2-04 | Alterações da §11 aplicadas ao PRD, à DESIGN, à ARCHITECTURE e à spec M0, depois da revisão das premissas e com este branch atualizado com a `main` (o M1 alterou ARCHITECTURE, DESIGN e `MEMORY.md`). | T1 | ✅ 24/10 |
 
 ### 0.1 Decisões desta especificação (lacunas e contradições resolvidas)
 
@@ -344,9 +344,9 @@ Dependências novas, já previstas nas ADRs: `zundo` (ADR-03) e `bson` (ADR-07).
 - Conforme a A-29: TDD em dois commits, como no M1 — `test(m2): …` com todos os testes vermelhos e `feat(m2): …` com a implementação e tudo verde (`typecheck`, `lint`, `test`, `e2e`). A ordem da §9 continua sendo a ordem de implementação. Status no `MEMORY.md` ao fim.
 - Validação do Nicholas na **T13** (aceite do M2).
 
-## 11. Alterações a aplicar em outros documentos
+## 11. Alterações feitas em outros documentos (24/10)
 
-Ainda não aplicadas (PR-M2-04): o M1 está alterando esses documentos na `main`. O `MEMORY.md` já tem as decisões.
+Aplicadas depois da revisão das premissas, com o branch atualizado com a `main` (M1 aceito).
 
 | Documento | Alteração |
 |---|---|
