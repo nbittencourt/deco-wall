@@ -3,8 +3,11 @@ import {
   BORDA_PADRAO,
   AREA_UTIL_MIN_CM,
   CORES_GRID,
+  DESLOCAMENTO_DUPLICAR_CM,
   GRID_PADRAO,
   GRID_PASSO_MIN_PX,
+  LIMITE_BORDA_CM,
+  LIMITE_HISTORICO,
   LIMITE_NOME_PROJETO,
   LIMITE_PASSO_GRID_CM,
   LIMITE_PERSONALIZADO_CM,
@@ -12,6 +15,7 @@ import {
   MARGEM_RETIFICACAO,
   NOME_PROJETO_PADRAO,
   NOME_VARIANTE_PADRAO,
+  PASSO_CASCATA_CM,
   PASSOS_GRID_CM,
   PERFIL_PADRAO,
   PERFIS,
@@ -20,7 +24,10 @@ import {
   SEGMENTO_MIN_PX,
   TAMANHO_PADRAO_ID,
   TAMANHOS_SUGERIDOS,
+  THUMB_FOTO_PX,
   THUMB_PAREDE_PX,
+  TOLERANCIA_CM,
+  UPLOAD_PARALELO,
   ZOOM,
 } from './constantes';
 import { GridSchema } from './schemas';
@@ -182,5 +189,32 @@ describe('constantes do M1', () => {
   it('projeto novo se chama "Projeto sem nome", com nome de até 100 caracteres (A-02)', () => {
     expect(NOME_PROJETO_PADRAO).toBe('Projeto sem nome');
     expect(LIMITE_NOME_PROJETO).toBe(100);
+  });
+});
+
+describe('constantes do M2 (docs/specs/M2-biblioteca-e-composicao.md §4.1)', () => {
+  it('miniatura das imagens da biblioteca: 256 px (ADR-05)', () => {
+    expect(THUMB_FOTO_PX).toBe(256);
+  });
+
+  it('histórico de 100 passos por variante (RN-18, M2-02)', () => {
+    expect(LIMITE_HISTORICO).toBe(100);
+  });
+
+  it('alertas com tolerância de 0,05 cm (RN-36)', () => {
+    expect(TOLERANCIA_CM).toBe(0.05);
+  });
+
+  it('duplicar e a cascata deslocam 5 cm (B-06, M2-04)', () => {
+    expect(DESLOCAMENTO_DUPLICAR_CM).toBe(5);
+    expect(PASSO_CASCATA_CM).toBe(5);
+  });
+
+  it('borda de 0 a 20 cm (B-04)', () => {
+    expect(LIMITE_BORDA_CM).toEqual({ min: 0, max: 20 });
+  });
+
+  it('upload com 3 envios em paralelo (DV-10)', () => {
+    expect(UPLOAD_PARALELO).toBe(3);
   });
 });

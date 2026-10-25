@@ -4,8 +4,11 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   criarAppTeste,
   criarProjetoApi,
+  criarProjetoComEscalaApi,
+  enviarImagemApi,
   salvarVarianteApi,
   type AppTeste,
+  type ImagemJson,
   type ProjetoJson,
   type VarianteJson,
 } from '../../../../tests/fixtures/api';
@@ -25,12 +28,20 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  await Promise.all(['projetos', 'variantes', 'rascunhos'].map((c) => t.db.collection(c).deleteMany({})));
+  await Promise.all(
+    ['projetos', 'variantes', 'rascunhos', 'imagens'].map((c) => t.db.collection(c).deleteMany({})),
+  );
 });
 
 async function novo() {
   const { projeto, variantes } = await criarProjetoApi(t.app, 'Sala');
   return { projeto, base: variantes[0]! };
+}
+
+async function comEscalaEImagem() {
+  const { projeto, base } = await criarProjetoComEscalaApi(t.app, 'Sala');
+  const imagem = (await enviarImagemApi(t.app, { projetoId: projeto._id })).json() as ImagemJson;
+  return { projeto, base, imagem };
 }
 
 function corpo(base: VarianteJson, sobrescrita: Record<string, unknown> = {}) {
@@ -75,9 +86,14 @@ describe('PUT /api/projetos/:pid/variantes/:id — sucesso', () => {
     expect(atual.revisao).toBe(projeto.revisao);
   });
 
-  it('grava as fotos posicionadas', async () => {
-    const { projeto, base } = await novo();
-    const res = await salvarVarianteApi(t.app, projeto._id, base._id, corpo(base, { fotos: [foto()] }));
+  it('grava as fotos posicionadas (projeto com escala e imagem existente)', async () => {
+    const { projeto, base, imagem } = await comEscalaEImagem();
+    const res = await salvarVarianteApi(
+      t.app,
+      projeto._id,
+      base._id,
+      corpo(base, { fotos: [foto({ imagemId: imagem._id })] }),
+    );
     expect(res.statusCode).toBe(200);
     const salva = await t.db.collection('variantes').findOne({ _id: new ObjectId(base._id) });
     expect(salva!.fotos).toHaveLength(1);
@@ -180,5 +196,116 @@ describe('PUT /api/projetos/:pid/variantes/:id — validação (400/404)', () =>
     const b = await criarProjetoApi(t.app, 'Outro');
     const res = await salvarVarianteApi(t.app, b.projeto._id, a.base._id, corpo(a.base));
     expect(res.statusCode).toBe(404);
+  });
+});
+
+describe('PUT /api/projetos/:pid/variantes/:id — fotos (M2-06, RN-08, RN-13, DM-05)', () => {
+  it('422 se há fotos e a parede não tem escala definida (RN-08)', async () => {
+    const { projeto, base } = await novo();
+    const imagem = (await enviarImagemApi(t.app, { projetoId: projeto._id })).json() as ImagemJson;
+    const res = await salvarVarianteApi(
+      t.app,
+      projeto._id,
+      base._id,
+      corpo(base, { fotos: [foto({ imagemId: imagem._id })] }),
+    );
+    expect(res.statusCode).toBe(422);
+    expect(res.json()).toEqual({ erro: 'Defina a escala da parede antes de posicionar fotos.' });
+    const salva = await t.db.collection('variantes').findOne({ _id: new ObjectId(base._id) });
+    expect(salva!.revisao).toBe(base.revisao);
+  });
+
+  it('sem fotos, salvar continua valendo sem escala (grid e área útil do M1)', async () => {
+    const { projeto, base } = await novo();
+    const res = await salvarVarianteApi(t.app, projeto._id, base._id, corpo(base));
+    expect(res.statusCode).toBe(200);
+  });
+
+  it('422 para imagem inexistente', async () => {
+    const { projeto, base } = await comEscalaEImagem();
+    const res = await salvarVarianteApi(
+      t.app,
+      projeto._id,
+      base._id,
+      corpo(base, { fotos: [foto({ imagemId: idFixture(777) })] }),
+    );
+    expect(res.statusCode).toBe(422);
+    expect(res.json()).toEqual({ erro: 'Há fotos que usam imagens inexistentes ou excluídas.' });
+  });
+
+  it('422 para imagem excluída', async () => {
+    const { projeto, base, imagem } = await comEscalaEImagem();
+    await t.db
+      .collection('imagens')
+      .updateOne(
+        { _id: new ObjectId(imagem._id) },
+        { $set: { excluidaEm: new Date(), purgaEm: new Date() } },
+      );
+    const res = await salvarVarianteApi(
+      t.app,
+      projeto._id,
+      base._id,
+      corpo(base, { fotos: [foto({ imagemId: imagem._id })] }),
+    );
+    expect(res.statusCode).toBe(422);
+  });
+
+  it('422 para _id de foto repetido', async () => {
+    const { projeto, base, imagem } = await comEscalaEImagem();
+    const res = await salvarVarianteApi(
+      t.app,
+      projeto._id,
+      base._id,
+      corpo(base, { fotos: [foto({ imagemId: imagem._id }), foto({ imagemId: imagem._id })] }),
+    );
+    expect(res.statusCode).toBe(422);
+    expect(res.json()).toEqual({ erro: 'Há fotos com o mesmo identificador.' });
+  });
+
+  it('a mesma imagem pode aparecer várias vezes (RN-13)', async () => {
+    const { projeto, base, imagem } = await comEscalaEImagem();
+    const res = await salvarVarianteApi(
+      t.app,
+      projeto._id,
+      base._id,
+      corpo(base, {
+        fotos: [
+          foto({ _id: idFixture(101), imagemId: imagem._id }),
+          foto({ _id: idFixture(102), imagemId: imagem._id, xCm: 90 }),
+        ],
+      }),
+    );
+    expect(res.statusCode).toBe(200);
+  });
+
+  it('o projeto entra em imagens.projetos das imagens usadas, sem duplicar (DM-05)', async () => {
+    const { projeto, base, imagem } = await comEscalaEImagem();
+    const outroProjeto = await criarProjetoApi(t.app, 'Outro');
+    const deOutro = (
+      await enviarImagemApi(t.app, { projetoId: outroProjeto.projeto._id })
+    ).json() as ImagemJson;
+
+    const salvar = (revisaoBase: number) =>
+      salvarVarianteApi(
+        t.app,
+        projeto._id,
+        base._id,
+        corpo(base, {
+          revisaoBase,
+          fotos: [foto({ imagemId: deOutro._id })],
+        }),
+      );
+    const primeiro = await salvar(base.revisao);
+    expect(primeiro.statusCode).toBe(200);
+    const segundo = await salvar((primeiro.json() as { revisao: number }).revisao);
+    expect(segundo.statusCode).toBe(200);
+
+    const doc = await t.db.collection('imagens').findOne({ _id: new ObjectId(deOutro._id) });
+    expect(doc!.projetos.map((p: ObjectId) => p.toHexString()).sort()).toEqual(
+      [outroProjeto.projeto._id, projeto._id].sort(),
+    );
+    // A imagem não usada não ganhou o projeto.
+    const parada = await t.db.collection('imagens').findOne({ _id: new ObjectId(imagem._id) });
+    expect(parada!.projetos).toHaveLength(1);
   });
 });

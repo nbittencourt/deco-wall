@@ -1,6 +1,7 @@
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { calcularRetificacao, ordenarCantos, PERFIS, type Pt } from '@deco-wall/domain';
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import type { Db, MongoClient } from 'mongodb';
@@ -229,6 +230,80 @@ export async function salvarVarianteApi(
 }
 
 export const FRONTAL_JPG = CAMINHO_FRONTAL;
+
+// ---- M2: biblioteca de imagens e projeto pronto para receber fotos ----
+
+const PASTA_IMAGENS = fileURLToPath(new URL('./imagens/', import.meta.url));
+export const lerImagem = (nome: string): Promise<Buffer> => readFile(join(PASTA_IMAGENS, nome));
+
+export async function jpegSintetico(largura: number, altura: number): Promise<Buffer> {
+  return sharp({
+    create: { width: largura, height: altura, channels: 3, background: { r: 120, g: 90, b: 60 } },
+  })
+    .jpeg()
+    .toBuffer();
+}
+
+export async function enviarImagemApi(
+  app: FastifyInstance,
+  opcoes: {
+    projetoId?: string;
+    perfil?: string;
+    // null: requisição sem o campo do arquivo.
+    arquivo?: Buffer | null;
+    nome?: string;
+    tipo?: string;
+  },
+): Promise<Resposta> {
+  const campos: Record<string, string> = { perfil: opcoes.perfil ?? 'leve' };
+  if (opcoes.projetoId !== undefined) campos.projetoId = opcoes.projetoId;
+  const arquivos: ArquivoMultipart[] = [];
+  if (opcoes.arquivo !== null) {
+    arquivos.push({
+      campo: 'arquivo',
+      nome: opcoes.nome ?? 'foto.jpg',
+      tipo: opcoes.tipo ?? 'image/jpeg',
+      conteudo: opcoes.arquivo ?? (await lerImagem('retrato.jpg')),
+    });
+  }
+  const { payload, headers } = await montarMultipart(campos, arquivos);
+  return app.inject({ method: 'POST', url: '/api/imagens', payload, headers });
+}
+
+export interface ImagemJson {
+  _id: string;
+  nomeOriginal: string;
+  perfil: string;
+  larguraPx: number;
+  alturaPx: number;
+  orientacaoNatural: 'retrato' | 'paisagem';
+  bytes: number;
+  arquivos: { render: string; thumb: string };
+  mime: string;
+  criadaEm: string;
+  projetos: string[];
+  excluidaEm: string | null;
+  purgaEm: string | null;
+  schemaVersion: number;
+}
+
+// Projeto com parede frontal e calibração linear (150 cm = 600 px): variante "Base" já com a área útil.
+export async function criarProjetoComEscalaApi(app: FastifyInstance, nome = 'Sala') {
+  const { projeto, variantes } = await criarProjetoApi(app, nome);
+  const parede = await enviarParedeApi(app, projeto._id, {
+    revisaoBase: projeto.revisao,
+    arquivo: await readFile(CAMINHO_FRONTAL),
+  });
+  const revisao = (parede.json() as { projeto: ProjetoJson }).projeto.revisao;
+  const escala = await aplicarLinearApi(app, projeto._id, { revisaoBase: revisao });
+  const corpo = escala.json() as {
+    projeto: ProjetoJson;
+    variantesAlteradas: { _id: string; revisao: number; areaUtil: VarianteJson['areaUtil'] }[];
+  };
+  const alterada = corpo.variantesAlteradas[0]!;
+  const base: VarianteJson = { ...variantes[0]!, revisao: alterada.revisao, areaUtil: alterada.areaUtil };
+  return { projeto: corpo.projeto, base };
+}
 
 // ---- formatos de resposta (datas viram texto no JSON) ----
 
