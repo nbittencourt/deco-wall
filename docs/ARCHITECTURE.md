@@ -2,9 +2,9 @@
 
 | Campo | Valor |
 |---|---|
-| Versão | 0.7 |
-| Data | 2026-10-24 |
-| Base | `docs/PRD.md` v0.11 |
+| Versão | 0.8 |
+| Data | 2026-10-25 |
+| Base | `docs/PRD.md` v0.12 |
 | Status | Decisões fechadas; modelo de dados em `docs/specs/M0-setup.md` §4 |
 
 > **Objetivo deste arquivo:** registrar a arquitetura e cada decisão técnica (ADR) com critérios, alternativas avaliadas e consequências. Toda escolha de biblioteca ou componente nova entra aqui antes de entrar no código.
@@ -92,10 +92,10 @@ Consequências:
 - Camadas: Parede (estática, cacheada) · Grid (1 `Shape` com `sceneFunc`, só linhas visíveis) · Fotos (1 `Group` por foto: `Rect` borda + `Image` com `crop`; snap em `dragBoundFunc`) · Overlay (seleção, destaques RN-11/12, ferramentas; nunca exportada).
 - Comparação (ADR-12): dois `Stage` lado a lado compartilhando o mesmo estado de viewport.
 
-### ADR-03 — Estado no cliente: Zustand + Immer + zundo · **Decidido**
+### ADR-03 — Estado no cliente: Zustand + Immer + histórico próprio · **Decidido** (revisada em 25/10: sem `zundo`)
 
 - Fatias: `documento` (projeto aberto), `ui` (seleção, ferramenta, viewport, variantes em comparação), `biblioteca` (lista global de imagens, vinda da API).
-- **Histórico por variante** (ADR-12): uma pilha de desfazer/refazer por variante, mantida em memória enquanto o projeto está aberto; não persistida; limite 100 passos por variante.
+- **Histórico por variante** (ADR-12): uma pilha de desfazer/refazer por variante, mantida em memória enquanto o projeto está aberto; não persistida; limite 100 passos por variante. **Implementação (M2-02):** pilha própria de instantâneos (`packages/domain/src/historico.ts`, pura e testada), guardada na store fora do que é desfeito. O `zundo` foi descartado: ele mescla o estado só no primeiro nível, então desfazer substituiria `documento` inteiro (projeto, revisões, status de salvamento) porque o conteúdo desfazível vive aninhado em `documento.variante`; os passos precisam ser por intenção (explícitos) e por variante (M3); e sai uma dependência (P4).
 - Um passo por intenção do usuário: arrastar grava só no `dragend`; campos numéricos com debounce.
 - Mutações só por ações nomeadas (casos de uso) que delegam às regras do domínio.
 
@@ -317,6 +317,7 @@ deco-wall/
         app/                # store do editor (zustand + immer), contexto, navegação, aviso ao sair
           store.ts          # fatias `documento` e `ui`; ações nomeadas (ADR-03)
           StoreContext.tsx  avisoAoSair.ts  navegacao.ts
+          uploadLote.ts     # fila de upload (3 em paralelo, cancelar, tentar de novo), sem React — M2
         infra/              # cliente HTTP e Worker
           dto.ts            # formatos da API, porta `ClienteApi` e `ErroApi`
           clienteApi.ts     # implementação com fetch (upload com progresso por XMLHttpRequest)
@@ -329,13 +330,14 @@ deco-wall/
             Palco.tsx       # único módulo que usa o Konva: camadas, zoom/pan, alças, lupa
             cena.ts         # cenas em dados (sem Konva): parede, área útil, perspectiva, calibração
             useImagem.ts
-          paineis/          # Composição, Perspectiva, Calibração, Área útil, BarraModo, CamposAreaUtil
+            FotoNode.tsx    # nó Konva de uma foto na parede (borda + imagem com crop) — M2
+          paineis/          # Composição, Perspectiva, Calibração, Área útil, Foto, Recorte, BarraModo, CamposAreaUtil
           telas/            # Projetos, Editor, Comparação, /dev/ui
-            editor/         # HeaderEditor, Biblioteca, ToolbarCanvas, EstadoVazio, cenas.ts
-              modos/        # ModoPerspectiva, ModoCalibracao, ModoAreaUtil, LayoutModo
+            editor/         # HeaderEditor, Biblioteca, DialogoUpload, ToolbarCanvas, EstadoVazio, cenas.ts
+              modos/        # ModoPerspectiva, ModoCalibracao, ModoAreaUtil, ModoRecorte, LayoutModo
           componentes/
             ui/             # componentes shadcn/ui (gerados)
-            proprios/       # StatusSalvamento, ChipEscala, Miniatura, CampoCm, NomeProjeto, DialogosProjeto…
+            proprios/       # StatusSalvamento, ChipEscala, Miniatura, CampoCm, SeletorTamanho, NomeProjeto, DialogosProjeto…
         lib/                # utilitários de UI (cn, etc.)
   api/
     src/
@@ -343,8 +345,8 @@ deco-wall/
       app.ts                # monta a API (rotas, multipart, erros); usado por main.ts e pelos testes
       contexto.ts  erros.ts
       config.ts             # leitura/validação do .env
-      rotas/                # projetos, parede (upload, escala, arquivos), variantes (hard save), saude
-      servicos/             # projetos, parede, variantes, imagem (sharp), reparo (A-18); purga no M4
+      rotas/                # projetos, parede (upload, escala, arquivos), imagens (biblioteca), variantes (hard save), saude
+      servicos/             # projetos, parede, imagens (biblioteca), variantes, imagem (sharp), reparo (A-18); purga no M4
       repositorios/         # MongoDB (conexão e conversão ObjectId ↔ string hex)
       migracoes/            # 0001-inicial…
       armazenamento/        # PASTA_FOTOS (inclui gravação em duas fases)
@@ -352,12 +354,14 @@ deco-wall/
     domain/
       src/                  # tipos, schemas Zod, RN, geometria, homografia, snap, desenho, formatadores
         arquivos.ts  projetos.ts   # validação de arquivo de imagem e de nome de projeto
+        historico.ts        # pilha de desfazer/refazer por variante (M2-02)
+        fotos/              # tamanho, geometria, alertas, recorte e composição das fotos na parede (M2)
         geometria/          # homografia, quadrilátero, viewport, grid
         escala/             # calibração linear, retificação, warp, parede inteira, área útil, padrões, referência
         templates/
           catalogo.ts       # catálogo de templates (constante; fonte: docs/specs/templates.md)
   tests/
-    e2e/                    # Playwright: smoke, rede, projetos, parede e escala, salvamento, desempenho (ajudantes.ts)
+    e2e/                    # Playwright: smoke, rede, projetos, parede e escala, salvamento, desempenho, biblioteca, composição (ajudantes.ts)
     fixtures/
       imagens/
       paredes/
@@ -412,7 +416,7 @@ Arquivos de dados fora do repositório: `PASTA_FOTOS` (definida no `.env`; estru
 ## 11. Referências
 
 - Konva — https://konvajs.org/docs/ · react-konva — https://github.com/konvajs/react-konva
-- Zustand — https://zustand.docs.pmnd.rs/ · zundo — https://github.com/charkour/zundo
+- Zustand — https://zustand.docs.pmnd.rs/
 - sharp — https://sharp.pixelplumbing.com/
 - Fastify — https://fastify.dev/docs/latest/
 - MongoDB Node.js Driver — https://www.mongodb.com/docs/drivers/node/current/
