@@ -115,6 +115,13 @@ Pedido original do Nicholas:
 | 2026-10-24 | `.env` criado a partir do `.env.example` e pasta `C:\Users\nbitt\Pictures\ParedeFotos` criada para a validação. `.claude/launch.json` com `dev` e `start`; no painel do app, só o `start` (build servido pela API, porta 3001) subiu: o Vite do `dev` não abriu a porta lá dentro (sozinho, sobe normal). | Registrado |
 | 2026-10-24 | **M0 aceito pelo Nicholas** (validação visual T6d/T10). Divergências do header resolvidas: em 1280 só Área útil, Perspectiva, Calibrar e Parede vão para o menu "Parede ▾" (Comparar e Templates ficam); gap de 4 px e padding de 9 px nos botões fantasma (DESIGN §7); E2E de hover/foco nas dicas dos botões só de ícone. | Feito |
 | 2026-10-24 | Status de salvamento sai do header e fica só na barra de status, com o texto completo: "Alterações não salvas" e "Rascunho salvo às hh:mm" estouravam o header em 1280 e 1440. Diverge do protótipo 03a; DESIGN §7 e spec M1 §3.2 atualizadas. A marca "Parede" ao lado do voltar foi mantida. | Decidido |
+| 2026-10-24 | Regra: especificação de marco lê só a documentação do projeto, sem abrir código-fonte (`CLAUDE.md`, Regras de trabalho). | Decidido |
+| 2026-10-24 | Spec M2 v0.1 (rascunho) em `docs/specs/M2-biblioteca-e-composicao.md`, escrita em paralelo ao M1 a pedido do Nicholas; implementação só após o aceite do M1 (MS-01). | Feito |
+| 2026-10-24 | M2-01: com snap, seta = 1 passo e Shift + seta = 5 passos; sem snap, 1 cm e 5 cm. M2-02: Ctrl+Z desfaz; Ctrl+Y e Ctrl+Shift+Z refazem. M2-03: desfazer cobre fotos, área útil e borda padrão; grid fora; 100 passos por variante. | Decidido |
+| 2026-10-24 | M2-04: botão do painel da foto continua "Remover" (tira da variante), com tooltip "A imagem continua na biblioteca."; sem confirmação. | Decidido |
+| 2026-10-24 | M2-05: `imagens.projetos` recebe o projeto no upload e no salvamento da variante; filtros Projeto e Variante mostram só o estado salvo (foto não salva não entra). | Decidido |
+| 2026-10-24 | M2-06: M2 desenha e edita placeholders (sem recorte); associação no M4. M2-07: "Excluídas" visível e inativo até o M4. M2-08: Trazer para frente / Enviar para trás andam uma posição por clique. | Decidido |
+| 2026-10-24 | M2-09: mudar tamanho ou orientação recentraliza o recorte. M2-10: mudar a borda mantém o canto sup.-esq. externo. M2-11: foto mantém ≥ 1 cm dentro da parede inteira nos movimentos do usuário (nunca ao refazer a escala). M2-12: com snap, X/Y digitados também encaixam. | Decidido |
 | 2026-10-24 | Repositório com remoto GitHub (`origin` = `github.com/nbittencourt/deco-wall`), configurado pelo Nicholas; substitui "git só local, sem GitHub" (17/10). Primeiro commit "M0 implementado" feito por ele; commits seguintes na `main`, sem push até pedido. | Decidido |
 
 ## Questões em aberto
@@ -148,3 +155,4 @@ Pedido original do Nicholas:
 - 2026-10-17 — Marcos M0–M5 aprovados; spec M0 v0.6 revisada e pronta.
 - 2026-10-17 — M0 liberado: bootstrap do monorepo e testes escritos (domínio, API, Mongo, seed, fixtures); 13 arquivos de teste rodando em vermelho, por módulos ainda não implementados.
 - 2026-10-24 — Spec M1 v0.1 (rascunho) com 8 decisões (M1-01 a M1-08) e 20 premissas; PRD v0.11, ARCHITECTURE v0.6, DESIGN v0.3.
+- 2026-10-24 — Spec M2 v0.1 (rascunho) em `docs/specs/M2-biblioteca-e-composicao.md`, escrita em paralelo ao M1: 12 decisões (M2-01 a M2-12, tomadas no mesmo dia; spec v0.2) e 27 premissas a revisar; alterações no PRD, DESIGN, ARCHITECTURE e spec M0 listadas na §11 e adiadas. Regra nova no `CLAUDE.md`: spec de marco usa só a documentação, sem ler código.
