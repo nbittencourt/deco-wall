@@ -125,6 +125,7 @@ Pedido original do Nicholas:
 
 ## Questões em aberto
 
+- **ADR-16 (desempenho do perfil Alto, 28 MP, ≈ 3 s):** o Nicholas decide depois entre as opções da ADR (limitar a retificada a 4096 px, WebP 0,8 só na retificada, vários Workers, JPEG sem transparência). Até lá vale a decisão provisória: pipeline atual, teto de 4,5 s no E2E do Alto. Não bloqueia o M2.
 - Status HTTP de `/api/saude` quando algum componente está em erro: o teste verifica só o corpo. Definir na T5.
 
 ## Status
