@@ -52,4 +52,5 @@ npm run e2e
 - Ao tomar ou confirmar uma decisão relevante (stack, escopo, mudança de requisito), registrar em `MEMORY.md` (seção Decisões) e, se mudar requisito, atualizar `docs/PRD.md`.
 - Ao concluir uma etapa do roadmap, atualizar o Status em `MEMORY.md`.
 - Em dúvida de requisito, consultar o PRD; se ambíguo, perguntar antes de implementar.
+- **Especificação de marco (`docs/specs/`): ler só a documentação do projeto**, sem abrir o código-fonte. A base é o PRD e as specs já escritas, junto com DESIGN, ARCHITECTURE, `MEMORY.md` e os protótipos de `docs/design/`.
 - Priorizar documentação oficial das libs (Konva, React, MDN para File System Access API).

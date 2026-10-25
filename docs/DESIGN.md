@@ -2,8 +2,8 @@
 
 | Campo | Valor |
 |---|---|
-| Versão | 0.4 (M2: painel da foto, diálogo de envio, desfazer) |
-| Data | 2026-10-25 |
+| Versão | 0.4 (decisões da spec M2: toolbar, barra de status, alertas, "Remover") |
+| Data | 2026-10-24 |
 | Status | Identidade e protótipos de alta fidelidade aprovados para implementação |
 | Protótipos | `docs/design/` (ver §10) |
 
@@ -73,16 +73,17 @@ Ficam em constantes TypeScript (não em CSS), pois são aplicadas em nós Konva.
 | Origem | Texto mono 11 px `ink-2`, “0,0” no canto da origem (RN-07) |
 | Foto selecionada | Contorno 2 px `accent`, offset 3 px; 4 alças 8×8 brancas, borda 2 px `accent`, raio 2 |
 | Rótulo de medida da seleção | Pill `accent`, texto branco mono 11 px, abaixo da foto: “24,0 × 34,0 cm” |
-| Sobreposição (RN-11) | Contorno 2 px tracejado `danger`, offset 2 px, em **todas** as fotos envolvidas + pill “Sobreposição” com ícone |
+| Sobreposição (RN-11) | Contorno 2 px tracejado `danger`, offset 2 px, em **todas** as fotos envolvidas + pill “Sobreposição” com ícone na foto da camada superior (canto inferior direito; uma por foto) |
 | Fora da parede / da área útil (RN-12, RN-34) | Mesmo tracejado `danger` na foto + pill `danger` com ícone: “Fora da parede” (RN-12) ou “Fora da área útil” (RN-34); se ambos, prevalece “Fora da parede” |
 | Área útil (RN-33) | Retângulo 1 px tracejado `ink-2`; exterior coberto por `paper` a 50% no editor ou `ink` a 55% no modo Área útil; rótulo mono 11 px `ink-2` acima, à esquerda: “Área útil · 180,0 × 110,0 cm”. Fora da exportação. |
 | Alças da área útil | Quadrado 12 px branco, borda 2 px `accent`, nos 4 cantos e nos 4 lados |
 | Placeholder (RF-30a) | Hachura 45° `danger` 20% sobre `#FBEDEA`, borda 1,5 px tracejada `danger`, ícone imagem-cortada `danger-ink` centralizado + tamanho da foto em mono 11 px sobre branco 80% (“20 × 30”) — vale para **todo** placeholder (foto excluída ou vaga de template, TPL-05) |
 | Vaga de template (RN-31, TPL-05) | Idêntica ao placeholder; durante o posicionamento, conjunto a 80% de opacidade |
 | Conjunto de template (RN-32) | Contorno 1,5 px tracejado `ink-2` (ou `danger` quando maior que a área útil), 8 px de folga, + pill com ícone de mover e o total (“151,0 × 70,6 cm”) |
-| Bounding box (RF-62) | Retângulo tracejado 1,5 px `ink-2`, 8 px de folga; pill `ink-2` com “90,0 × 47,0 cm” acima |
+| Bounding box (RF-62) | Retângulo tracejado 1,5 px `ink-2`, 8 px de folga; pill `ink-2` com “90,0 × 47,0 cm” acima; mostrada ou escondida pelo toggle “Área total” da toolbar |
 | Alças de perspectiva/calibração | Círculo 18 px branco, borda 2,5 px `accent`; ativo = preenchido `accent`; número do canto em pill `accent` |
 | Polígono de perspectiva | Contorno 2 px `accent`, preenchimento `accent` a 12% |
+| Imagem indisponível | Arquivo da imagem não carregou: retângulo `sand` no tamanho da foto, ícone e “Imagem indisponível” em `ink-3`. Não é placeholder (a foto mantém a imagem associada). |
 | Lupa ao marcar pontos | Círculo 160 px, borda 3 px branca, sombra forte, mira em cruz `accent`, zoom 4× |
 
 Exportação (RN-19): nada desta tabela sai no PNG/JPG, exceto grid (opcional) e placeholder, que sai como hachura `danger` 45% / 16% sem borda.
@@ -187,9 +188,10 @@ Somente tema claro na v1. Foco visível: `ring` 2 px `accent` com offset 2 px em
 - **Editor:** header (≈56 px) · coluna esquerda Biblioteca 264–296 px · canvas fluido · coluna direita Propriedades 300–320 px · barra de status 32 px.
 - **Header do editor (≥ 1440 px), da esquerda para a direita:** voltar · marca · nome do projeto (serif, máx. 120 px com reticências) · seletor de variante (badge “1 sem foto”) · Comparar | Templates · Área útil · Perspectiva · Calibrar · chip “4,0 px/cm” · Parede (inativo, DV-02) | Grid 5 cm · Snap | Desfazer · Refazer · (espaço) · Salvar (Ctrl+S no tooltip) · Exportar (primário). Botões fantasma com padding horizontal 9 px e gap 4 px. O status de salvamento **não** fica no header: só na barra de status, com o texto completo (24/10; “Alterações não salvas” e “Rascunho salvo às hh:mm” estouram o header em 1280 e 1440). Diverge do protótipo 03a.
 - **Header < 1440 px (1280):** Área útil, Perspectiva, Calibrar e Parede (inativo, com tooltip) vão para o menu **“Parede ▾”**; Comparar, Templates e o chip de escala continuam visíveis. Breakpoint `max-width: 1439px` (protótipo 03a).
-- **Toolbar do canvas:** Adicionar · Duplicar · Trazer para frente · Enviar para trás · (espaço) · zoom − / % / + · Ajustar à tela.
+- **Toolbar do canvas:** Adicionar · Duplicar · Trazer para frente · Enviar para trás · (espaço) · Área total (`Toggle` da bounding box, padrão ligado, não persistido) · zoom − / % / + · Ajustar à tela.
+- **Barra de status:** à esquerda, X/Y da foto selecionada (“X 112,5 · Y 40,0 cm”, ao vivo no arraste) e a dica de teclado conforme o snap — “Setas: 1 passo do grid · Shift + setas: 5 passos” ou “Setas: 1 cm · Shift + setas: 5 cm”; à direita, “Medidas aproximadas, parede considerada plana” e o status de salvamento.
 - **Painel da foto (RF-60):** cabeçalho (miniatura + nome) · Tamanho (select) e Orientação na mesma linha · Borda (cm + cor) · Tamanho externo · Posição X/Y · alerta de sobreposição, se houver · Enquadramento (“Ajustar recorte”) · Duplicar / Remover.
-- **Painel sem seleção (protótipo 11):** Composição · Escala · **Área útil desta variante** (L, A, X, Y + “Ajustar”) · Borda padrão · Grid (“Linha forte a cada” inativo). Cada seção abre com título Newsreader 18 px `ink` e divisória `line-faint` acima (padding 18 px); labels de campo seguem em `label`.
+- **Painel sem seleção (protótipo 11):** Composição (Fotos, Área total e, só quando > 0, Sobreposições, Sem foto e **Fora da área**) · Escala · **Área útil desta variante** (L, A, X, Y + “Ajustar”) · Borda padrão · Grid (“Linha forte a cada” inativo). Cada seção abre com título Newsreader 18 px `ink` e divisória `line-faint` acima (padding 18 px); labels de campo seguem em `label`.
 - **Modos (perspectiva, calibração, área útil, posicionamento de template):** header escuro `ink` + área `stage-dark` + painel direito de 320–360 px.
 - **Prévia frontal (perspectiva):** sob demanda — botão secundário “Gerar prévia” no bloco “Prévia frontal”; estados: vazio (texto de instrução), gerando (indicador), pronta, **desatualizada** (prévia esmaecida + aviso “Os cantos mudaram” + botão reativado). Não há atualização ao vivo (DV-06).
 - **Comparação:** dois painéis lado a lado, cada um com seletor de variante e dimensões; selo “Somente visualização”; zoom/pan **sempre sincronizados** e botão “Parede inteira” (enquadra a parede nos dois). A alternância “Zoom sincronizado / Independente” do protótipo 06 **não** será implementada (DV-01).
@@ -202,10 +204,6 @@ Somente tema claro na v1. Foco visível: `ring` 2 px `accent` com offset 2 px em
 - Campos largura × altura (cm) visíveis durante o modo quando o tamanho for personalizado (RN-28); alterar recentraliza o recorte.
 - Saída: “Concluir” / Enter confirma (1 passo de desfazer); Esc cancela e restaura.
 
-- **Painel da foto (M2):** cabeçalho com miniatura, nome e "Retrato/Paisagem natural" (orientação da **imagem**); o gatilho do seletor de tamanho mostra só "20 × 30" (sem "cm", para caber ao lado da Orientação de 152 px; a lista mostra "20 × 30 cm"); os campos de borda, X e Y usam rótulo só para leitores de tela (o título da seção e o prefixo já dizem o que são) e aplicam em Enter ou ao sair do campo.
-- **Diálogo "Carregar fotos" (M2, diverge do protótipo 07 — DS-02):** os arquivos entram numa fila e o envio começa em **"Enviar N fotos"**, depois de escolhido o perfil (definitivo); o perfil fica travado durante o envio. Rodapé: "Cancelar" (antes de enviar), "Cancelar restantes" (durante), "Concluir".
-- **Desfazer/Refazer (M2):** ficam inativos pelo estado quando a pilha está vazia ("Nada para desfazer." / "Nada para refazer."); dicas com o atalho ("Desfazer (Ctrl+Z)").
-
 ### 7.1 Funções ainda não implementadas
 
 - Botão **primário** inativo: fundo `sand` e texto `ink-3` (o `ink-disabled` sobre `accent` não tinha contraste).
@@ -214,8 +212,9 @@ Somente tema claro na v1. Foco visível: `ring` 2 px `accent` com offset 2 px em
 - Casos atuais:
   - botão **“Parede”** do header do editor quando alguma variante tem fotos (trocar a parede mantendo as fotos — RF-04). Sem fotos, o botão fica ativo e troca a parede com confirmação (RF-07, M1-05);
   - controle **“Linha forte a cada”** do painel Grid (RF-52 — P1, marco M5);
+  - filtro **“Excluídas”** no menu ⋯ da Biblioteca (ciclo de vida das imagens, marco M4);
   - campos **“Buscar projeto”** (Projetos) e **“Buscar por nome”** (Biblioteca) — campo inativo (`aria-disabled`, sem aceitar digitação), mesmo tooltip (RF-33b / RF-33c, Ideias futuras).
-- Controles indisponíveis **pelo estado** (não por versão futura) usam o mesmo padrão inativo, com tooltip que diz o que falta: Carregar fotos sem escala ("Defina a escala primeiro."), Adicionar sem foto escolhida na biblioteca ("Selecione uma foto na biblioteca."), Duplicar e ordem sem foto selecionada ("Selecione uma foto na parede."), Perspectiva e Calibrar sem parede (“Carregue a foto da parede primeiro.”), Área útil sem escala (“Defina a escala primeiro.”), Calibrar com a perspectiva aplicada (“Com a perspectiva aplicada, use Perspectiva para refazer a escala.” — RN-08).
+- Controles indisponíveis **pelo estado** (não por versão futura) usam o mesmo padrão inativo, com tooltip que diz o que falta: Perspectiva e Calibrar sem parede (“Carregue a foto da parede primeiro.”), Área útil sem escala (“Defina a escala primeiro.”), Calibrar com a perspectiva aplicada (“Com a perspectiva aplicada, use Perspectiva para refazer a escala.” — RN-08), Adicionar sem escala (“Defina a escala primeiro.”) ou sem miniatura selecionada (“Selecione uma foto na biblioteca.”), Duplicar e ordem sem foto selecionada (“Selecione uma foto na parede.”), Ajustar recorte em placeholder (“Sem imagem para enquadrar.”).
 
 ### 7.2 Área útil (RF-94, RN-33 a RN-35)
 
@@ -234,6 +233,8 @@ Somente tema claro na v1. Foco visível: `ring` 2 px `accent` com offset 2 px em
 - Datas/horas: “às 14:35”, “12/10”.
 - Rótulos fixos: “Carregar fotos”, “Adicionar”, “Salvar”, “Exportar”, “Comparar”, “Recalibrar”, “Restaurar”, “Sem foto”, “Sobreposição”, “Templates”, “Área útil”, “Fora da área útil”, “Maior que a área útil”, “Gerar prévia”, “Os cantos mudaram”, “Confirmar área”, “Usar a parede inteira”, “Posicionar na parede”, “Confirmar posição”, “Ajustar recorte”, “Concluir”.
 - Ações de imagem: “Remover deste projeto” × “Excluir da biblioteca” (RN-24).
+- Foto na parede: “Remover” (painel da foto) tira a foto da variante, sem confirmação, com o tooltip “Tira a foto desta variante. A imagem continua na biblioteca.”; não confundir com “Remover deste projeto”, que é da imagem.
+- Atalhos: Ctrl+Z desfaz; Ctrl+Y e Ctrl+Shift+Z refazem (tooltips “Desfazer (Ctrl+Z)” e “Refazer (Ctrl+Y)”).
 - Conflito (SV-05): “Usar a salva” · “Salvar a minha como nova variante” · “Manter a minha”.
 - Tom: frases curtas, instrução direta, sem jargão técnico (“escala”, não “homografia”).
 
@@ -242,7 +243,7 @@ Somente tema claro na v1. Foco visível: `ring` 2 px `accent` com offset 2 px em
 - Controles reais (`button`, `input`, `label`); ícones sem texto com `aria-label`.
 - Contraste ≥ 4,5:1 para texto; estados nunca diferenciados só por cor (DS-04).
 - Alvos ≥ 36 px na toolbar, ≥ 40 px em listas e diálogos.
-- Teclado: setas movem a foto (RN-16), Ctrl+S salva (RF-72), Esc fecha diálogos/menus e cancela modos.
+- Teclado: setas movem a foto (RN-16), Ctrl+Z / Ctrl+Y desfazem e refazem (RF-70), Ctrl+S salva (RF-72), Esc fecha diálogos/menus e cancela modos.
 
 ## 10. Protótipos
 

@@ -2,256 +2,356 @@
 
 | Campo | Valor |
 |---|---|
-| Versão | 0.2 (implementada; decisões e premissas aguardam revisão do Nicholas) |
-| Data | 2026-10-25 |
-| Base | `docs/PRD.md` v0.11 · `docs/ARCHITECTURE.md` v0.7 · `docs/DESIGN.md` v0.3 + protótipos 03, 03a, 03b, 07, 16 · `docs/specs/M0-setup.md` v0.6 · `docs/specs/M1-parede-e-escala.md` v0.3 |
-| Status | **Implementada (25/10), aguardando a revisão e a validação visual do Nicholas.** Ele liberou o M2 sem revisar a spec; as decisões da §0.1 e as premissas da §0.2 foram tomadas com o padrão mais conservador dos documentos e seguem marcadas para revisão. Registro da implementação na §12. |
+| Versão | 0.3 |
+| Data | 2026-10-24 |
+| Base | `docs/PRD.md` v0.12 · `docs/ARCHITECTURE.md` v0.8 · `docs/DESIGN.md` v0.4 + protótipos 03, 03a, 03b, 07, 11, 16 · `docs/specs/M0-setup.md` v0.6 · `docs/specs/M1-parede-e-escala.md` v0.3 (implementada e aceita) |
+| Status | **Pronta para implementação** — decisões e premissas revisadas (24/10); M1 aceito. Começa com a liberação do Nicholas. |
 
 ## 0. Pré-requisitos
 
-| # | Item | Situação |
-|---|---|---|
-| PR-M2-01 | Aceite do M1. | ✅ 24/10 |
-| PR-M2-02 | Spec do M2 (MS-01). | ✅ este arquivo (rascunho; revisão do Nicholas pendente) |
-| PR-M2-03 | Dependências: `bson` (ADR-07, ids no cliente). `zundo` (ADR-03) **não** entra: ver M2-02. Nenhuma outra. | ✅ |
+| # | Item | Bloqueia | Situação |
+|---|---|---|---|
+| PR-M2-01 | **Aceite do M1** (§8 da spec M1). | T1 | ✅ 24/10 (M1 aceito; ADR-16 pendente, não bloqueia o M2) |
+| PR-M2-02 | Lacunas e contradições da §0.1 decididas. | T1 | ✅ 24/10 |
+| PR-M2-03 | Revisão das premissas da §0.2 pelo Nicholas. | T1 | ✅ 24/10 |
+| PR-M2-04 | Alterações da §11 aplicadas ao PRD, à DESIGN, à ARCHITECTURE e à spec M0, depois da revisão das premissas e com este branch atualizado com a `main` (o M1 alterou ARCHITECTURE, DESIGN e `MEMORY.md`). | T1 | ✅ 24/10 |
 
 ### 0.1 Decisões desta especificação (lacunas e contradições resolvidas)
 
-| # | Lacuna ou contradição | Decisão (25/10) |
+| # | Lacuna ou contradição | Decisão (24/10) |
 |---|---|---|
-| M2-01 | RF-13 diz "exigir calibração antes de incluir fotos"; RF-20 pede upload "a partir de um projeto". Não estava dito se a biblioteca recebe fotos antes da escala. O texto aceito do M1 (§3.2) já diz "As fotos ficam disponíveis depois que a escala da parede for definida". | **"Carregar fotos" e "Adicionar" ficam inativos sem escala**, com o tooltip "Defina a escala primeiro." (padrão A-16). A biblioteca (miniaturas já enviadas) aparece sempre, mas só se posiciona com escala. O servidor aceita o upload de qualquer forma (a biblioteca é global); a trava de RF-13/RN-08 no servidor é a do salvamento da variante (M2-06). |
-| M2-02 | A ADR-03 prevê `zundo` para o histórico, mas o conteúdo desfazível (`fotos`, `areaUtil`, `bordaPadrao`) vive aninhado em `documento.variante`, e o `zundo` mescla o estado só no primeiro nível: desfazer substituiria o `documento` inteiro (projeto, revisões, status de salvamento). Além disso o histórico é **por variante** (M3). | **Pilha própria de instantâneos, pura, em `packages/domain/src/historico.ts`**, indexada por variante e guardada na store fora do que é desfeito. Um passo por intenção do usuário, registrado explicitamente pelas ações. Limite de **100 passos** por variante (RN-18 pede ≥ 50). **Muda a ADR-03** (sem `zundo`; uma dependência a menos, P4) — registrado na ARCHITECTURE v0.8. |
-| M2-03 | RN-18 só nomeia a área útil como desfazível; o grid também é da variante. | **Entram no desfazer:** fotos (adicionar, mover, tamanho, orientação, borda, recorte, duplicar, remover, ordem), área útil e borda padrão. **Ficam de fora:** os ajustes do grid (visível, passo, snap, cor, opacidade), que são auxílio de visão, não composição; continuam marcando "Alterações não salvas". Mudanças da parede continuam fora (M1-04). |
-| M2-04 | Quais fotos "Adicionar" põe e onde. | **"Adicionar" põe a foto selecionada na biblioteca** (clique na miniatura seleciona; duplo clique na miniatura também adiciona). Sem foto selecionada na biblioteca o botão fica inativo ("Selecione uma foto na biblioteca."). A foto entra **centralizada na área útil** (encaixada no grid se o snap estiver ligado); se já houver uma foto exatamente no mesmo lugar, desloca-se em cascata (um passo do grid com o snap ligado; 5 cm sem snap) até ficar livre. Ao **soltar** a miniatura no canvas, o **centro** da foto vai para o ponto de soltura, encaixado no grid se o snap estiver ligado. |
-| M2-05 | Qual canto fica fixo quando a borda muda, e o que acontece com o recorte quando a proporção muda. | RN-05 vale também para a borda: o **canto superior esquerdo externo não se mexe**; o tamanho externo cresce para a direita e para baixo. **Trocar o tamanho ou a orientação recentraliza o recorte** (offsets 0, 0), como já valia para o personalizado (RN-28). |
-| M2-06 | O *hard save* da M1 aceita `fotos` sem conferir nada, e `imagens.projetos` (DM-05) não é mantido. | O servidor passa a recusar (422) fotos sem escala definida (RN-08), imagens inexistentes ou excluídas e `_id` de foto repetido; e, a cada salvamento, acrescenta o projeto a `imagens.projetos` das imagens usadas (`$addToSet`). |
-| M2-07 | O protótipo 07 não mostra "Enviar": o envio parece começar ao escolher os arquivos, mas o perfil é definitivo (RF-25, RN-21) e os arquivos também podem chegar por arrastar-e-soltar sobre a biblioteca. | **Os arquivos escolhidos ou arrastados ficam na fila e o envio começa em "Enviar N fotos"** (primário). Até lá o perfil pode ser trocado e mais arquivos podem entrar. Depois de iniciar o envio o perfil fica travado (DV-10) até o lote acabar. Diverge do protótipo 07 (DS-02). |
-| M2-08 | "Fora da parede" × "Fora da área útil": tolerância e o que conta como sobreposição. | Tolerância de **0,05 cm** (meio milímetro) contra ruído de arredondamento. **Sobreposição** = interseção dos tamanhos externos com largura e altura maiores que a tolerância (fotos encostadas não se sobrepõem). **Fora** = qualquer parte do tamanho externo além do retângulo. Prevalece "Fora da parede" (DESIGN §2.2). Alertas não bloqueiam nada (RN-11, RN-12, RN-34). |
-| M2-09 | RN-16: "com snap ligado, move um passo do grid" não diz o que o Shift faz nesse caso. | Com snap **ligado**: seta = ir à linha do grid seguinte na direção (se a foto está entre linhas, vai à mais próxima na direção); Shift + seta = 5 linhas. Com snap **desligado**: seta = 1 cm; Shift + seta = 5 cm. |
+| M2-01 | **Shift + seta com snap ligado.** A RN-16 diz "seta move 1 cm; Shift + seta move 5 cm; com snap ligado, move um passo do grid", sem dizer o que o Shift faz com snap. O protótipo 03 diz "Shift + setas: 5 cm". Com passo de 2 cm, mover 5 cm tira a foto do grid. | **Com snap ligado, a seta move 1 passo e Shift + seta move 5 passos.** Sem snap, 1 cm e 5 cm. A barra de status mostra o texto do estado atual: "Setas: 1 passo do grid · Shift + setas: 5 passos" ou "Setas: 1 cm · Shift + setas: 5 cm". |
+| M2-02 | **Atalhos de desfazer.** A DESIGN §9 só lista setas, Ctrl+S e Esc. A UX-01 deixa Del, Ctrl+D, G, S e R para o futuro, mas não fala de Ctrl+Z. | **Ctrl+Z desfaz; Ctrl+Y e Ctrl+Shift+Z refazem.** Os atalhos fazem parte da RF-70, não da UX-01. Del e Ctrl+D continuam ideias futuras. Com o foco num campo de texto, Ctrl+Z é do campo. |
+| M2-03 | **O que entra no desfazer, e quantos passos.** A RN-18 põe a área útil no histórico (M1-04) e não fala do grid nem da borda padrão. A RN-18 pede no mínimo 50 passos, e a ADR-03 fixa 100. | **Entram as fotos (todas as ações), a área útil e a borda padrão. O grid fica fora**, porque é preferência de exibição: visível, snap, passo, cor e opacidade continuam alterando a variante e indo no salvamento, mas sem passo de desfazer. **Limite de 100 passos por variante** (ADR-03, atende ao mínimo da RN-18). |
+| M2-04 | **"Remover" com dois sentidos.** O painel da foto (protótipo 03) tem "Remover", que tira a foto da variante. A DESIGN §8 e a RN-24 usam "Remover deste projeto" para outra ação, a da imagem na biblioteca (M4). | **O botão do painel continua "Remover"** (protótipo 03), com o tooltip "Tira a foto desta variante. A imagem continua na biblioteca.". Sem confirmação, porque a ação se desfaz. "Remover deste projeto" continua sendo a ação da imagem (M4). |
+| M2-05 | **Quando `imagens.projetos` muda (DM-05).** A regra diz "ao posicionar a foto numa variante", mas a variante só é gravada no salvamento manual (M1-01). Também não estava definido o que os filtros mostram para fotos ainda não salvas. | **O servidor grava a associação em dois momentos**: no upload feito no projeto e no salvamento da variante, para cada `imagemId` das fotos (`$addToSet`), mantendo a RF-28 e a DM-05. No M2 a associação nunca é removida ("Remover deste projeto" é do M4). **Os filtros mostram só o estado salvo**: "Projeto" = imagens com o projeto em `projetos`; "Variante" = imagens das fotos da última versão salva da variante. Foto adicionada e ainda não salva não entra nesses filtros até o Salvar. Depois de cada salvamento, a web recarrega a biblioteca. |
+| M2-06 | **Placeholders no M2.** O seed do M0 já tem variantes com placeholders (imagem excluída e vaga de template), e a associação de imagem fica no M4. Um projeto com placeholder aberto no M2 precisa aparecer certo. | **O M2 desenha placeholders** (DESIGN §2.2) e permite selecionar, mover, mudar tamanho, orientação e borda, duplicar e remover. "Ajustar recorte" fica inativo, com o tooltip "Sem imagem para enquadrar.". A linha "Sem foto" do painel Composição já aparece no M2 quando houver placeholder. Associar uma imagem e a recomendação continuam no M4. O M2 não cria placeholders. |
+| M2-07 | **Filtro "Excluídas".** O menu ⋯ da biblioteca (protótipo 03) tem "Excluídas", função do M4. | **"Excluídas" fica no menu ⋯, visível e inativo**, com o tooltip padrão (DESIGN §7.1). |
+| M2-08 | **"Trazer para frente" e "Enviar para trás" (RF-35).** O texto não diz se a foto vai uma posição ou até o fim da pilha. | **Uma posição por clique**: "Trazer para frente" troca a foto com a seguinte na pilha; "Enviar para trás", com a anterior. Cada clique é 1 passo de desfazer. O botão fica inativo quando a foto já está no topo (ou no fundo). |
+| M2-09 | **Recorte ao mudar tamanho ou orientação.** A RN-28 manda recentralizar só no tamanho personalizado; para os sugeridos e para a orientação, não estava definido. | **Toda mudança de tamanho ou de orientação recentraliza o recorte** (*cover* centralizado, deslocamento 0, 0). |
+| M2-10 | **Borda e canto fixo.** A RN-05 fixa o canto superior esquerdo externo ao mudar orientação ou tamanho, mas não fala da borda. | **Mudar a borda também mantém fixo o canto superior esquerdo externo** (a área impressa se desloca). Assim X/Y no painel não mudam e a foto continua no grid. |
+| M2-11 | **Limite de posição.** A RN-12 permite que a foto ultrapasse a parede. Sem limite, uma foto pode ser arrastada para longe da parede e ficar difícil de achar. | **A foto pode sair da parede inteira, mas não por completo**: o arraste e os campos X/Y garantem pelo menos 1 cm do retângulo externo dentro da parede inteira, em cada eixo. O limite vale só para movimentos do usuário (arraste, teclado, campos, adicionar, duplicar), nunca ao abrir o projeto nem ao refazer a escala: se a parede inteira encolher, a foto mantém os cm (RN-10) e só recebe o destaque "Fora da parede". A regra fica no domínio e na UI, sem mudar o schema (A-23). |
+| M2-12 | **Snap nos campos X/Y.** O PRD aceite 4 fala de foto "solta", e a RN-15 não diz se o snap vale para valores digitados. | **Com snap ligado, X/Y digitados também encaixam no grid**: o valor vai para a linha mais próxima e o campo mostra o valor encaixado. Com snap desligado, vale o valor digitado (0,1 cm). O snap vale para arraste, adicionar, duplicar, teclado e campos. |
 
-### 0.2 Premissas (a revisar pelo Nicholas)
+Contradições menores, corrigidas sem decisão nova (DS-02: a documentação prevalece sobre o protótipo):
+- O protótipo 07 pinta a barra de progresso em `accent`. Vale a DESIGN §6: preenchimento `ink-2`, porque não é ação.
+- O protótipo 03 mostra o status "Salvo 14:35" no header. Vale a DESIGN §7: o status fica só na barra de status.
+- O protótipo 03 mostra o contador de uso nas miniaturas. Ele continua no M5 (DV-04, RF-23).
+- O protótipo 03 diz "Setas movem 1 passo do grid · Shift + setas: 5 cm". O texto passa a seguir a M2-01.
+- A RNF-03 diz "miniaturas para render, original só no export", mas o original nunca é guardado (RN-21). O canvas desenha a versão do perfil (`render`); as miniaturas (256 px) servem à biblioteca. O texto da RNF-03 está desatualizado (§11).
+- O M1 trocou o texto da Biblioteca sem escala para "As fotos ficam disponíveis depois que a escala da parede for definida." (M1 §3.2). No M2 a biblioteca funciona sem escala (A-20), então o texto passa a "Defina a escala da parede para colocar fotos nela."; o `Alert` do canvas continua com a frase dele.
+- O protótipo 16 mostra "Personalizado" no gatilho do seletor. Fora do modo de recorte, o gatilho mostra a medida (A-10).
+
+### 0.2 Premissas (revisadas pelo Nicholas em 24/10)
+
+Valores e comportamentos que os documentos não fixavam. Todas foram revisadas; as marcadas com **(alterada)** mudaram na revisão.
 
 | # | Premissa |
 |---|---|
-| B-01 | Seleção única (RF-36 é ideia futura). Clicar numa foto seleciona; clicar no fundo ou `Esc` desseleciona; selecionar não muda a ordem. Selecionar na biblioteca e selecionar no canvas são independentes. |
-| B-02 | **Snap** encaixa o canto superior esquerdo **externo** (RN-06) em múltiplos do passo a partir da origem 0,0 (RF-54, origem configurável, é futuro). Vale ao arrastar, ao soltar da biblioteca, ao adicionar, ao duplicar e nas setas. **Não** vale para valores digitados em X/Y (ficam como digitados, a 0,1 cm) nem reencaixa a foto ao trocar tamanho ou borda. |
-| B-03 | O arrasto não muda o estado a cada pixel: o Konva move o nó, o palco acompanha o contorno e os alertas ao vivo, e a store recebe **uma** atualização no `dragend` (1 passo no desfazer). |
-| B-04 | Campos do painel (tamanho personalizado, borda, X, Y) aplicam em Enter ou ao sair do campo (padrão do `CamposAreaUtil`), cada aplicação é 1 passo. Valor inválido mostra a faixa válida e não aplica. X e Y não têm limite (a foto pode sair da parede — RN-12); a borda vai de 0 a 20 cm. |
-| B-05 | **Bounding box** (RF-62) aparece com 2 ou mais fotos (com 1 é o próprio tamanho externo). Pill "L × A cm" acima do retângulo. "Área total" do painel é essa mesma medida. |
-| B-06 | **Duplicar** cria a cópia a +5 cm em X e em Y (com snap ligado, +1 passo do grid), no topo da ordem, e a seleciona. Mesma imagem, tamanho, borda e recorte (RN-13). |
-| B-07 | **Remover** (painel da foto) tira só a foto **da variante**; o ciclo de vida da imagem (RF-29) é do M4. `Delete`, `Ctrl+D` e demais atalhos de UX-01 não entram. `Ctrl+Z` desfaz; `Ctrl+Shift+Z` e `Ctrl+Y` refazem (fora de campos de texto). |
-| B-08 | Filtros da biblioteca: **Todas**; **Projeto** = imagens com o projeto em `imagens.projetos` **ou** usadas em alguma foto da variante aberta (inclui o que ainda não foi salvo); **Variante** = usadas na variante aberta. **Excluídas** fica visível e inativa (M4). Busca por nome segue inativa. Sem o contador de uso (RF-23, M5). |
-| B-09 | A foto é desenhada com o arquivo `render` do perfil (não com a miniatura de 256 px, que fica borrada em 20 × 30 cm). A miniatura serve a biblioteca. Arquivos de imagem são imutáveis por id: `Cache-Control: public, max-age=31536000, immutable`. |
-| B-10 | Entrada de arquivos (RF-20): `Selecionar arquivos` (múltiplos), `Selecionar pasta` (`webkitdirectory`, só os formatos aceitos entram; os demais contam em "arquivos ignorados por formato" — RN-20) e arrastar para o diálogo ou para a coluna Biblioteca. O limite de 50 MB é o do M1 (fixo no browser). `nomeOriginal` é o nome do arquivo sem pasta. |
-| B-11 | Falha de um arquivo não interrompe o lote; o item mostra o motivo e "Tentar de novo". "Cancelar restantes" aborta o que está em envio e esvazia a fila; o que já terminou fica na biblioteca. |
-| B-12 | O painel direito mostra o **painel da foto** quando há seleção e **Composição** quando não há. No modo de recorte o painel é o do recorte. |
-| B-13 | Controles do M3 em diante seguem visíveis e inativos: seletor de variante (só "Base"), Comparar, Templates, Exportar. |
-| B-14 | Contagem de fotos, "Área total", sobreposições e "fora da área" no painel Composição: as duas últimas linhas só aparecem quando maiores que zero ("Sem foto" é do M4). |
-| B-15 | Ordem das miniaturas: mais recentes primeiro. A lista vem inteira da API (sem paginação; uso pessoal). |
+| A-01 | **Biblioteca**: carregada ao abrir o projeto e atualizada a cada upload concluído; sem sincronização entre abas. Ordem por `criadaEm` decrescente; sem paginação (uso pessoal, até alguns milhares de imagens); miniaturas com `loading="lazy"`. O contador do título mostra quantas fotos o filtro ativo exibe ("48 fotos"). |
+| A-02 | **Miniatura**: grade de 2 colunas, altura 92 px (DESIGN §6), imagem em *cover*, nome com reticências. Tooltip com o nome completo e a orientação natural ("Retrato natural" / "Paisagem natural" — RF-22). Imagem quadrada conta como retrato (RN-04: largura > altura → paisagem; senão retrato). |
+| A-03 | **(alterada)** **Seleção na biblioteca**: clique seleciona uma miniatura (anel `accent`); só o botão "Adicionar" (ou arrastar) a põe na parede — duplo clique não faz nada. Uma por vez (seleção múltipla na parede é RF-36, futura). A seleção da biblioteca é independente da seleção na parede. |
+| A-04 | **Adicionar** (RF-30, RN-03, RN-04): pelo botão "Adicionar" da toolbar, a foto entra **centralizada na área útil**; arrastando a miniatura para o canvas, entra **centralizada no ponto de soltura**. Nos dois casos, com snap, o canto superior esquerdo externo encaixa no grid. Se outra foto já tiver o mesmo canto, a nova é deslocada em cascata (+1 passo, ou +5 cm sem snap, em X e Y; até 10 tentativas). Tamanho 10×15 na orientação natural, borda = borda padrão da variante, recorte centralizado. A foto nova vai para o topo da pilha e fica selecionada. |
+| A-05 | **Controles inativos por estado** (padrão da DESIGN §7.1): "Adicionar" sem escala ("Defina a escala primeiro.") ou sem miniatura selecionada ("Selecione uma foto na biblioteca."); "Duplicar", "Trazer para frente" e "Enviar para trás" sem foto selecionada ("Selecione uma foto na parede."). Sem escala, as miniaturas não são arrastáveis (RF-13). |
+| A-06 | **Seleção na parede**: clique seleciona; clique no fundo ou Esc limpa. Arrastar uma foto não selecionada a seleciona e a move. Arrastar o fundo continua fazendo *pan* (A-06 do M1). As 4 alças da seleção (DESIGN §2.2) só indicam a seleção: não redimensionam, porque os tamanhos vêm do seletor. A seleção fica fora do desfazer. |
+| A-07 | **Arraste**: snap durante o arraste; ao soltar, a posição é arredondada a 0,1 cm (DM-08). Os destaques (sobreposição, fora da parede ou da área útil) são recalculados a cada quadro durante o arraste. A barra de status mostra "X 112,5 · Y 40,0 cm" ao vivo. Um arraste gera 1 passo de desfazer, no fim; clique sem movimento não gera passo. |
+| A-08 | **Teclado** (RN-16, M2-01): setas só agem com foto selecionada e o foco fora de campo de texto. Setas seguidas na mesma foto, com menos de 1 s entre elas, formam 1 passo de desfazer. Com snap e a foto fora do grid, a primeira seta vai até a linha seguinte naquela direção. |
+| A-09 | **Campos do painel**: Enter ou sair do campo aplica (1 passo de desfazer); Esc restaura o valor. Valor fora da faixa mostra a faixa válida e não aplica (mesmo padrão da A-13 do M1). Borda: 0 a 20 cm, passo 0,1. Posição: 0,1 cm; com snap ligado, encaixa no grid (M2-12); limite da M2-11. |
+| A-10 | **Seletor de tamanho** (DESIGN §6, protótipo 03b): o gatilho mostra "20 × 30 cm" para sugerido (sem decimal) ou "21,0 × 29,7 cm" para personalizado (DS-02). Os itens mostram sempre menor × maior. Escolher um sugerido mantém a orientação atual; vindo de um quadrado, usa a orientação natural da imagem (retrato para placeholder). "Personalizado…" abre o modo de recorte com o tamanho atual nos campos. Orientação inativa em tamanho quadrado, com o tooltip "Quadrado: sem orientação". |
+| A-11 | **Modo de recorte** (DESIGN §7.0, protótipo 16): barra escura só identifica o modo ("Ajustar recorte · <nome>" + "O restante da parede fica bloqueado até concluir" — DS-05). Painel: Tamanho (o seletor funciona dentro do modo), Largura × Altura quando personalizado ("Entre 5,0 e 150,0 cm em cada lado."), Tamanho externo, texto "A foto sempre preenche o quadro. Arraste a imagem para escolher a parte que aparece.", Cancelar e **Concluir**. Zoom e *pan* continuam funcionando. As outras fotos ficam a 35% e sem interação. Desfazer, Refazer, Salvar e Ctrl+S ficam inativos durante o modo. |
+| A-12 | **Destaques no canvas** (DESIGN §2.2): contorno tracejado `danger` em todas as fotos envolvidas. **(alterada)** A pill "Sobreposição" fica **na foto da camada superior** de cada sobreposição (a que está mais acima na pilha), no canto inferior direito dela; uma pill por foto, mesmo que ela cubra várias. "Fora da parede" ou "Fora da área útil" em pill abaixo da foto, alinhada à direita. Pills e contornos com tamanho fixo em px de tela (não escalam com o zoom). |
+| A-13 | **(alterada)** **Bounding box** (RF-62): mostrada ou escondida por um `Toggle` "Área total" na toolbar do canvas, antes do zoom (padrão ligado; estado da tela, não persistido e fora do desfazer). Ligado, aparece com 1 foto ou mais; pill acima, à direita. Fica fora da exportação. No painel Composição, "Área total" aparece com 1 foto ou mais ("—" sem fotos). Placeholders entram no cálculo. |
+| A-14 | **Painel Composição** (protótipo 11, confirmada a linha nova): Fotos (N, placeholders incluídos); Área total; Sobreposições "N fotos" (`danger-ink`); Sem foto N; **Fora da área "N fotos"** (linha nova, `danger-ink`, conta fora da parede e fora da área útil — RN-34 "conta como alerta"). As linhas de alerta só aparecem com valor > 0. "Borda padrão para novas fotos" fica ativa: altera só as fotos adicionadas depois (RN-03) e entra no desfazer (M2-03). |
+| A-15 | **Painel da foto** (DESIGN §7, protótipo 03): miniatura + nome original + orientação natural; Tamanho e Orientação na mesma linha; Borda (cm + `SeletorCor` com as cores da DV-08); Tamanho externo; "Posição do canto superior esquerdo" X/Y; alertas da foto ("Esta foto sobrepõe outra na parede.", "Esta foto está fora da área útil.", "Esta foto está fora da parede."); Enquadramento ("Ajustar recorte"); "Trazer para frente" e "Enviar para trás" ficam na toolbar; rodapé com Duplicar e Remover (M2-04, texto `danger-ink`). Para placeholder, o cabeçalho mostra o ícone imagem-cortada e "Sem foto". |
+| A-16 | **Imagem indisponível**: se o arquivo da imagem não carregar (404 ou falha de decodificação), a foto aparece como retângulo `sand` com ícone e o texto "Imagem indisponível". Não é placeholder: continua com a imagem associada e pode ser movida e editada. |
+| A-17 | **Diálogo "Carregar fotos"** (protótipo 07, DV-10): abre pelo botão "Carregar fotos". A qualidade é escolhida antes, em radio cards (Leve 1024 px · Médio 2048 px · Alto 3072 px; padrão Leve — RF-25). Selecionar arquivos, selecionar pasta (subpastas incluídas) ou arrastar para o diálogo **inicia o envio na hora**. A qualidade trava no primeiro envio e só destrava ao fechar o diálogo; arquivos acrescentados depois entram na mesma fila, com a mesma qualidade. **(alterada)** Soltar arquivos do sistema sobre a coluna Biblioteca abre o diálogo com eles (aguardando "Enviar" — A-18). Em outras áreas, soltar não faz nada (o browser não abre o arquivo). |
+| A-18 | **Estados por arquivo**: Na fila · Enviando nn% · Processando… · Concluída (tamanho do WebP em KB/MB, `success-ink`) · Formato não suportado · Arquivo maior que N MB (A-28) · Não foi possível ler a imagem (415 do servidor) · Falhou — **Tentar de novo** (rede ou 5xx) · Cancelada. Resumo "9 de 14 enviadas" + "3 arquivos ignorados por formato" (RN-20). **Cancelar restantes** fica ativo com envios pendentes. **Concluir** (primário) fica ativo sem pendentes e fecha o diálogo. Fechar (×/Esc) com pendentes pergunta "Cancelar os envios restantes?". **Arquivos soltos sobre a Biblioteca** (A-17) abrem o diálogo como "Aguardando": escolhe-se a qualidade (padrão Leve) e clica-se em **Enviar** (primário, só nesse caso; "Concluir" aparece depois do início). Com o diálogo já aberto, selecionar ou arrastar continua iniciando na hora. |
+| A-19 | **Formatos aceitos no browser**: extensão `.jpg`, `.jpeg`, `.png` ou `.webp` **e** tipo `image/jpeg`, `image/png` ou `image/webp`; até `UPLOAD_MAX_MB`. **(alterada)** Todo arquivo não suportado, inclusive os de sistema da pasta (`Thumbs.db`, `desktop.ini`, ocultos), entra na lista e no contador de ignorados (RN-20). O servidor confere o conteúdo de verdade (sharp). |
+| A-20 | **Upload sem escala**: "Carregar fotos" funciona sem parede e sem escala, porque a biblioteca é global (RN-22). Só adicionar à parede exige escala (RF-13). |
+| A-21 | **Botão "Parede"** (M1-05): passa a considerar também as fotos ainda não salvas (é estado da tela, não filtro). Com qualquer foto na variante em memória, fica inativo com o tooltip padrão. |
+| A-22 | **Persistência**: as fotos da variante gravam só no Salvar (M1-01); o rascunho automático é do M3. O upload grava na hora, na biblioteca. |
+| A-23 | **Sem migração no M2**: os limites novos (borda até 20 cm, posição da M2-11) ficam no domínio e na UI. Os schemas Zod e os validadores `$jsonSchema` do M0 não mudam. |
+| A-24 | **Pilha**: ordem do array `fotos` = z-index (DM-04); foto nova e cópia vão para o topo; "Trazer para frente" e "Enviar para trás" andam uma posição (M2-08). |
+| A-25 | **Duplicar**: copia imagem, tamanho, borda e recorte; a cópia sai deslocada +1 passo (snap) ou +5 cm (sem snap) em X e Y, sujeita à M2-11, e fica selecionada. Id novo gerado no cliente (DM-01). |
+| A-26 | **Status depois de desfazer**: se o conteúdo voltar a ser igual ao último salvo, o status volta a "Salvo às hh:mm" (hora do último salvamento — M1 §12); senão, "Alterações não salvas". |
+| A-27 | **Histórico**: mantido por variante enquanto o projeto está aberto (RN-18, SV-10: salvar não o altera). É descartado ao recarregar depois de um 409 (§3.8 do M1) e ao trocar a parede (M1-05). Refazer a escala o mantém, porque os valores em cm não mudam (RN-10). Desfazer mantém a seleção se a foto ainda existir. |
+| A-28 | **Limite de upload na web**: a API passa a expor `GET /api/config` → `{ uploadMaxMb }` (de `UPLOAD_MAX_MB`), lido ao abrir o app. O browser deixa de usar 50 MB fixos (limitação registrada no M1 §12) e a mensagem mostra o valor real ("Arquivo maior que N MB."), para fotos e para a parede. |
+| A-29 | **Forma de trabalho**: igual ao M1 (M1 §12) — primeiro um commit com todos os testes do M2, vermelhos; depois a implementação, com tudo verde. Validação do Nicholas no fim (T13), sem pontos intermediários. |
 
 ## 1. Objetivo
 
-Entregar a parte central do uso: enviar fotos para a biblioteca global (individual ou em lote), posicioná-las na parede em tamanhos sugeridos ou personalizados, retrato ou paisagem, com borda, recorte, grid e snap, ver medidas e alertas, desfazer e refazer, e salvar. Ao fim do M2, uma composição inteira numa variante é montada, salva e reaberta (PRD aceite 7) a partir da biblioteca.
+Entregar o centro do fluxo: carregar fotos na biblioteca global, filtrá-las, colocá-las na parede em tamanhos sugeridos ou personalizados, ajustar orientação, borda e recorte, posicionar com snap e teclado, ver medidas, sobreposições e fotos fora da área, e desfazer. Ao fim do M2, uma composição completa da variante "Base" pode ser montada, salva e reaberta.
 
 ## 2. Escopo
 
 | Dentro | Fora (marco) |
 |---|---|
-| Upload individual e em lote com perfil, progresso, falhas e cancelamento — RF-20, RF-21, RF-25, RF-26, RN-20, RN-21, RN-25 | Contador de uso nas miniaturas (RF-23, M5); busca por nome (RF-33c, futuro) |
-| Biblioteca global com miniaturas, nome, orientação e filtros — RF-22, RF-27, RF-28 | Filtro e fluxo "Excluídas", remover do projeto, excluir, restaurar, placeholders, purga (RF-29, RF-30a, RN-24 — M4) |
-| Adicionar (botão e arrastar), mover (mouse e setas), selecionar, duplicar, remover, ordem — RF-30, RF-34, RF-35, RN-13, RN-16 | Seleção múltipla, alinhar, distribuir (RF-36, RF-63, RF-64 — futuro) |
-| Tamanhos sugeridos, orientação, personalizado em cm — RF-31, RF-32, RN-01, RN-04, RN-05, RN-28 | Variantes, templates, comparação (M3) |
-| Enquadramento *cover* e modo de recorte — RF-33, RN-14 | Rascunho (*soft save*), recuperação e diálogo de conflito (M3) |
-| Borda em cm e cor, borda padrão — RF-41, RN-02, RN-03 | Exportação (M4) |
-| Snap — RF-53, RN-06, RN-15 | Linha forte do grid (RF-52, M5) |
-| Painel da foto, bounding box, sobreposição, fora da parede/área — RF-60, RF-62, RN-11, RN-12, RN-34 | Distância até vizinhas, guias, réguas (futuro) |
-| Desfazer e refazer — RF-70, RN-18 | |
+| Upload individual e em lote (arquivos, pasta, arrastar) com perfil — RF-20, RF-21, RF-25, RF-26, RN-20, RN-21, RN-25, DV-10 | HEIC (RF-15, ideia futura) |
+| Biblioteca global, miniaturas, filtros Todas · Projeto · Variante — RF-22, RF-27, RF-28 (parcial), RN-22, M2-05 | "Excluídas", remover, excluir, restaurar, purga (RF-29, RN-24 — M4); busca (RF-33c, ideia futura); contador de uso (RF-23 — M5) |
+| Adicionar por arrastar e por botão; bloqueio sem escala — RF-13, RF-30, RN-03, RN-04, RN-13 | Seleção múltipla e mover em grupo (RF-36, ideia futura) |
+| Tamanho sugerido e personalizado, orientação — RF-31, RF-32, RN-01, RN-05, RN-28 | Trocar a imagem de uma foto (RF-37, ideia futura) |
+| Recorte em modo próprio — RF-33, RN-14, DV-09 | Zoom dentro do recorte (fora da v1) |
+| Mover por arraste e teclado, selecionar, duplicar, remover da variante, ordem — RF-34, RF-35, RN-16 | Atalhos Del, Ctrl+D e outros (UX-01, ideia futura) |
+| Borda e cor por foto e borda padrão — RF-41, RN-02, RN-03, DV-08 | Moldura e passe-partout (RF-38, ideia futura) |
+| Snap em efeito — RF-53, RN-06, RN-15 | Linha forte (RF-52 — M5) |
+| Painel da foto e bounding box — RF-60, RF-62, RN-27 | Distâncias, réguas, guias (RF-55 a RF-61, ideias futuras) |
+| Sobreposição, fora da parede e fora da área útil — RN-11, RN-12, RN-34 | Exportação (RF-80 — M4) |
+| Desfazer e refazer por variante — RF-70, RN-18, M2-02, M2-03 | Variantes, templates, rascunho, conflito completo, comparação (M3) |
+| Placeholders desenhados e editáveis — M2-06 | Associar imagem a placeholder e recomendação (RF-30a — M4) |
+
+**O que muda em relação ao M1** (para não passar despercebido na implementação):
+
+| Item do M1 | No M2 |
+|---|---|
+| A-15: Snap e "Encaixar no grid" sem efeito | Passam a agir nas fotos (§4.4). A área útil continua livre (M1-07). |
+| M1-04: desfazer da área útil "implementado no M2" | O modo Área útil confirmado e os campos L, A, X, Y do painel geram 1 passo de desfazer cada. |
+| A-15: controles inativos até o M2 | **Ativam**: Desfazer, Refazer, Borda padrão, Adicionar, Duplicar, Trazer para frente, Enviar para trás, Carregar fotos, filtros Todas · Projeto · Variante. **Continuam inativos**: seletor de variante, Comparar, Templates (M3); Exportar e "Excluídas" (M4); busca da biblioteca e de projetos (ideias futuras); "Linha forte a cada" (M5). |
+| §3.7: linhas do painel Composição ocultas | Fotos, Área total, Sobreposições, Sem foto e Fora da área (A-14). |
+| M1-05: "Parede" ativo sem fotos | Agora pode haver fotos: o botão segue a A-21, e o servidor recusa a troca com 409 (já previsto no M1). |
+| RF-13: bloqueio sem escala só como estado visível | Vale para as ações reais: Adicionar e arrastar miniatura (A-05). |
+| §3.8: salvamento de `grid` e `areaUtil` | Passa a levar `fotos` e `bordaPadrao` com conteúdo; o servidor valida as imagens e associa ao projeto (§5). |
 
 ## 3. Comportamento
 
-### 3.1 Biblioteca (protótipo 03)
+### 3.1 Coluna Biblioteca (protótipo 03)
 
-- Coluna de 280 px: título "Biblioteca" (serif) com contador "N fotos" (12 px `ink-3`) à direita; botão primário **Carregar fotos** (largura total); filtros `Todas · Projeto · Variante · ⋯` (o menu ⋯ tem **Excluídas**, inativo — M4); busca inativa; grade de 2 colunas de miniaturas (altura 88 px, raio 6) com nome (12 px, reticências) e orientação ("Retrato" / "Paisagem", 12 px `ink-3`).
-- Clique na miniatura seleciona (anel `accent` de 2 px — DESIGN §6); clique de novo ou `Esc` não desseleciona na biblioteca (só troca a seleção). **Duplo clique adiciona** (M2-04). A miniatura é arrastável (cursor `grab`).
-- Sem fotos: "Nenhuma foto na biblioteca ainda." e o botão "Carregar fotos". Filtro sem resultado: "Nenhuma foto neste filtro.".
-- Sem escala (M2-01): "Carregar fotos" inativo ("Defina a escala primeiro.") e o texto "As fotos ficam disponíveis depois que a escala da parede for definida." (M1 §3.2).
-- Soltar arquivos sobre a coluna abre o diálogo com os arquivos na fila (M2-07). A coluna destaca a área de soltura (borda tracejada `accent`) enquanto arquivos são arrastados sobre ela.
+- Título "Biblioteca" (Newsreader) + contador do filtro (A-01); **Carregar fotos** (primário, largura total) abre o diálogo (§3.2).
+- Filtros (DESIGN §6): segmented **Todas · Projeto · Variante · ⋯**; "Excluídas" no ⋯, inativo (M2-07). Padrão ao abrir: Todas. O filtro não é persistido.
+- Busca: campo inativo (DESIGN §7.1).
+- Grade de miniaturas (A-02); seleção (A-03); arrastar para o canvas (A-04, RF-30).
+- Estados vazios: Todas — "Nenhuma foto na biblioteca. Carregue fotos para começar."; Projeto — "Nenhuma foto neste projeto ainda."; Variante — "Nenhuma foto salva nesta variante ainda.". Projeto e Variante refletem o estado salvo (M2-05).
+- Sem escala: a lista e o upload funcionam, mas as miniaturas não arrastam e o texto acima da grade passa a "Defina a escala da parede para colocar fotos nela." (§0.1, contradições menores).
 
-### 3.2 Diálogo "Carregar fotos" (protótipo 07, M2-07)
+### 3.2 Diálogo "Carregar fotos" (protótipo 07)
 
-- Diálogo de 640 px: **Selecionar arquivos** · **Selecionar pasta** · "ou arraste para esta janela".
-- `fieldset` "Qualidade · definitiva para este envio": radio cards **Leve** 1024 px · **Médio** 2048 px · **Alto** 3072 px (padrão Leve — RF-25), nota "Convertidas para WebP. Seus arquivos originais não são alterados.". Desabilitado enquanto o lote envia.
-- Resumo: "9 de 14 enviadas" e, se houver, "3 arquivos ignorados por formato" (RN-20; o texto cita também o tamanho: "2 arquivos ignorados (formato ou tamanho)" quando houver recusa por tamanho); barra de progresso de 6 px.
-- Lista: miniatura (quando concluída), nome, estado e tamanho (mono): **Aguardando** · **Enviando 45%** · **Concluída** (`success-ink`) · **Falhou: <motivo>** (`danger-ink`) + "Tentar de novo" · **Cancelada**.
-- Rodapé (`surface-muted`): fantasma **Cancelar restantes** (só durante o envio), primário **Enviar N fotos** (com fila e sem envio em curso) ou **Concluir** (fecha). Fechar com envio em andamento pede confirmação "Cancelar os envios restantes?".
-- Envio: 1 requisição por arquivo, **3 em paralelo**, progresso por arquivo (DV-10); a miniatura entra na biblioteca assim que o arquivo termina.
-- Recusas no browser (antes de enviar): formato (inclusive HEIC — RF-15) e tamanho acima de 50 MB, com a mensagem do arquivo na lista de ignorados.
+- Diálogo de 640 px (DESIGN §6) com "Selecionar arquivos" (`<input type="file" multiple>`), "Selecionar pasta" (`webkitdirectory`) e "ou arraste para esta janela" (ADR-06).
+- "Qualidade · definitiva para este envio": radio cards com o lado maior de cada perfil (ADR-05) e o texto "Convertidas para WebP. Seus arquivos originais não são alterados." (RN-21).
+- Validação no browser (A-19). Inválidos entram na lista com o motivo e contam em "ignorados" (RN-20).
+- Fila: **3 envios em paralelo**, 1 requisição por arquivo, progresso por arquivo e geral, falha não interrompe o lote, "Tentar de novo" por arquivo, cancelamento aborta os envios em curso e esvazia a fila; os concluídos ficam (DV-10). Estados e botões: A-17, A-18.
+- Cada envio concluído entra no topo da biblioteca na hora (A-01) e já fica associado ao projeto (M2-05).
 
-### 3.3 Canvas — fotos
+### 3.3 Fotos na parede
 
-- **Camada Fotos** entre a área útil e o overlay (ADR-02): 1 `Group` por foto — retângulo da borda (tamanho externo, cor da borda) + imagem *cover* com `crop` (tamanho impresso) deslocada pela borda. Ordem do array = z-index (o último fica por cima).
-- **Seleção** (DESIGN §2.2): contorno contínuo 2 px `accent`, offset 3 px; 4 alças 8 × 8 brancas nos cantos (indicativo de seleção, sem redimensionar — o tamanho vem do painel); pill `accent` abaixo com o **tamanho externo** ("24,0 × 34,0 cm"). Contorno, alças e pill ficam na camada em px de tela (tamanho constante em qualquer zoom).
-- **Alertas** (DESIGN §2.2, M2-08): contorno tracejado `danger` 2 px (offset 2 px) em todas as fotos envolvidas + pill `danger` com ícone: "Sobreposição", "Fora da parede" ou "Fora da área útil". Calculados ao vivo durante o arrasto.
-- **Bounding box** (RF-62, B-05): retângulo tracejado 1,5 px `ink-2` com 8 px de folga e pill `ink-2` "L × A cm" acima.
-- **Arrastar**: botão esquerdo sobre a foto; o canto superior esquerdo externo é encaixado no grid quando o snap está ligado (B-02); o Konva move o nó e a store só muda no `dragend` (B-03). Arrastar o fundo continua sendo pan.
-- **Teclado** (RN-16, M2-09), com a foto selecionada e o foco fora de campos de texto: setas movem; `Esc` desseleciona; `Ctrl+Z` / `Ctrl+Shift+Z` / `Ctrl+Y` desfazem e refazem.
-- **Soltar da biblioteca** (M2-04): `dragover` aceita a miniatura; `drop` converte o ponto da página em cm (`PalcoApi.dePaginaParaConteudo`).
-- Imagem ainda carregando: retângulo `sand`. Imagem que não está na biblioteca (ou que falha ao carregar): fica o retângulo `sand`; a foto continua selecionável e movível, e o painel mostra "Imagem indisponível".
-- Hook de teste (estende o da M1 §3.9): `window.__deco.paraTela(x, y)`, `window.__deco.dePagina(x, y)` e `window.__deco.retanguloDaFoto(id)` → `{ x, y, largura, altura }` em px da página do **tamanho externo**.
+- **Adicionar**: A-04, A-05. Bloqueado sem escala (RF-13).
+- **Selecionar e mover**: A-06, A-07, A-08. Snap pelo §4.4. Limite de posição pela M2-11.
+- **Rótulo da seleção**: pill `accent` abaixo da foto com o tamanho externo ("24,0 × 34,0 cm" — DESIGN §2.2).
+- **Duplicar**: A-25. **Remover**: M2-04. **Ordem**: M2-08, A-24.
+- **Imagem indisponível**: A-16. **Placeholder**: M2-06.
+- A mesma imagem pode ser usada várias vezes (RN-13).
 
-### 3.4 Painel da foto (protótipo 03; DESIGN §7)
+### 3.4 Painel da foto (RF-60, protótipo 03)
 
-Cabeçalho: miniatura + nome (serif 18) + "Retrato natural" / "Paisagem natural" (orientação da **imagem**, não da foto na parede). Depois:
+Aparece com uma foto selecionada, no lugar do painel Composição. Layout e textos: A-15.
 
-1. **Tamanho** (`Select` agrupado Padrão · Quadrados · Grandes + "Personalizado…", rótulo mono "20 × 30 cm"; personalizado exibido com 1 casa, "21,0 × 29,7 cm") e **Orientação** (segmented 152 px, Retrato · Paisagem; inativa nos tamanhos quadrados — RN-28). Trocar aplica RN-05 e M2-05.
-2. **Borda**: `CampoCm` (0 a 20 cm) + `SeletorCor`. Aplica em Enter/sair (B-04).
-3. Bloco **Tamanho externo** ("34,0 × 54,0 cm").
-4. **Posição do canto superior esquerdo**: X e Y (`CampoCm`, prefixo "X" / "Y" e sufixo `cm`; precisão de 0,1 cm; aceitam valores negativos).
-5. `Alert` de alerta com o texto do alerta ativo: "Esta foto sobrepõe outra na parede." · "Esta foto passa dos limites da parede." · "Esta foto passa dos limites da área útil.".
-6. **Enquadramento**: botão "Ajustar recorte" (também por duplo clique na foto — RN-14).
-7. **Duplicar** e **Remover** (texto `danger-ink`).
+| Campo | Regra |
+|---|---|
+| Tamanho | Seletor (A-10, RN-01). Mudar mantém o canto superior esquerdo externo (RN-05) e recentraliza o recorte (M2-09). |
+| Orientação | Segmented Retrato · Paisagem (152 px). Troca largura e altura (RN-05, RN-28); inativo em quadrado. |
+| Borda | Largura em cm (0 a 20, A-09) e cor (DV-08). Soma por fora (RN-02); canto fixo (M2-10). |
+| Tamanho externo | Somente leitura: impresso + 2 × borda (RN-02). |
+| Posição X/Y | Canto superior esquerdo externo (RN-06), a partir da origem 0,0 (RN-07). Com snap ligado, o valor encaixa no grid (M2-12); limite da M2-11. |
+| Enquadramento | "Ajustar recorte" (§3.5). |
 
-### 3.5 Modo de recorte (RN-14, RN-28, protótipo 16; DESIGN §7.0)
+### 3.5 Modo de recorte (DESIGN §7.0, protótipo 16)
 
-- Entrada: "Ajustar recorte", duplo clique na foto, ou escolher "Personalizado…" no tamanho. Barra do modo **só identifica** ("Ajustar recorte · IMG_2041.jpg" + "O restante da parede fica bloqueado até concluir"); as ações ficam no painel.
-- Canvas: demais fotos e controles sem interação; a **imagem inteira** (cobrindo o quadro) é desenhada com a parte fora do quadro esmaecida (`ink` a 55%); quadro com contorno `accent`; arrastar desloca a imagem **só no eixo com sobra**; pill de medida "30,0 × 30,0 cm" e ícone de mover no centro.
-- Painel: título "Ajustar recorte"; `Select` de tamanho (como acima); com tamanho **personalizado**, campos **Largura × Altura** (5,0 a 150,0 cm; passo 0,1; texto "Entre 5,0 e 150,0 cm em cada lado."); bloco "Tamanho externo"; texto "A foto sempre preenche o quadro. Arraste a imagem para escolher a parte que aparece."; **Cancelar** e **Concluir**.
-- Enquanto o modo está aberto o tamanho e o recorte são um *rascunho* na UI (o canto superior esquerdo externo fica fixo — RN-05); mudar o tamanho recentraliza o recorte. **Concluir** (ou `Enter`) grava tudo como **1 passo**; **Cancelar** (ou `Esc`) descarta o rascunho. Personalizado igual a um sugerido vira o sugerido (RN-28).
+- Entrada: "Ajustar recorte" no painel, duplo clique na foto ou "Personalizado…" no seletor de tamanho (RN-28). Inativo para placeholder (M2-06).
+- Tela: A-11. A imagem inteira aparece, com a parte fora do quadro esmaecida (`ink` 55%) e o quadro com contorno `accent` e o ícone de mover no centro; pill com o tamanho externo.
+- Arrastar desloca a imagem só no eixo com sobra (§4.3); a foto não se move na parede.
+- Tamanho personalizado: campos Largura × Altura (`CampoCm`, 5 a 150 cm, passo 0,1 — RN-28); valor fora da faixa mostra a faixa e não aplica (critério 2a do PRD). Mudar o tamanho recentraliza. Personalizado igual a um sugerido, em qualquer orientação, vira o sugerido (RN-28).
+- **Concluir** ou Enter: aplica tamanho e recorte juntos, em 1 passo de desfazer (RN-14). **Cancelar** ou Esc: restaura tudo.
 
-### 3.6 Painel Composição (protótipo 11)
+### 3.6 Grid e snap
 
-Passa a mostrar: Fotos N · Área total (bounding box, ou "—") · Sobreposições n · Fora dos limites n (as duas últimas só se > 0, B-14). **Borda padrão** vira funcional (largura e cor valem para **novas** fotos; as existentes não mudam — RN-03). As demais seções seguem como no M1.
+- O grid continua como no M1 (passo, cor, opacidade, só dentro da parede inteira). O snap vale **mesmo com o grid oculto**: Grid e Snap são chaves separadas (RN-15).
+- O toggle Snap do header e "Encaixar no grid" do painel continuam ligados ao mesmo valor da variante e fora do desfazer (M2-03).
 
-### 3.7 Header, toolbar e barra de status
+### 3.7 Alertas e bounding box
 
-- **Desfazer / Refazer** funcionam (inativos, por estado, quando a pilha está vazia: dica "Nada para desfazer." / "Nada para refazer."). `Salvar` não limpa as pilhas (SV-10).
-- **Toolbar**: Adicionar, Duplicar, Trazer para frente, Enviar para trás funcionam; Duplicar e as de ordem ficam inativas sem foto selecionada ("Selecione uma foto na parede."); "Adicionar" segue M2-04.
-- **Barra de status**: à esquerda "Nenhuma foto selecionada" ou a posição da foto selecionada (`X 112,5 · Y 40,0 cm`); no centro a dica de teclado (M2-09); à direita o status de salvamento.
-- Sem escala (M2-01): o editor se comporta como no M1.
+- Sobreposição (RN-11), fora da parede (RN-12) e fora da área útil (RN-34): regras no §4.5, desenho na A-12. Com os dois "fora", prevalece "Fora da parede" (DESIGN §2.2).
+- Os alertas não bloqueiam nada (RN-12, RN-34).
+- Bounding box: §4.6 e A-13.
+- Nenhum destaque sai na exportação (RN-19, M4).
 
-## 4. Domínio
+### 3.8 Painel Composição (sem seleção)
 
-### 4.1 Módulos novos em `packages/domain/src/` (TS puro; testes obrigatórios)
+Como no M1 (§3.7 da spec M1), com as linhas de resumo da A-14 e a seção "Borda padrão para novas fotos" ativa.
+
+### 3.9 Desfazer e refazer (RF-70, RN-18)
+
+- Botões Desfazer e Refazer do header (tooltips "Desfazer (Ctrl+Z)" e "Refazer (Ctrl+Y)"), atalhos da M2-02.
+- Conteúdo do histórico: M2-03. Passos: 1 por intenção (ADR-03) — fim do arraste, campo aplicado, item escolhido no seletor, orientação, cor, Concluir do recorte, Confirmar área, adicionar, duplicar, remover, cada clique de ordem; setas agrupadas (A-08).
+- Inativos sem passo disponível e durante qualquer modo (perspectiva, calibração, área útil, recorte).
+- Status de salvamento: A-26. Ciclo de vida do histórico: A-27.
+
+### 3.10 Barra de status
+
+- Esquerda: com foto selecionada, "X 112,5 · Y 40,0 cm" (ao vivo no arraste); dica de teclado conforme M2-01.
+- Direita: "Medidas aproximadas, parede considerada plana" e o status de salvamento (M1).
+- No modo de recorte: "Arraste para reposicionar · Enter conclui · Esc cancela".
+
+## 4. Domínio e algoritmos
+
+### 4.1 Módulos novos em `packages/domain` (TS puro, testes obrigatórios)
+
+Pastas novas: `composicao/` e `biblioteca/` (a registrar na ARCHITECTURE §6 antes de criar — §11). A validação de formato amplia o `arquivos.ts` do M1 (ARCHITECTURE §6), sem módulo novo.
 
 | Módulo | Funções |
 |---|---|
-| `fotos/tamanho.ts` | `orientacaoDoTamanho`, `tamanhoSugerido(id, orientacao)`, `tamanhoDaImagem(orientacaoNatural)` (RN-04), `tamanhoPersonalizado(l, a)` (5–150, 0,1; igual a um sugerido → sugerido — RN-28), `trocarOrientacao`, `validarLadoPersonalizado`, `ehQuadrado` |
-| `fotos/geometria.ts` | `tamanhoExterno(foto)` (RN-02), `caixaExterna(foto)`, `caixaDaComposicao(fotos)` (RF-62), `encaixarNoGrid(valor, passo)`, `encaixarPosicao`, `proximaLinhaDoGrid(valor, passo, direcao)` (M2-09), `moverPorSeta(foto, direcao, shift, grid)` |
-| `fotos/alertas.ts` | `calcularAlertas(fotos, paredeInteira, areaUtil)` → por `_id`: `{ sobreposicao, fora: 'parede' \| 'area-util' \| null }`; `resumirAlertas` (M2-08) |
-| `fotos/recorte.ts` | `recorteCover(imagem, tamanho, offset)` → retângulo em px da imagem; `deslocarRecorte(imagem, tamanho, offset, deltaCm)` → novo offset (só no eixo com sobra) |
-| `fotos/composicao.ts` | `criarFoto` (RN-03, RN-04, RN-13), `posicaoInicial` (M2-04), `posicaoDoDrop`, `duplicarFoto` (B-06), `trazerParaFrente`, `enviarParaTras`, `aplicarTamanho`, `aplicarBorda` (RN-05, M2-05), `resumoDaComposicao` |
-| `historico.ts` | pilha de desfazer/refazer, pura e imutável: `criarHistorico`, `registrar`, `desfazer`, `refazer`, `podeDesfazer`, `podeRefazer` (limite 100 — M2-02); a store guarda uma por variante |
-| `constantes.ts` | `THUMB_FOTO_PX = 256`, `LIMITE_HISTORICO = 100`, `TOLERANCIA_CM = 0.05`, `DESLOCAMENTO_DUPLICAR_CM = 5`, `LIMITE_BORDA_CM = { min: 0, max: 20 }`, `UPLOAD_PARALELO = 3`, `PASSO_CASCATA_CM = 5` |
+| Tamanho | `tamanhoSugerido(id, orientacao)`, `orientacaoDe(tamanho)` (retrato · paisagem · quadrado), `alternarOrientacao(tamanho)`, `tamanhoPersonalizado(larguraCm, alturaCm)` → tamanho normalizado (vira sugerido se coincidir — RN-28) ou erro de faixa, `tamanhoExterno(tamanho, borda)` |
+| Foto | `novaFoto({ id, imagem, bordaPadrao, centroCm, grid })` (RN-03, RN-04, A-04), `retanguloExterno(foto)`, `mudarTamanho(foto, tamanho)` e `mudarBorda(foto, borda)` (canto fixo — RN-05, M2-10; recorte recentralizado — M2-09), `duplicarFoto(foto, novoId, grid)` (A-25) |
+| Snap | `encaixar(valorCm, passoCm)`, `encaixarPosicao(pt, grid)` (só com `grid.snap`) |
+| Teclado | `moverPorTeclado(foto, direcao, { shift, grid })` (RN-16, M2-01, A-08) |
+| Limites | `limitarPosicao(foto, paredeInteira)` (M2-11; chamada só em movimentos do usuário) |
+| Recorte | `calcularRecorte({ larguraPx, alturaPx }, tamanho, recorte)` → janela em px da imagem (§4.3), `deslocarRecorte(recorte, deltaPx, ...)` |
+| Alertas | `sobreposicoes(fotos)` → pares e ids, `foraDaParede(foto, paredeInteira)`, `foraDaAreaUtil(foto, areaUtil)`, `alertasDaComposicao(variante, paredeInteira)` → contagens do painel (A-14) |
+| Caixa | `boundingBox(fotos)` → `{ xCm, yCm, larguraCm, alturaCm } \| null` (RF-62) |
+| Ordem | `trazerParaFrente(fotos, id)`, `enviarParaTras(fotos, id)` (M2-08) |
+| Biblioteca | `orientacaoNatural(larguraPx, alturaPx)` (RN-04), `filtrarBiblioteca(imagens, filtro, { projetoId, fotosSalvas })` (M2-05: só o estado salvo); em `arquivos.ts`, a validação de formato e tamanho do M1 serve às fotos, com o motivo de recusa da A-18 e o filtro de arquivos de sistema (A-19) |
+| Formatadores | `formatarTamanhoComUnidade` (A-10: "20 × 30 cm" / "21,0 × 29,7 cm"), `formatarBytes` ("412 KB", "1,2 MB") |
+| Constantes | `THUMB_FOTO_PX = 256` (ADR-05), `UPLOAD_PARALELO = 3` (DV-10), `HISTORICO_LIMITE = 100` (M2-03), `BORDA_MAX_CM = 20` (A-09), `TOLERANCIA_CM = 0.05` (§4.5), `MINIMO_DENTRO_CM = 1` (M2-11), `DESLOCAMENTO_SEM_SNAP_CM = 5` (A-04, A-25), `AGRUPAR_SETAS_MS = 1000` (A-08) |
 
-### 4.2 Fórmulas
+O domínio não gera ids: o id da foto nova chega como parâmetro (gerado na web com `bson` — DM-01).
 
-- **Tamanho externo** = impresso + 2 × borda (arredondado a 0,1 cm).
-- **Recorte *cover*** (RN-14): `s = max(W/iw, H/ih)` (cm por px); recorte em px da imagem: `cw = W/s`, `ch = H/s`, `x = (iw − cw)/2 · (1 + offsetX)`, `y = (ih − ch)/2 · (1 + offsetY)`. `offset` ∈ [−1, 1]; −1 mostra a borda esquerda/superior, +1 a direita/inferior; sem sobra no eixo, o offset daquele eixo é 0.
-- **Arrasto no modo de recorte**: arrastar a imagem `d` cm para a direita mostra mais da esquerda (`x` diminui `d/s` px); o offset é recalculado e limitado a [−1, 1].
-- **Posição inicial** (M2-04): centro da área útil (ou da parede inteira, se não houver) menos metade do tamanho externo; encaixada se o snap estiver ligado; em cascata (um passo do grid com snap; 5 cm sem snap) enquanto houver outra foto exatamente no lugar.
+### 4.2 Tamanho e posição
+
+- `tamanho.larguraCm` × `tamanho.alturaCm` = área impressa na orientação atual (DM-14). Orientação derivada: largura < altura → retrato; > → paisagem; = → quadrado.
+- Tamanho externo = (largura + 2 × borda) × (altura + 2 × borda) (RN-02). Ex.: 10×15 retrato com borda 2 → 14,0 × 19,0 cm (PRD aceite 2).
+- `xCm`, `yCm` = canto superior esquerdo externo (RN-06), 0,1 cm (DM-08).
+- Mudança de tamanho, orientação ou borda: `xCm` e `yCm` não mudam (RN-05, M2-10).
+
+### 4.3 Recorte (*cover*, RN-14)
+
+Entrada: imagem `iw × ih` px; quadro = área impressa `w × h` cm (a borda não entra); `recorte = { offsetX, offsetY }` ∈ [−1, 1].
+
+1. Proporções `ri = iw / ih` e `rq = w / h`.
+2. Se `ri > rq`, a sobra é horizontal: janela `jh = ih`, `jw = ih · rq`, `sobraX = iw − jw`, `sobraY = 0`. Senão, a sobra é vertical: `jw = iw`, `jh = iw / rq`, `sobraY = ih − jh`, `sobraX = 0`.
+3. Janela: `x = (sobraX / 2) · (1 + offsetX)`, `y = (sobraY / 2) · (1 + offsetY)`.
+4. Significado: 0 = centralizado; −1 = encostado à esquerda (ou no topo) da imagem; +1 = encostado à direita (ou embaixo).
+5. No eixo sem sobra, o offset é sempre 0 (normalizado ao gravar).
+6. Arraste no modo de recorte: mover a imagem `d` px da imagem para a direita move a janela para a esquerda, `offsetX −= 2d / sobraX` (idem em Y), limitado a [−1, 1] e arredondado a 3 casas.
+7. Mudar tamanho ou orientação zera os offsets (M2-09).
+
+A janela vai para o `crop` do `Konva.Image` (ADR-02), com a imagem do perfil (`render`).
+
+### 4.4 Snap (RF-53, RN-06, RN-15)
+
+- `encaixar(v, passo) = arredondarCm(round(v / passo) · passo)`, a partir da origem 0,0 (mesma origem do grid — A-07 do M1).
+- Aplicado ao canto superior esquerdo externo, só com `grid.snap` ligado: durante o arraste (`dragBoundFunc`), ao adicionar (A-04), ao duplicar (A-25), no teclado (M2-01) e nos campos X/Y (M2-12).
+- Com snap, toda foto solta ou digitada tem X/Y múltiplos do passo (PRD aceite 4), salvo quando o limite da M2-11 empurrar a foto.
+
+### 4.5 Alertas
+
+Sobre os retângulos externos, com tolerância `ε = 0,05 cm` para evitar falso alerta por arredondamento:
+- **Sobreposição** (RN-11): `min(a.dir, b.dir) − max(a.esq, b.esq) > ε` **e** o mesmo em Y. Fotos que só encostam não contam. Placeholders entram.
+- **Fora da parede** (RN-12): o retângulo não cabe na parede inteira (ADR-04: retângulo envolvente da região com pixels; com escala linear, a foto toda), com folga `ε`.
+- **Fora da área útil** (RN-34): o retângulo não cabe na área útil da variante, com folga `ε`.
+- Custo: O(n²) pares; com 40 fotos são 780 pares, recalculados por quadro só durante o arraste (A-07).
+
+### 4.6 Bounding box (RF-62)
+
+Mínimo e máximo dos retângulos externos de todas as fotos da variante (placeholders inclusive). Exibida com 1 casa ("90,0 × 47,0 cm").
+
+### 4.7 Desfazer (ADR-03, M2-03)
+
+- zundo sobre a parte desfazível da variante: `{ fotos, areaUtil, bordaPadrao }`. Uma pilha por `varianteId` (no M2, só a "Base"; a estrutura já serve ao M3).
+- Limite de 100 passos; o mais antigo sai.
+- Seleção, modo, viewport e grid ficam fora.
 
 ## 5. API (M2)
 
 | Método e rota | Corpo | Resposta |
 |---|---|---|
-| `POST /api/imagens` | multipart: `arquivo`, `perfil`, `projetoId` | 201 `Imagem` (datas em texto) · 400 perfil ou projeto inválido · 404 projeto · 413 tamanho · 415 formato |
-| `GET /api/imagens` | — | `Imagem[]` ativas (`excluidaEm = null`), por `criadaEm` decrescente |
-| `GET /api/imagens/:id/arquivo?tipo=render\|thumb` | — | `image/webp`, `Cache-Control: public, max-age=31536000, immutable` · 404 |
-| `PUT /api/projetos/:pid/variantes/:id` | (M1) | + 422 sem escala / imagem inexistente ou excluída / `_id` repetido; atualiza `imagens.projetos` |
+| `POST /api/imagens` | multipart: `arquivo`, `perfil`, `projetoId` | 201 `{ imagem }` · 400 Zod · 404 projeto · 413 tamanho · 415 formato ou imagem ilegível |
+| `GET /api/imagens` | — | `[{ _id, nomeOriginal, perfil, larguraPx, alturaPx, orientacaoNatural, bytes, criadaEm, projetos, thumbUrl, renderUrl }]`, só ativas (`excluidaEm: null`), por `criadaEm` desc |
+| `GET /api/imagens/:id/arquivo?tipo=render\|thumb` | — | `image/webp` com `Cache-Control: public, max-age=31536000, immutable` · 404 |
+| `PUT /api/projetos/:pid/variantes/:id` (M1, ampliada) | `{ sessaoId, revisaoBase, grid, bordaPadrao, areaUtil, fotos }` | 200 `{ revisao, salvaEm }` · 409 (M1) · 400 Zod · **422** `{ erro, detalhes: { imagensInexistentes } }` |
 
-Processamento (`sharp`): `rotate()` (EXIF), lado maior do perfil (`PERFIS[perfil].ladoFotoPx`, sem ampliar), WebP na qualidade do perfil, miniatura de **256 px** (ADR-05). O id (`ObjectId`) é gerado antes de gravar; arquivos vão para `tmp/` e só são promovidos depois do `insertOne` aceito (sem rastro em falha). `orientacaoNatural`: largura > altura → `paisagem`, senão `retrato` (RN-04). `bytes` = tamanho do arquivo `render`. `nomeOriginal` = nome do arquivo sem pasta; vazio vira "sem-nome". Sem detecção de duplicatas (RN-25).
+Upload (`POST /api/imagens`):
+1. Valida perfil e projeto; recusa acima de `UPLOAD_MAX_MB` (413).
+2. sharp: `rotate()` (EXIF), redimensiona ao lado maior do perfil (ADR-05: 1024 · 2048 · 3072 px; sem ampliar), WebP na qualidade do perfil; miniatura de 256 px no lado maior (ADR-05). Falha de decodificação → 415 "Não foi possível ler a imagem." (fixture de texto renomeado para `.jpg`).
+3. Grava `imagens/<id>.webp` e `imagens/<id>.thumb.webp` de forma atômica (`tmp/` + rename) e insere o documento: `orientacaoNatural` pelas dimensões processadas (RN-04), `projetos: [projetoId]` (M2-05), `excluidaEm: null`, `purgaEm: null`.
+4. Requisição abortada pelo cliente (`AbortController`, DV-10): apaga temporários e não insere documento.
+5. Sem verificação de duplicata (RN-25).
+
+Arquivos da imagem nunca mudam (RN-21), por isso o cache imutável, diferente da parede (A-19 do M1).
+
+Salvamento da variante (ampliação do M1):
+- Todo `imagemId` não nulo precisa existir em `imagens`; senão, 422 com a lista. (A imagem excluída e o placeholder automático são do M4.)
+- Depois do `updateOne` com revisão, `$addToSet: { projetos: projetoId }` nas imagens usadas (M2-05). Falha nessa etapa não desfaz o salvamento: é registrada no log e repetida no próximo salvamento.
+- Placeholder (`imagemId: null`) é aceito (M2-06).
+
+Regras comuns do M1 continuam (erros `{ erro, detalhes? }` em pt-BR, gravação atômica, API só em `127.0.0.1`).
 
 ## 6. Web
 
 | Camada | Entrega |
 |---|---|
-| `app/` | Store: `ui.selecaoId`, `ui.bibliotecaSelecaoId`, `ui.recorte` (rascunho), fatia `biblioteca` (imagens, carregando, erro) e `historico` por variante; ações nomeadas: `carregarBiblioteca`, `adotarImagem`, `adicionarFoto`, `moverFoto`, `moverPorSeta`, `trocarTamanho`, `trocarOrientacao`, `alterarBordaDaFoto`, `definirPosicao`, `duplicarFoto`, `removerFoto`, `trazerParaFrente`, `enviarParaTras`, `selecionarFoto`, `abrirRecorte`, `concluirRecorte`, `cancelarRecorte`, `alterarBordaPadrao`, `desfazer`, `refazer`. `app/uploadLote.ts`: fila com 3 em paralelo, cancelamento e nova tentativa (sem React). Ids de foto com `ObjectId` da lib `bson` (ADR-07). |
-| `infra/` | `ClienteApi`: `listarImagens`, `enviarImagem` (XHR com progresso). `urlArquivoImagem(id, tipo)`. |
-| `ui/canvas/` | `cena.ts`: `CenaParede` ganha `fotos`, `selecaoId`, callbacks e o rascunho do recorte; `Palco.tsx`: camada Fotos, seleção, alertas, bounding box, arrasto com snap, `dePaginaParaConteudo`, modo de recorte. |
-| `ui/telas/editor/` | `Biblioteca` (real), `DialogoUpload`, `ModoRecorte`, `ToolbarCanvas` e `HeaderEditor` funcionais. |
-| `ui/paineis/` | `PainelFoto`, `PainelRecorte`, `PainelComposicao` (contagens e borda padrão). `ui/componentes/proprios/SeletorTamanho`. |
+| `app/` | Fatia **biblioteca** (ADR-03): imagens, filtro, miniatura selecionada, fila de upload (estados da A-18). Fatia **documento**: fotos da variante + histórico zundo por variante (§4.7), comparação com o último salvo (A-26). Fatia **ui**: foto selecionada, modo recorte. Ações nomeadas que delegam ao domínio: `enviarImagens`, `cancelarEnvios`, `tentarDeNovo`, `adicionarFoto`, `moverFoto` (ARCHITECTURE §7), `moverPorTeclado`, `alterarTamanho`, `alternarOrientacao`, `alterarBorda`, `alterarPosicao`, `concluirRecorte`, `duplicarFoto`, `removerFoto`, `trazerParaFrente`, `enviarParaTras`, `alterarBordaPadrao`, `desfazer`, `refazer`. |
+| `infra/` | A porta `ClienteApi` (`dto.ts`) e o `clienteApi.ts` do M1 ganham as rotas de `/api/imagens` e `/api/config` (upload por `XMLHttpRequest` com progresso e `abort()`, como o da parede; fila de 3). Geração de id com `bson` (DM-01; não foi necessário no M1). |
+| `ui/canvas/` | Segue a divisão do M1 (ARCHITECTURE §6): `cena.ts` ganha as fotos, destaques, bounding box e o modo recorte **como dados**, e o `Palco.tsx` continua o único módulo com Konva. Camada **Fotos** em cm (1 `Group` por foto: `Rect` da borda + `Image` com `crop`; snap no `dragBoundFunc`); seleção, alças, rótulos e pills na camada em px de tela do M1 (tamanho constante em qualquer zoom — A-12) — ADR-02. Imagens carregadas uma vez por `imagemId` (`useImagem`) e compartilhadas entre fotos repetidas. O gancho `window.__deco.paraTela` (M1 §3.9) passa a servir também para as fotos. |
+| `ui/paineis/` | Painel da foto (§3.4), painel do recorte (§3.5), painel Composição do M1 ampliado (A-14). |
+| `ui/telas/editor/` e `ui/componentes/` | `Biblioteca` e `ToolbarCanvas` do M1 passam a funcionar; diálogo Carregar fotos; `SeletorTamanho` (DESIGN §6); uso de `Miniatura`, `CampoCm`, `SeletorCor` do M0 e de `BotaoInativo` / `BotaoEmBreve` (M1 §12) para os inativos da A-05 e da §2. |
 
-Dependência nova: `bson` (versão do `mongodb` 7.7.0 já instalado, fixada em `apps/web`). Qualquer outra para e pede aprovação.
+Dependências novas, já previstas nas ADRs: `zundo` (ADR-03) e `bson` (ADR-07). Versões exatas fixadas na T1 e registradas no `MEMORY.md`. Qualquer outra dependência para e pede aprovação.
 
 ## 7. Testes
 
 | Tipo | Cobertura |
 |---|---|
-| Unitário (domínio) | Tamanhos (orientação, quadrado, personalizado = sugerido, limites); geometria (externo, caixa, bounding box, snap, próxima linha, setas); alertas (encostar ≠ sobrepor, tolerância, prioridade parede × área); recorte (*cover*, offsets, sem sobra, arrasto); composição (criar foto, cascata, drop, duplicar, ordem, tamanho/borda mantendo o canto, recorte recentralizado); histórico (limite 100, registrar limpa o refazer, desfazer/refazer, por chave). Cobertura do domínio ≥ 90%. |
-| API (integração) | Upload (perfis, EXIF, miniatura 256, orientação natural, 415/413/400/404, nome sem pasta, `projetos`); listagem e ordem; arquivo (cabeçalhos, 404); *hard save* (422 sem escala, imagem inexistente, `_id` repetido; `imagens.projetos` atualizado e sem duplicar). |
-| Web (Vitest) | Store (adicionar com borda padrão e tamanho natural, mover, trocar tamanho/orientação mantendo o canto, borda, duplicar, ordem, remover, desfazer/refazer por passo, recorte em 1 passo, histórico não mexe em `documento`); fila de upload (3 em paralelo, falha sem parar, cancelar, tentar de novo, ignorados); Biblioteca (filtros, seleção, duplo clique); `DialogoUpload`; `PainelFoto`; `PainelRecorte`; `PainelComposicao`; toolbar e header (estados inativos por estado); `Editor` com o palco trocado por um marcador. |
-| E2E (Playwright) | (1) enviar lote pelo diálogo (perfil, progresso, ignorados, falha), conferir a biblioteca e recarregar; (2) adicionar por botão e por arrastar da biblioteca; (3) mover com snap (X/Y múltiplos de 5 — aceite 4) e setas; (4) 20 × 30 retrato mede 20 × 30 cm na tela (±1 px — aceite 1) e 10 × 15 com borda 2 cm mede 14 × 19 externo (aceite 2); (5) personalizado 21,0 × 29,7 aceito e 4,9 / 150,1 rejeitados (2a); (6) orientação (3); (7) sobreposição e fora da área; (8) recorte (Concluir, Esc); (9) desfazer/refazer; (10) salvar, recarregar, mesmo estado (7); (11) imagem do projeto A aparece na biblioteca do B (10); (12) rede: nenhuma requisição externa nos fluxos novos. |
+| Unitário (domínio) | Tamanho (sugeridos nas duas orientações, quadrado sem orientação, personalizado 21,0 × 29,7 aceito e 4,9 / 150,1 recusados, personalizado igual a sugerido); tamanho externo (10×15 + borda 2 → 14 × 19); RN-05 e M2-10 (canto fixo); `novaFoto` (RN-03, RN-04, cascata); snap (múltiplos, passo 2,5, negativos); teclado (com e sem snap, Shift, foto fora do grid); limites (M2-11); recorte (sobra em X e em Y, offsets −1/0/+1, eixo sem sobra, arraste limitado, zerar ao mudar); alertas (encostar não conta, ε, fora da parede × área útil, prevalência); bounding box; ordem (uma posição, limites no topo e no fundo); duplicar; filtros (só o estado salvo; foto não salva fora); formatos e motivos de recusa; formatadores. Cobertura do domínio ≥ 90%. |
+| API (integração) | Upload: EXIF da fixture rotacionada, os 3 perfis (lado maior), miniatura de 256 px, `orientacaoNatural` de retrato, paisagem e quadrada, `projetos = [pid]`, 413, 415 (texto renomeado, `.heic`), abortado sem documento nem arquivo. Listagem: ordem, sem excluídas do seed, **imagem do projeto A listada no B** (PRD aceite 10). Arquivo: cabeçalhos de cache, 404. Salvamento com fotos: ok, 422 com imagem inexistente, `$addToSet` sem duplicar, placeholder aceito, ordem preservada. |
+| Componentes | Coluna Biblioteca (filtros, estados vazios, inativo sem escala); diálogo Carregar fotos (perfil travado, estados, cancelar restantes, tentar de novo, fechar com pendentes); `SeletorTamanho` (grupos, rodapé de rolagem, quadrado, personalizado); painel da foto (campos, faixas, alertas, placeholder); painel do recorte; painel Composição (linhas de alerta); Desfazer/Refazer (estados e atalhos). |
+| E2E (Playwright) | (1) Carregar as fixtures em lote, válidas e inválidas → contadores e ignorados (RN-20, RF-21). (2) Arrastar para a parede calibrada, escolher 20 × 30 retrato sem borda e medir o nó: 20 × 30 cm ± 1 px na escala (PRD aceite 1). (3) Borda 2 em 10 × 15 → "14,0 × 19,0 cm" (aceite 2). (4) Personalizado 21,0 × 29,7 aceito, 4,9 recusado (aceite 2a). (5) Alternar orientação (aceite 3). (6) Snap passo 5: X/Y múltiplos de 5 após soltar (aceite 4). (7) Recalibrar mantém X/Y/tamanho (aceite 5). (8) Sobreposição e fora da área útil com pills e contagens. (9) Recorte: arrastar, Concluir, Esc. (10) Desfazer/refazer por botão e atalho. (11) Salvar → recarregar → mesma composição (aceite 7). (12) Imagem do projeto A no projeto B (aceite 10). (13) Nenhuma requisição fora de `localhost` (teste existente estendido ao upload e ao canvas com fotos). |
+| Desempenho | Arraste com 40 fotos ≥ 50 fps (alvo 60); upload de 50 fotos Leve ≤ 1 s por foto; memória < 300 MB com 40 fotos **no perfil Leve** no Chromium (ARCHITECTURE §8; com perfil Alto o orçamento não se aplica). Números registrados no `MEMORY.md`. |
 
 ## 8. Critérios de aceite do M2
 
-1. Upload individual e em lote (arquivos, pasta e arrastar) com perfil escolhido antes do envio, progresso por arquivo, falhas listadas sem interromper e cancelamento (RF-20, RF-21, RF-25, DV-10); arquivos não suportados ignorados com a contagem (PRD aceite 9).
-2. A biblioteca mostra nome e orientação natural; os filtros Todas, Projeto e Variante funcionam; uma imagem carregada no projeto A aparece na biblioteca do projeto B (PRD aceite 10).
-3. Adicionar por botão e por arrastar; mover por mouse e setas; selecionar, duplicar, remover e mudar a ordem.
-4. **PRD aceite 1:** foto 20 × 30 retrato sem borda mede 20 × 30 cm na escala (±1 px). **Aceite 2:** 10 × 15 com borda de 2 cm tem tamanho externo 14 × 19 cm. **Aceite 2a:** 21,0 × 29,7 aceito; 4,9 e 150,1 rejeitados. **Aceite 3:** alternar orientação inverte largura e altura mantendo o canto (RN-05).
-5. **PRD aceite 4:** com snap ligado e passo 5 cm, X e Y de qualquer foto solta são múltiplos de 5 cm.
-6. Borda em cm e cor; borda padrão vale para as novas fotos.
-7. Modo de recorte: arrastar a imagem, Concluir (1 passo), Esc cancela; personalizado igual a sugerido vira o sugerido.
-8. Sobreposição, "Fora da parede" e "Fora da área útil" aparecem como na §3.3 sem bloquear; bounding box e "Área total" corretos.
-9. Desfazer e refazer cobrem as ações da M2-03; um passo por intenção; `Ctrl+Z`.
-10. **PRD aceite 7:** salvar, fechar e reabrir restaura fotos, posições, tamanhos, bordas e recortes; o servidor recusa fotos sem escala ou com imagem inexistente.
-11. `typecheck`, `lint`, `format:check`, `test` e `e2e` verdes; cobertura do domínio ≥ 90%; nenhuma requisição externa.
+1. Upload individual, em lote e de pasta, com o perfil escolhido; progresso por arquivo; inválidos listados e contados sem parar o lote; cancelar restantes e tentar de novo funcionam (RF-20, RF-21, RF-25, RN-20, DV-10). **PRD aceite 9.**
+2. A biblioteca é global e os filtros Todas · Projeto · Variante seguem a M2-05; "Excluídas" e busca visíveis e inativas. **PRD aceite 10.**
+3. Adicionar por arraste e pelo botão, com tamanho 10×15 na orientação natural e a borda padrão; bloqueado sem escala (RF-13, RN-03, RN-04).
+4. **PRD aceite 1:** 20×30 retrato sem borda mede 20 × 30 cm na escala (±1 px).
+5. **PRD aceites 2, 2a e 3:** tamanho externo com borda, faixas do personalizado e orientação conforme RN-05.
+6. **PRD aceite 4:** com snap e passo 5 cm, toda foto solta tem X/Y múltiplos de 5.
+7. **PRD aceite 5:** recalibrar ou refazer a perspectiva mantém X/Y/tamanho em cm de todas as fotos.
+8. Recorte em modo próprio, só no eixo com sobra, com Concluir/Enter e Esc (RN-14, DV-09); mudar tamanho ou orientação recentraliza (M2-09).
+9. Mover por arraste e teclado (RN-16, M2-01), duplicar, remover, trazer para frente e enviar para trás uma posição (RF-34, RF-35, M2-08).
+10. Sobreposição, fora da parede e fora da área útil destacados e contados, sem bloquear (RN-11, RN-12, RN-34); bounding box com o total (RF-62).
+11. Desfazer e refazer por botão e atalho, até 100 passos, com o escopo da M2-03. **PRD aceite 12 parcial**: só há a "Base" no M2; o teste entre variantes fica no M3.
+12. **PRD aceite 7 (posições):** salvar, fechar e reabrir restaura fotos, tamanhos, bordas, recortes e ordem.
+13. Desempenho da §7 atingido ou registrado com plano de ação no `MEMORY.md`.
+14. `typecheck`, `lint`, `test` e `e2e` verdes; cobertura do domínio ≥ 90%; nenhuma requisição externa.
 
 ## 9. Tarefas
 
 | # | Tarefa | Depende de |
 |---|---|---|
-| T1 | Documentação (spec, PRD v0.12, ARCHITECTURE v0.8 com §6 atualizada), constantes e dependência `bson` | — |
-| T2 | Testes (vermelhos) de domínio, API e store | T1 |
-| T3 | Domínio: tamanho, geometria, alertas, recorte, composição, histórico | T2 |
-| T4 | API: imagens (upload, listagem, arquivo) e *hard save* com fotos | T2, T3 |
-| T5 | Web: cliente, store (biblioteca, fotos, histórico), fila de upload | T3, T4 |
-| T6 | Web: Palco (camada Fotos, seleção, alertas, bounding box, arrasto, snap, drop) | T5 |
-| T7 | Web: Biblioteca e `DialogoUpload` | T5 |
-| T8 | Web: `PainelFoto`, `SeletorTamanho`, modo de recorte, `PainelComposicao`, toolbar, header, barra de status | T6 |
-| T9 | E2E, README, `MEMORY.md` | todas |
+| T1 | Dependências (`zundo`, `bson`), constantes novas, pastas `composicao/` e `biblioteca/` (após a ARCHITECTURE §6), `GET /api/config` e limite de upload na web (A-28) | PR-M2-01 a 04 |
+| T2 | Domínio: tamanho, foto, snap, teclado, limites, recorte + testes | T1 |
+| T3 | Domínio: alertas, bounding box, ordem, biblioteca (filtros, formatos), formatadores + testes | T1 |
+| T4 | API: `POST/GET /api/imagens` e arquivo + testes; medição do upload em lote | T3 |
+| T5 | API: salvamento da variante com fotos (422, `$addToSet`) + testes | T2 |
+| T6 | Web: fatia biblioteca, cliente de imagens, coluna Biblioteca (filtros, vazios, seleção) | T4 |
+| T7 | Web: diálogo Carregar fotos (fila, estados, cancelar, tentar de novo) | T6 |
+| T8 | Web: camada Fotos e Overlay, seleção, adicionar (arraste, botão), mover com snap, teclado e limite, destaques e bounding box; medição de fps e memória | T2, T3, T6 |
+| T9 | Web: painel da foto (tamanho, orientação, borda, posição, alertas), toolbar (duplicar, ordem), remover | T8 |
+| T10 | Web: modo de recorte e tamanho personalizado | T9 |
+| T11 | Web: desfazer/refazer (zundo), atalhos, status pós-desfazer, área útil e borda padrão no histórico | T9 |
+| T12 | Web: painel Composição (A-14), barra de status, ativação dos controles do header e da toolbar (§2) | T9, T11 |
+| T13 | E2E + desempenho + README + `MEMORY.md` | todas |
 
 ## 10. Forma de trabalho
 
-TDD como no M1: os testes de domínio, API e store entram primeiro, vermelhos (`test(m2): …`), depois a implementação em verde (`feat(m2): …`); os testes de componente e os E2E são escritos junto das telas. `typecheck`, `lint`, `format:check`, `test` e `e2e` verdes ao fim. Os pontos de validação com o Nicholas ficam para o fim (aceite do M2), como no M1.
+- Conforme a A-29: TDD em dois commits, como no M1 — `test(m2): …` com todos os testes vermelhos e `feat(m2): …` com a implementação e tudo verde (`typecheck`, `lint`, `test`, `e2e`). A ordem da §9 continua sendo a ordem de implementação. Status no `MEMORY.md` ao fim.
+- Validação do Nicholas na **T13** (aceite do M2).
 
-## 11. Alterações em outros documentos
+## 11. Alterações feitas em outros documentos (24/10)
+
+Aplicadas depois da revisão das premissas, com o branch atualizado com a `main` (M1 aceito).
 
 | Documento | Alteração |
 |---|---|
-| `docs/PRD.md` v0.12 | RF-13 (incluir fotos = carregar e posicionar), RN-16 (snap e Shift), RN-18 (o que entra no desfazer; 100 passos), RF-20 (fila com envio explícito), novo RN-36 (alertas: tolerância e sobreposição) |
-| `docs/ARCHITECTURE.md` v0.8 | ADR-03 (histórico próprio, sem `zundo`); §6 com as pastas e arquivos novos; ADR-05 (miniatura de 256 px) |
-| `docs/DESIGN.md` v0.4 | §7: painel da foto, modo de recorte e diálogo de envio como implementados (envio explícito, diverge do protótipo 07) |
-| `MEMORY.md` | Decisões M2-01 a M2-09, status |
-
-## 12. Registro da implementação (25/10)
-
-**Forma de trabalho.** Como no M1: a spec e os testes de domínio, API e store entraram primeiro, vermelhos (`test(m2): …`); a implementação seguiu em verde (`feat(m2): …`). Os testes de componente e os E2E foram escritos junto das telas, não antes.
-
-| Item | Resultado |
-|---|---|
-| Testes | Vitest: domínio (tamanho, geometria, alertas, recorte, composição, histórico; cobertura 97,4% das instruções e 93,5% dos ramos), API (imagens, salvamento com fotos), web (store, fila de upload, filtros, painéis da foto e do recorte, biblioteca, diálogo de envio, teclado, recorte). Playwright: `biblioteca.spec.ts` e `composicao.spec.ts` cobrem os aceites 1, 2, 2a, 3, 4, 7, 9 e 10 do PRD, os alertas, o recorte e a rede. O aceite 5 (recalibrar mantém as fotos) tem teste de API. O aceite 12 (desfazer na variante A não altera a B) fica **parcial**: a pilha é por variante, mas a independência só é verificável no M3, com mais de uma variante. |
-| Orçamento de arrasto (RNF-03) | Sonda do Playwright (`desempenho.spec.ts`): com 40 fotos de 10 × 15 cm e borda, o arrasto longo mede **60 fps** (quadro médio 16,7 ms, p95 16,7 ms) no Chromium headless da máquina de desenvolvimento; o teste só guarda contra regressões grosseiras (média ≤ 33 ms). |
-| Dependências novas | `bson` 7.3.3 (ADR-07; a mesma versão que o driver do MongoDB já instala) para os ids das fotos no navegador. `zundo` **não** entrou (M2-02, ADR-03 revista). |
-| Desempenho | O pacote JS da web foi de ~917 kB para ~1.016 kB (o `bson` entra no pacote principal; sem divisão de código, como já pendia no M1). |
-
-**Decisões de implementação** (o que a spec não fixava):
-
-- Os instantâneos do desfazer são as próprias estruturas imutáveis do Immer (compartilham estrutura): não há cópia profunda, e comparar o conteúdo antes e depois (JSON) evita registrar passos sem mudança (mover para o mesmo lugar, concluir recorte sem alteração).
-- Desfazer e refazer só valem no modo Editor; trocam o conteúdo (fotos, área útil, borda padrão), soltam a seleção que sumiu e marcam "Alterações não salvas". Refazer não devolve a seleção.
-- "Confirmar área" continua marcando a variante como alterada mesmo com a área igual à gravada (M1 §3.6), embora a área útil agora entre no desfazer.
-- O gatilho do seletor de tamanho mostra só "20 × 30" (cabe ao lado da Orientação); os campos do painel da foto têm rótulo só para leitores de tela.
-- Rótulos do canvas (pills) usam a fonte mono medida por estimativa de largura (6,6 px por caractere a 11 px) e a camada é refeita quando a fonte termina de carregar; o Konva só aceita o mesmo `padding` nos quatro lados.
-- A camada de fotos fica entre a área útil e o overlay; no modo Área útil as fotos aparecem sem reagir ao mouse e sem alertas; no modo de recorte, o resto da parede é desenhado normalmente, esmaecido pelo véu do quadro.
-- O modo de recorte reaproveita o `LayoutModo` (painel de 340 px) com uma barra só de identificação, sem botões (DESIGN §7.0).
-- `Esc` que já fechou um menu ou seletor (Radix) não cancela mais o modo aberto (`defaultPrevented`).
-- O gancho de teste do palco ganhou `dePagina`, `retanguloDaFoto(id)` e `idsDasFotos()`.
-- Os E2E compartilham o banco `parede-fotos-test` e a biblioteca é global: os testes não assumem biblioteca vazia e escolhem a miniatura mais recente.
-
-**Limitações conhecidas / pendências do M2:**
-
-- Soltar pastas arrastadas depende de `webkitGetAsEntry` (Chrome/Edge); "Selecionar pasta" usa `webkitdirectory`.
-- O limite de 50 MB do upload continua fixo no browser (o servidor respeita `UPLOAD_MAX_MB`).
-- Sem coalescer setas repetidas: cada toque de seta é um passo do desfazer (limite de 100 por variante).
-- Pacote JS de ~1 MB sem divisão (pendente desde o M1).
-- Decisões M2-01 a M2-09 e premissas B-01 a B-15: revisar (principalmente M2-01 — upload só com escala; M2-03 — grid fora do desfazer; M2-07 — envio explícito).
-
+| `docs/PRD.md` | RN-16 (Shift + seta com snap — M2-01); RN-18 (escopo do desfazer, limite 100, atalhos — M2-02, M2-03); RN-05 (borda com canto fixo — M2-10); RN-12 (limite de 1 cm dentro da parede inteira — M2-11); RN-14/RN-28 (recentralizar em toda mudança de tamanho ou orientação — M2-09); RN-15 (snap também nos campos X/Y — M2-12); RF-35 (ordem anda uma posição — M2-08); RF-28 ("Excluídas" no M4 — M2-07); RNF-03 (canvas usa a versão do perfil; o original não é guardado — RN-21). Versão 0.12. |
+| `docs/DESIGN.md` | §8: "Remover" (foto da variante) × "Remover deste projeto" (imagem) e o tooltip da M2-04; §7: toolbar do canvas com o toggle "Área total" (A-13); textos da barra de status (M2-01) e linha "Fora da área" no painel Composição (A-14); §7.1: "Excluídas" inativo até o M4 e controles inativos por estado da A-05; §2.2: imagem indisponível (A-16). |
+| `docs/ARCHITECTURE.md` | §6: pastas `packages/domain/src/composicao/` e `packages/domain/src/biblioteca/`; ADR-03: escopo do histórico (M2-03). |
+| `docs/specs/M0-setup.md` | DM-05: momentos da associação (upload e salvamento) e filtros pelo estado salvo (M2-05). |
+| `MEMORY.md` | Decisões M2-01 a M2-12 (registradas em 24/10) e premissas alteradas na revisão. |
