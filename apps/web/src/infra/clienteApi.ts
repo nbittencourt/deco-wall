@@ -3,6 +3,7 @@ import {
   type ClienteApi,
   type CorpoSalvarVariante,
   type DadosPerspectiva,
+  type ImagemDto,
   type OpcoesEnvio,
   type ProjetoDto,
   type RespostaParede,
@@ -43,10 +44,15 @@ export function criarClienteHttp(
   });
 
   // Upload com barra de progresso: fetch ainda não informa o progresso do envio, então usa XMLHttpRequest.
-  function enviarMultipart(url: string, form: FormData, opcoes: OpcoesEnvio = {}): Promise<RespostaParede> {
+  function enviarMultipart<T>(
+    metodo: 'PUT' | 'POST',
+    url: string,
+    form: FormData,
+    opcoes: OpcoesEnvio = {},
+  ): Promise<T> {
     return new Promise((resolve, reject) => {
       const xhr = criarXhr();
-      xhr.open('PUT', url);
+      xhr.open(metodo, url);
       xhr.responseType = 'text';
       xhr.setRequestHeader('accept', 'application/json');
       xhr.upload.onprogress = (evento) => {
@@ -59,7 +65,7 @@ export function criarClienteHttp(
         } catch {
           // corpo vazio ou que não é JSON
         }
-        if (xhr.status >= 200 && xhr.status < 300) resolve(corpo as unknown as RespostaParede);
+        if (xhr.status >= 200 && xhr.status < 300) resolve(corpo as unknown as T);
         else reject(new ErroApi(xhr.status, corpo));
       };
       xhr.onerror = () => reject(new ErroApi(0, { erro: 'Servidor local indisponível.' }));
@@ -89,7 +95,7 @@ export function criarClienteHttp(
       form.append('perfil', perfil);
       form.append('revisaoBase', String(revisaoBase));
       form.append('arquivo', arquivo, arquivo.name);
-      return enviarMultipart(`/api/projetos/${id}/parede`, form, opcoes);
+      return enviarMultipart<RespostaParede>('PUT', `/api/projetos/${id}/parede`, form, opcoes);
     },
 
     aplicarCalibracao: (id, { revisaoBase, linear }: { revisaoBase: number; linear: SegmentoLinear }) =>
@@ -114,6 +120,16 @@ export function criarClienteHttp(
       });
     },
 
+    listarImagens: () => pedir<ImagemDto[]>('/api/imagens'),
+
+    enviarImagem: ({ arquivo, perfil, projetoId }, opcoes) => {
+      const form = new FormData();
+      form.append('perfil', perfil);
+      form.append('projetoId', projetoId);
+      form.append('arquivo', arquivo, arquivo.name);
+      return enviarMultipart<ImagemDto>('POST', '/api/imagens', form, opcoes);
+    },
+
     salvarVariante: (projetoId, varianteId, corpo: CorpoSalvarVariante) =>
       pedir<{ revisao: number; salvaEm: string }>(
         `/api/projetos/${projetoId}/variantes/${varianteId}`,
@@ -133,4 +149,9 @@ export function urlArquivoParede(
   revisao: number,
 ): string {
   return `/api/projetos/${projetoId}/parede/arquivo?tipo=${tipo}&v=${revisao}`;
+}
+
+// Arquivos das imagens da biblioteca: o id está no nome e o conteúdo nunca muda (cache imutável na API).
+export function urlArquivoImagem(imagemId: string, tipo: 'render' | 'thumb'): string {
+  return `/api/imagens/${imagemId}/arquivo?tipo=${tipo}`;
 }

@@ -1,4 +1,4 @@
-import type { AreaUtil, Borda, Grid, Perfil, Projeto, Pt, Variante } from '@deco-wall/domain';
+import type { AreaUtil, Borda, Grid, Imagem, Perfil, Projeto, Pt, Variante } from '@deco-wall/domain';
 
 // Formatos que trafegam entre a API e a web (docs/specs/M1-parede-e-escala.md §5). No JSON as datas
 // chegam como texto ISO; o resto segue os tipos do domínio.
@@ -7,6 +7,11 @@ type DatasEmTexto<T, K extends keyof T> = Omit<T, K> & { [P in K]: string };
 
 export type ProjetoDto = DatasEmTexto<Projeto, 'criadoEm' | 'atualizadoEm'>;
 export type VarianteDto = DatasEmTexto<Variante, 'criadaEm' | 'salvaEm'>;
+export type ImagemDto = Omit<Imagem, 'criadaEm' | 'excluidaEm' | 'purgaEm'> & {
+  criadaEm: string;
+  excluidaEm: string | null;
+  purgaEm: string | null;
+};
 
 export interface ResumoProjeto {
   _id: string;
@@ -77,6 +82,11 @@ export interface ClienteApi {
     retificada: Blob,
     opcoes?: OpcoesEnvio,
   ): Promise<RespostaParede>;
+  listarImagens(): Promise<ImagemDto[]>;
+  enviarImagem(
+    dados: { arquivo: File; perfil: Perfil; projetoId: string },
+    opcoes?: OpcoesEnvio,
+  ): Promise<ImagemDto>;
   salvarVariante(
     projetoId: string,
     varianteId: string,
