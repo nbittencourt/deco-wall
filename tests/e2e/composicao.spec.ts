@@ -93,7 +93,10 @@ test.describe('adicionar fotos (RF-30, RN-03, RN-04, RN-13)', () => {
     await biblioteca(page)
       .getByRole('button', { name: 'paisagem.jpg, Paisagem' })
       .first()
-      .dragTo(page.getByTestId('palco'), { position: { x: 20, y: 20 }, targetPosition: { x: 400, y: 300 } });
+      .dragTo(page.getByTestId('palco'), {
+        sourcePosition: { x: 20, y: 20 },
+        targetPosition: { x: 400, y: 300 },
+      });
 
     const [id] = await idsDasFotos(page);
     expect(id).toBeTruthy();

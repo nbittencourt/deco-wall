@@ -1,4 +1,5 @@
 /// <reference lib="dom" />
+import { dirname } from 'node:path';
 import { expect, test } from '@playwright/test';
 import {
   caminhoImagem,
@@ -86,6 +87,21 @@ test.describe('upload em lote (RF-20, RF-21, DV-10, M2-07)', () => {
       await dialogo.getByRole('button', { name: 'Concluir' }).click();
     }
     expect((await listarImagens(request)).length).toBe(antes + 2);
+  });
+
+  test('"Selecionar pasta" enfileira os arquivos da pasta, ignorando os que não são imagem (RF-20, RN-20)', async ({
+    page,
+    request,
+  }) => {
+    const p = await criarProjetoComEscalaLinear(request, nomeUnico('Pasta'));
+    await page.goto(`/projetos/${p.id}`);
+    await page.getByRole('button', { name: 'Carregar fotos' }).click();
+    const dialogo = page.getByRole('dialog', { name: 'Carregar fotos' });
+    // A pasta das fixtures tem 7 arquivos com extensão de imagem e 1 HEIC (RN-20).
+    await dialogo.getByTestId('entrada-pasta').setInputFiles(dirname(caminhoImagem('retrato.jpg')));
+    await expect(dialogo.getByText('Aguardando')).toHaveCount(7);
+    await expect(dialogo.getByText('1 arquivo ignorado por formato')).toBeVisible();
+    await expect(dialogo.getByRole('button', { name: 'Enviar 7 fotos' })).toBeVisible();
   });
 
   test('soltar arquivos sobre a coluna abre o diálogo com a fila pronta', async ({ page, request }) => {

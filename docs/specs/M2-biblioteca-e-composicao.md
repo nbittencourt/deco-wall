@@ -2,10 +2,10 @@
 
 | Campo | Valor |
 |---|---|
-| Versão | 0.1 (rascunho para revisão; implementação iniciada a pedido do Nicholas em 25/10) |
+| Versão | 0.2 (implementada; decisões e premissas aguardam revisão do Nicholas) |
 | Data | 2026-10-25 |
 | Base | `docs/PRD.md` v0.11 · `docs/ARCHITECTURE.md` v0.7 · `docs/DESIGN.md` v0.3 + protótipos 03, 03a, 03b, 07, 16 · `docs/specs/M0-setup.md` v0.6 · `docs/specs/M1-parede-e-escala.md` v0.3 |
-| Status | **Em implementação.** O Nicholas liberou o M2 sem revisar a spec; as decisões da §0.1 e as premissas da §0.2 foram tomadas com o padrão mais conservador dos documentos e estão marcadas para revisão. |
+| Status | **Implementada (25/10), aguardando a validação visual do Nicholas.** Ele liberou o M2 sem revisar a spec; as decisões da §0.1 e as premissas da §0.2 foram tomadas com o padrão mais conservador dos documentos e seguem marcadas para revisão. Registro da implementação na §12. |
 
 ## 0. Pré-requisitos
 
@@ -22,7 +22,7 @@
 | M2-01 | RF-13 diz "exigir calibração antes de incluir fotos"; RF-20 pede upload "a partir de um projeto". Não estava dito se a biblioteca recebe fotos antes da escala. O texto aceito do M1 (§3.2) já diz "As fotos ficam disponíveis depois que a escala da parede for definida". | **"Carregar fotos" e "Adicionar" ficam inativos sem escala**, com o tooltip "Defina a escala primeiro." (padrão A-16). A biblioteca (miniaturas já enviadas) aparece sempre, mas só se posiciona com escala. O servidor aceita o upload de qualquer forma (a biblioteca é global); a trava de RF-13/RN-08 no servidor é a do salvamento da variante (M2-06). |
 | M2-02 | A ADR-03 prevê `zundo` para o histórico, mas o conteúdo desfazível (`fotos`, `areaUtil`, `bordaPadrao`) vive aninhado em `documento.variante`, e o `zundo` mescla o estado só no primeiro nível: desfazer substituiria o `documento` inteiro (projeto, revisões, status de salvamento). Além disso o histórico é **por variante** (M3). | **Pilha própria de instantâneos, pura, em `packages/domain/src/historico.ts`**, indexada por variante e guardada na store fora do que é desfeito. Um passo por intenção do usuário, registrado explicitamente pelas ações. Limite de **100 passos** por variante (RN-18 pede ≥ 50). **Muda a ADR-03** (sem `zundo`; uma dependência a menos, P4) — registrado na ARCHITECTURE v0.8. |
 | M2-03 | RN-18 só nomeia a área útil como desfazível; o grid também é da variante. | **Entram no desfazer:** fotos (adicionar, mover, tamanho, orientação, borda, recorte, duplicar, remover, ordem), área útil e borda padrão. **Ficam de fora:** os ajustes do grid (visível, passo, snap, cor, opacidade), que são auxílio de visão, não composição; continuam marcando "Alterações não salvas". Mudanças da parede continuam fora (M1-04). |
-| M2-04 | Quais fotos "Adicionar" põe e onde. | **"Adicionar" põe a foto selecionada na biblioteca** (clique na miniatura seleciona; duplo clique na miniatura também adiciona). Sem foto selecionada na biblioteca o botão fica inativo ("Selecione uma foto na biblioteca."). A foto entra **centralizada na área útil** (encaixada no grid se o snap estiver ligado); se já houver uma foto exatamente no mesmo lugar, desloca-se em cascata de 5 cm até ficar livre. Ao **soltar** a miniatura no canvas, o **centro** da foto vai para o ponto de soltura, encaixado no grid se o snap estiver ligado. |
+| M2-04 | Quais fotos "Adicionar" põe e onde. | **"Adicionar" põe a foto selecionada na biblioteca** (clique na miniatura seleciona; duplo clique na miniatura também adiciona). Sem foto selecionada na biblioteca o botão fica inativo ("Selecione uma foto na biblioteca."). A foto entra **centralizada na área útil** (encaixada no grid se o snap estiver ligado); se já houver uma foto exatamente no mesmo lugar, desloca-se em cascata (um passo do grid com o snap ligado; 5 cm sem snap) até ficar livre. Ao **soltar** a miniatura no canvas, o **centro** da foto vai para o ponto de soltura, encaixado no grid se o snap estiver ligado. |
 | M2-05 | Qual canto fica fixo quando a borda muda, e o que acontece com o recorte quando a proporção muda. | RN-05 vale também para a borda: o **canto superior esquerdo externo não se mexe**; o tamanho externo cresce para a direita e para baixo. **Trocar o tamanho ou a orientação recentraliza o recorte** (offsets 0, 0), como já valia para o personalizado (RN-28). |
 | M2-06 | O *hard save* da M1 aceita `fotos` sem conferir nada, e `imagens.projetos` (DM-05) não é mantido. | O servidor passa a recusar (422) fotos sem escala definida (RN-08), imagens inexistentes ou excluídas e `_id` de foto repetido; e, a cada salvamento, acrescenta o projeto a `imagens.projetos` das imagens usadas (`$addToSet`). |
 | M2-07 | O protótipo 07 não mostra "Enviar": o envio parece começar ao escolher os arquivos, mas o perfil é definitivo (RF-25, RN-21) e os arquivos também podem chegar por arrastar-e-soltar sobre a biblioteca. | **Os arquivos escolhidos ou arrastados ficam na fila e o envio começa em "Enviar N fotos"** (primário). Até lá o perfil pode ser trocado e mais arquivos podem entrar. Depois de iniciar o envio o perfil fica travado (DV-10) até o lote acabar. Diverge do protótipo 07 (DS-02). |
@@ -140,7 +140,7 @@ Passa a mostrar: Fotos N · Área total (bounding box, ou "—") · Sobreposiç�
 | `fotos/alertas.ts` | `calcularAlertas(fotos, paredeInteira, areaUtil)` → por `_id`: `{ sobreposicao, fora: 'parede' \| 'area-util' \| null }`; `resumirAlertas` (M2-08) |
 | `fotos/recorte.ts` | `recorteCover(imagem, tamanho, offset)` → retângulo em px da imagem; `deslocarRecorte(imagem, tamanho, offset, deltaCm)` → novo offset (só no eixo com sobra) |
 | `fotos/composicao.ts` | `criarFoto` (RN-03, RN-04, RN-13), `posicaoInicial` (M2-04), `posicaoDoDrop`, `duplicarFoto` (B-06), `trazerParaFrente`, `enviarParaTras`, `aplicarTamanho`, `aplicarBorda` (RN-05, M2-05), `resumoDaComposicao` |
-| `historico.ts` | pilha de desfazer/refazer por chave (variante), pura: `criarHistorico`, `registrar`, `desfazer`, `refazer`, `podeDesfazer`, `podeRefazer`, `limpar` (limite 100 — M2-02) |
+| `historico.ts` | pilha de desfazer/refazer, pura e imutável: `criarHistorico`, `registrar`, `desfazer`, `refazer`, `podeDesfazer`, `podeRefazer` (limite 100 — M2-02); a store guarda uma por variante |
 | `constantes.ts` | `THUMB_FOTO_PX = 256`, `LIMITE_HISTORICO = 100`, `TOLERANCIA_CM = 0.05`, `DESLOCAMENTO_DUPLICAR_CM = 5`, `LIMITE_BORDA_CM = { min: 0, max: 20 }`, `UPLOAD_PARALELO = 3`, `PASSO_CASCATA_CM = 5` |
 
 ### 4.2 Fórmulas
@@ -148,7 +148,7 @@ Passa a mostrar: Fotos N · Área total (bounding box, ou "—") · Sobreposiç�
 - **Tamanho externo** = impresso + 2 × borda (arredondado a 0,1 cm).
 - **Recorte *cover*** (RN-14): `s = max(W/iw, H/ih)` (cm por px); recorte em px da imagem: `cw = W/s`, `ch = H/s`, `x = (iw − cw)/2 · (1 + offsetX)`, `y = (ih − ch)/2 · (1 + offsetY)`. `offset` ∈ [−1, 1]; −1 mostra a borda esquerda/superior, +1 a direita/inferior; sem sobra no eixo, o offset daquele eixo é 0.
 - **Arrasto no modo de recorte**: arrastar a imagem `d` cm para a direita mostra mais da esquerda (`x` diminui `d/s` px); o offset é recalculado e limitado a [−1, 1].
-- **Posição inicial** (M2-04): centro da área útil (ou da parede inteira, se não houver) menos metade do tamanho externo; encaixada se o snap estiver ligado; cascata de 5 cm enquanto houver outra foto exatamente no lugar.
+- **Posição inicial** (M2-04): centro da área útil (ou da parede inteira, se não houver) menos metade do tamanho externo; encaixada se o snap estiver ligado; em cascata (um passo do grid com snap; 5 cm sem snap) enquanto houver outra foto exatamente no lugar.
 
 ## 5. API (M2)
 
@@ -222,3 +222,35 @@ TDD como no M1: os testes de domínio, API e store entram primeiro, vermelhos (`
 | `docs/ARCHITECTURE.md` v0.8 | ADR-03 (histórico próprio, sem `zundo`); §6 com as pastas e arquivos novos; ADR-05 (miniatura de 256 px) |
 | `docs/DESIGN.md` v0.4 | §7: painel da foto, modo de recorte e diálogo de envio como implementados (envio explícito, diverge do protótipo 07) |
 | `MEMORY.md` | Decisões M2-01 a M2-09, status |
+
+## 12. Registro da implementação (25/10)
+
+**Forma de trabalho.** Como no M1: a spec e os testes de domínio, API e store entraram primeiro, vermelhos (`test(m2): …`); a implementação seguiu em verde (`feat(m2): …`). Os testes de componente e os E2E foram escritos junto das telas, não antes.
+
+| Item | Resultado |
+|---|---|
+| Testes | Vitest: domínio (tamanho, geometria, alertas, recorte, composição, histórico; cobertura 97,4% das instruções e 93,5% dos ramos), API (imagens, salvamento com fotos), web (store, fila de upload, filtros, painéis da foto e do recorte, biblioteca, diálogo de envio, teclado, recorte). Playwright: `biblioteca.spec.ts` e `composicao.spec.ts` cobrem os aceites 1, 2, 2a, 3, 4, 7, 9, 10 e 12 do PRD, os alertas, o recorte e a rede. |
+| Dependências novas | `bson` 7.3.3 (ADR-07; a mesma versão que o driver do MongoDB já instala) para os ids das fotos no navegador. `zundo` **não** entrou (M2-02, ADR-03 revista). |
+| Desempenho | O pacote JS da web foi de ~917 kB para ~1.016 kB (o `bson` entra no pacote principal; sem divisão de código, como já pendia no M1). |
+
+**Decisões de implementação** (o que a spec não fixava):
+
+- Os instantâneos do desfazer são as próprias estruturas imutáveis do Immer (compartilham estrutura): não há cópia profunda, e comparar o conteúdo antes e depois (JSON) evita registrar passos sem mudança (mover para o mesmo lugar, concluir recorte sem alteração).
+- Desfazer e refazer só valem no modo Editor; trocam o conteúdo (fotos, área útil, borda padrão), soltam a seleção que sumiu e marcam "Alterações não salvas". Refazer não devolve a seleção.
+- "Confirmar área" continua marcando a variante como alterada mesmo com a área igual à gravada (M1 §3.6), embora a área útil agora entre no desfazer.
+- O gatilho do seletor de tamanho mostra só "20 × 30" (cabe ao lado da Orientação); os campos do painel da foto têm rótulo só para leitores de tela.
+- Rótulos do canvas (pills) usam a fonte mono medida por estimativa de largura (6,6 px por caractere a 11 px) e a camada é refeita quando a fonte termina de carregar; o Konva só aceita o mesmo `padding` nos quatro lados.
+- A camada de fotos fica entre a área útil e o overlay; no modo Área útil as fotos aparecem sem reagir ao mouse e sem alertas; no modo de recorte, o resto da parede é desenhado normalmente, esmaecido pelo véu do quadro.
+- O modo de recorte reaproveita o `LayoutModo` (painel de 340 px) com uma barra só de identificação, sem botões (DESIGN §7.0).
+- `Esc` que já fechou um menu ou seletor (Radix) não cancela mais o modo aberto (`defaultPrevented`).
+- O gancho de teste do palco ganhou `dePagina`, `retanguloDaFoto(id)` e `idsDasFotos()`.
+- Os E2E compartilham o banco `parede-fotos-test` e a biblioteca é global: os testes não assumem biblioteca vazia e escolhem a miniatura mais recente.
+
+**Limitações conhecidas / pendências do M2:**
+
+- Soltar pastas arrastadas depende de `webkitGetAsEntry` (Chrome/Edge); "Selecionar pasta" usa `webkitdirectory`.
+- O limite de 50 MB do upload continua fixo no browser (o servidor respeita `UPLOAD_MAX_MB`).
+- Sem coalescer setas repetidas: cada toque de seta é um passo do desfazer (limite de 100 por variante).
+- Pacote JS de ~1 MB sem divisão (pendente desde o M1).
+- Decisões M2-01 a M2-09 e premissas B-01 a B-15: revisar (principalmente M2-01 — upload só com escala; M2-03 — grid fora do desfazer; M2-07 — envio explícito).
+

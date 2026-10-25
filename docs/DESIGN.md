@@ -2,8 +2,8 @@
 
 | Campo | Valor |
 |---|---|
-| Versão | 0.3 (botão "Parede" sem fotos, controles inativos por estado) |
-| Data | 2026-10-24 |
+| Versão | 0.4 (M2: painel da foto, diálogo de envio, desfazer) |
+| Data | 2026-10-25 |
 | Status | Identidade e protótipos de alta fidelidade aprovados para implementação |
 | Protótipos | `docs/design/` (ver §10) |
 
@@ -202,6 +202,10 @@ Somente tema claro na v1. Foco visível: `ring` 2 px `accent` com offset 2 px em
 - Campos largura × altura (cm) visíveis durante o modo quando o tamanho for personalizado (RN-28); alterar recentraliza o recorte.
 - Saída: “Concluir” / Enter confirma (1 passo de desfazer); Esc cancela e restaura.
 
+- **Painel da foto (M2):** cabeçalho com miniatura, nome e "Retrato/Paisagem natural" (orientação da **imagem**); o gatilho do seletor de tamanho mostra só "20 × 30" (sem "cm", para caber ao lado da Orientação de 152 px; a lista mostra "20 × 30 cm"); os campos de borda, X e Y usam rótulo só para leitores de tela (o título da seção e o prefixo já dizem o que são) e aplicam em Enter ou ao sair do campo.
+- **Diálogo "Carregar fotos" (M2, diverge do protótipo 07 — DS-02):** os arquivos entram numa fila e o envio começa em **"Enviar N fotos"**, depois de escolhido o perfil (definitivo); o perfil fica travado durante o envio. Rodapé: "Cancelar" (antes de enviar), "Cancelar restantes" (durante), "Concluir".
+- **Desfazer/Refazer (M2):** ficam inativos pelo estado quando a pilha está vazia ("Nada para desfazer." / "Nada para refazer."); dicas com o atalho ("Desfazer (Ctrl+Z)").
+
 ### 7.1 Funções ainda não implementadas
 
 - Botão **primário** inativo: fundo `sand` e texto `ink-3` (o `ink-disabled` sobre `accent` não tinha contraste).
@@ -211,7 +215,7 @@ Somente tema claro na v1. Foco visível: `ring` 2 px `accent` com offset 2 px em
   - botão **“Parede”** do header do editor quando alguma variante tem fotos (trocar a parede mantendo as fotos — RF-04). Sem fotos, o botão fica ativo e troca a parede com confirmação (RF-07, M1-05);
   - controle **“Linha forte a cada”** do painel Grid (RF-52 — P1, marco M5);
   - campos **“Buscar projeto”** (Projetos) e **“Buscar por nome”** (Biblioteca) — campo inativo (`aria-disabled`, sem aceitar digitação), mesmo tooltip (RF-33b / RF-33c, Ideias futuras).
-- Controles indisponíveis **pelo estado** (não por versão futura) usam o mesmo padrão inativo, com tooltip que diz o que falta: Perspectiva e Calibrar sem parede (“Carregue a foto da parede primeiro.”), Área útil sem escala (“Defina a escala primeiro.”), Calibrar com a perspectiva aplicada (“Com a perspectiva aplicada, use Perspectiva para refazer a escala.” — RN-08).
+- Controles indisponíveis **pelo estado** (não por versão futura) usam o mesmo padrão inativo, com tooltip que diz o que falta: Carregar fotos sem escala ("Defina a escala primeiro."), Adicionar sem foto escolhida na biblioteca ("Selecione uma foto na biblioteca."), Duplicar e ordem sem foto selecionada ("Selecione uma foto na parede."), Perspectiva e Calibrar sem parede (“Carregue a foto da parede primeiro.”), Área útil sem escala (“Defina a escala primeiro.”), Calibrar com a perspectiva aplicada (“Com a perspectiva aplicada, use Perspectiva para refazer a escala.” — RN-08).
 
 ### 7.2 Área útil (RF-94, RN-33 a RN-35)
 

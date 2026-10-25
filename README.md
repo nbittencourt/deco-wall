@@ -2,7 +2,7 @@
 
 App web local para simular a decoração de uma parede com fotos: carrega uma foto da parede, calibra a escala em cm, envia fotos para uma biblioteca e posiciona as fotos com grid, snap e medidas. Tudo roda na sua máquina (navegador, servidor Node e MongoDB local).
 
-Requisitos em `docs/PRD.md`; arquitetura em `docs/ARCHITECTURE.md`; especificações dos marcos em `docs/specs/` (M0 e M1 implementados).
+Requisitos em `docs/PRD.md`; arquitetura em `docs/ARCHITECTURE.md`; especificações dos marcos em `docs/specs/` (M0, M1 e M2 implementados).
 
 ## Pré-requisitos
 
