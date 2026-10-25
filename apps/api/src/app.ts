@@ -3,6 +3,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import type { MongoClient } from 'mongodb';
 import type { ContextoApi } from './contexto';
 import { ErroHttp } from './erros';
+import { registrarImagens } from './rotas/imagens';
 import { registrarParede } from './rotas/parede';
 import { registrarProjetos } from './rotas/projetos';
 import { registrarSaude } from './rotas/saude';
@@ -44,6 +45,7 @@ export async function criarApp(deps: DependenciasApp): Promise<FastifyInstance> 
   await registrarSaude(app, { pastaFotos: deps.pastaFotos, mongo: deps.mongo });
   await registrarProjetos(app, ctx);
   await registrarParede(app, ctx);
+  await registrarImagens(app, ctx);
   await registrarVariantes(app, ctx);
   return app;
 }

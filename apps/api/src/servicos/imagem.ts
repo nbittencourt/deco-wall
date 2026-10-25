@@ -1,4 +1,10 @@
-import { MENSAGEM_FORMATO_NAO_SUPORTADO, PERFIS, THUMB_PAREDE_PX, type Perfil } from '@deco-wall/domain';
+import {
+  MENSAGEM_FORMATO_NAO_SUPORTADO,
+  PERFIS,
+  THUMB_FOTO_PX,
+  THUMB_PAREDE_PX,
+  type Perfil,
+} from '@deco-wall/domain';
 import sharp, { type Metadata } from 'sharp';
 import { ErroHttp } from '../erros';
 
@@ -49,6 +55,44 @@ export async function processarParede(buffer: Buffer, perfil: Perfil): Promise<P
       thumb,
       larguraPx: principal.info.width,
       alturaPx: principal.info.height,
+    };
+  } catch {
+    // Cabeçalho válido mas pixels corrompidos.
+    throw new ErroHttp(415, MENSAGEM_FORMATO_NAO_SUPORTADO);
+  }
+}
+
+export interface FotoProcessada {
+  principal: Buffer;
+  thumb: Buffer;
+  larguraPx: number;
+  alturaPx: number;
+  orientacaoNatural: 'retrato' | 'paisagem';
+}
+
+// Foto da biblioteca (RF-25, ADR-05): EXIF aplicado, lado maior do perfil sem ampliar, WebP; miniatura de 256 px.
+// RN-04: largura maior que a altura é paisagem; senão, retrato (a quadrada vale retrato).
+export async function processarFoto(buffer: Buffer, perfil: Perfil): Promise<FotoProcessada> {
+  await lerMetadados(buffer);
+  const { ladoFotoPx, qualidadeWebp } = PERFIS[perfil];
+  try {
+    const principal = await sharp(buffer)
+      .rotate()
+      .resize({ width: ladoFotoPx, height: ladoFotoPx, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: Math.round(qualidadeWebp * 100) })
+      .toBuffer({ resolveWithObject: true });
+    const thumb = await sharp(buffer)
+      .rotate()
+      .resize({ width: THUMB_FOTO_PX, height: THUMB_FOTO_PX, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 80 })
+      .toBuffer();
+    const { width, height } = principal.info;
+    return {
+      principal: principal.data,
+      thumb,
+      larguraPx: width,
+      alturaPx: height,
+      orientacaoNatural: width > height ? 'paisagem' : 'retrato',
     };
   } catch {
     // Cabeçalho válido mas pixels corrompidos.

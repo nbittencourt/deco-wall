@@ -8,10 +8,12 @@ import {
   aplicarPerspectivaApi,
   criarAppTeste,
   criarProjetoApi,
+  enviarImagemApi,
   enviarParedeApi,
   montarMultipart,
   salvarVarianteApi,
   type AppTeste,
+  type ImagemJson,
   type ProjetoJson,
   type VarianteJson,
 } from '../../../../tests/fixtures/api';
@@ -309,13 +311,15 @@ describe('PUT /api/projetos/:id/parede — troca (M1-05, RF-07)', () => {
   it('com fotos posicionadas em alguma variante: 409 e nada muda (RF-04 segue futuro)', async () => {
     const { projeto, base, revisaoProjeto } = await comEscalaEAreaUtil();
     const atual = (await buscarProjeto(projeto._id)).variantes[0]!;
+    // M2-06: a foto precisa de uma imagem da biblioteca.
+    const imagem = (await enviarImagemApi(t.app, { projetoId: projeto._id })).json() as ImagemJson;
     const salvo = await salvarVarianteApi(t.app, projeto._id, base._id, {
       sessaoId: 'sessao-a',
       revisaoBase: atual.revisao,
       grid: atual.grid,
       bordaPadrao: atual.bordaPadrao,
       areaUtil: atual.areaUtil,
-      fotos: [foto()],
+      fotos: [foto({ imagemId: imagem._id })],
     });
     expect(salvo.statusCode).toBe(200);
 

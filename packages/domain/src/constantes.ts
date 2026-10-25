@@ -95,3 +95,13 @@ export const ZOOM = { min: 0.1, max: 8, passo: 1.1 } as const;
 // A-02: nome do projeto.
 export const NOME_PROJETO_PADRAO = 'Projeto sem nome';
 export const LIMITE_NOME_PROJETO = 100;
+
+// ---- M2 (docs/specs/M2-biblioteca-e-composicao.md §4.1) ----
+
+export const THUMB_FOTO_PX = 256; // ADR-05: miniatura das imagens da biblioteca
+export const LIMITE_HISTORICO = 100; // RN-18, M2-02: passos de desfazer por variante
+export const TOLERANCIA_CM = 0.05; // RN-36: ruído de arredondamento nos alertas de posição
+export const DESLOCAMENTO_DUPLICAR_CM = 5; // B-06
+export const PASSO_CASCATA_CM = 5; // M2-04: foto nova sobre outra no mesmo lugar
+export const LIMITE_BORDA_CM = { min: 0, max: 20 } as const; // B-04
+export const UPLOAD_PARALELO = 3; // DV-10

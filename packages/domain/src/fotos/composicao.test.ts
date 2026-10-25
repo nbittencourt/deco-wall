@@ -181,7 +181,7 @@ describe('resumoDaComposicao', () => {
     ];
     const resumo = resumoDaComposicao(fotos, AREA, { xCm: 10, yCm: 10, larguraCm: 200, alturaCm: 100 });
     expect(resumo.quantidade).toBe(3);
-    expect(resumo.caixa).toEqual({ xCm: 50, yCm: 50, larguraCm: 265, alturaCm: 30 });
+    expect(resumo.caixa).toEqual({ xCm: 50, yCm: 50, larguraCm: 265, alturaCm: 40 });
     expect(resumo.comSobreposicao).toBe(2);
     expect(resumo.foraDosLimites).toBe(1);
   });

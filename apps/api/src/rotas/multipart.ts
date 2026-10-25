@@ -5,6 +5,8 @@ import { ErroHttp } from '../erros';
 export interface CorpoMultipart {
   campos: Record<string, string>;
   arquivos: Record<string, Buffer>;
+  // Nome do arquivo enviado, por campo (o que o navegador informou).
+  nomes: Record<string, string>;
 }
 
 export async function lerMultipart(request: FastifyRequest, uploadMaxMb: number): Promise<CorpoMultipart> {
@@ -13,12 +15,16 @@ export async function lerMultipart(request: FastifyRequest, uploadMaxMb: number)
   }
   const campos: Record<string, string> = {};
   const arquivos: Record<string, Buffer> = {};
+  const nomes: Record<string, string> = {};
   try {
     for await (const parte of request.parts()) {
       if (parte.type === 'file') {
         const conteudo = await parte.toBuffer();
         // Navegadores mandam uma parte vazia quando nenhum arquivo foi escolhido.
-        if (conteudo.length > 0) arquivos[parte.fieldname] = conteudo;
+        if (conteudo.length > 0) {
+          arquivos[parte.fieldname] = conteudo;
+          nomes[parte.fieldname] = parte.filename;
+        }
       } else {
         campos[parte.fieldname] = String(parte.value);
       }
@@ -29,5 +35,5 @@ export async function lerMultipart(request: FastifyRequest, uploadMaxMb: number)
     }
     throw erro;
   }
-  return { campos, arquivos };
+  return { campos, arquivos, nomes };
 }

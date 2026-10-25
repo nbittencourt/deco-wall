@@ -210,10 +210,12 @@ describe('POST /api/imagens — recusas', () => {
 
   it('recusa não deixa rastro: nada no banco, nada em imagens/ nem em tmp/', async () => {
     const projeto = await projetoNovo();
+    // A pasta é compartilhada entre os testes: compara com o que já havia.
+    const antes = await readdir(join(t.pasta, 'imagens'));
     await enviarImagemApi(t.app, { projetoId: projeto._id, arquivo: await lerImagem('texto-invalido.jpg') });
     await enviarImagemApi(t.app, { projetoId: projeto._id, arquivo: Buffer.alloc(2 * 1024 * 1024, 1) });
     expect(await t.db.collection('imagens').countDocuments()).toBe(0);
-    expect(await readdir(join(t.pasta, 'imagens'))).toEqual([]);
+    expect(await readdir(join(t.pasta, 'imagens'))).toEqual(antes);
     expect(await readdir(join(t.pasta, 'tmp'))).toEqual([]);
   });
 });

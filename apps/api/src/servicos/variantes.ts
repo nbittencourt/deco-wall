@@ -1,4 +1,5 @@
 import { AreaUtilSchema, BordaSchema, FotoNaParedeSchema, GridSchema } from '@deco-wall/domain';
+import { ObjectId } from 'mongodb';
 import { z } from 'zod';
 import { ErroHttp, naoEncontrado } from '../erros';
 import type { ContextoApi } from '../contexto';
@@ -19,6 +20,50 @@ export const CorpoSalvarVarianteSchema = z
 
 export type CorpoSalvarVariante = z.infer<typeof CorpoSalvarVarianteSchema>;
 
+// Ids das imagens usadas pelas fotos (sem repetir; placeholders não têm imagem).
+function imagensUsadas(fotos: CorpoSalvarVariante['fotos']): ObjectId[] {
+  const ids = new Set(fotos.flatMap((f) => (f.imagemId ? [f.imagemId] : [])));
+  return [...ids].map((id) => new ObjectId(id));
+}
+
+// M2-06: fotos só com escala definida (RN-08), com ids únicos e com imagens que existem e estão ativas.
+async function conferirFotos(
+  ctx: ContextoApi,
+  idProjeto: ObjectId,
+  fotos: CorpoSalvarVariante['fotos'],
+): Promise<void> {
+  if (fotos.length === 0) return;
+
+  const projeto = await ctx.db.collection('projetos').findOne({ _id: idProjeto });
+  const escala = (projeto?.parede as { escala?: { metodo?: string | null } } | null | undefined)?.escala;
+  if (!escala?.metodo) throw new ErroHttp(422, 'Defina a escala da parede antes de posicionar fotos.');
+
+  if (new Set(fotos.map((f) => f._id)).size !== fotos.length) {
+    throw new ErroHttp(422, 'Há fotos com o mesmo identificador.');
+  }
+
+  const ids = imagensUsadas(fotos);
+  if (ids.length > 0) {
+    const ativas = await ctx.db.collection('imagens').countDocuments({ _id: { $in: ids }, excluidaEm: null });
+    if (ativas !== ids.length) {
+      throw new ErroHttp(422, 'Há fotos que usam imagens inexistentes ou excluídas.');
+    }
+  }
+}
+
+// DM-05: "fotos do projeto" = carregadas no projeto ou usadas em qualquer variante dele.
+async function registrarProjetoNasImagens(
+  ctx: ContextoApi,
+  idProjeto: ObjectId,
+  fotos: CorpoSalvarVariante['fotos'],
+): Promise<void> {
+  const ids = imagensUsadas(fotos);
+  if (ids.length === 0) return;
+  await ctx.db
+    .collection('imagens')
+    .updateMany({ _id: { $in: ids } }, { $addToSet: { projetos: idProjeto } });
+}
+
 export async function salvarVariante(
   ctx: ContextoApi,
   projetoId: string,
@@ -32,6 +77,8 @@ export async function salvarVariante(
   const variantes = ctx.db.collection('variantes');
   const existente = await variantes.findOne({ _id: idVariante, projetoId: idProjeto });
   if (!existente) throw naoEncontrado('Variante não encontrada.');
+
+  await conferirFotos(ctx, idProjeto, corpo.fotos);
 
   const salvaEm = ctx.agora();
   // SV-04: a escrita só vale se a revisão oficial ainda for a que esta sessão carregou.
@@ -60,6 +107,8 @@ export async function salvarVariante(
       salvaPorSessao: atual.salvaPorSessao,
     });
   }
+
+  await registrarProjetoNasImagens(ctx, idProjeto, corpo.fotos);
 
   // SV-02: o hard save apaga o rascunho da própria sessão.
   await ctx.db.collection('rascunhos').deleteOne({ varianteId: idVariante, sessaoId: corpo.sessaoId });
