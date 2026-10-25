@@ -170,7 +170,7 @@ Somente tema claro na v1. Foco visível: `ring` 2 px `accent` com offset 2 px em
 | Seletor de cor da borda | `Popover` | Botão com amostra 16 px + nome (ou hex, se livre). Popover com cores prontas: Branco `#FFFFFF` · Off-white `#F5F1E8` · Preto `#1A1A1A` · Cinza `#8C8C8C` · Madeira clara `#C8A27A` · Madeira escura `#5C3A21`; item “Outra cor…” abre `<input type="color">` nativo (DV-08). |
 | Badge “sem foto” | `Badge` | Pill `danger-tint`, texto `danger-ink` 12 px. |
 | Chip de escala | — | `sand`, raio 6, mono 12 px “4,0 px/cm”. |
-| Status de salvamento | — | Ponto 7 px + texto 13 px `ink-2`: verde “Salvo”, âmbar “Alterações não salvas”, verde “Rascunho salvo às hh:mm”, `danger` “Conflito” (SV-08). |
+| Status de salvamento | — | Ponto 7 px + texto 13 px `ink-2`: verde “Salvo às hh:mm” (só “Salvo” ao abrir), âmbar “Alterações não salvas” e “Salvando…”, verde “Rascunho salvo às hh:mm”, `danger` “Conflito” (SV-08). |
 | Tooltip | `Tooltip` | Fundo `ink`, texto branco 12 px, raio 6, seta 5 px. Obrigatório em botões só com ícone e em controles inativos (§7.1). Botão só de ícone e inativo mostra o nome do botão acima de “Disponível em uma próxima versão”. |
 | Grid / Snap (header) | `Toggle` | Grid: ícone + “5 cm” mono; Snap: só ícone, com `aria-label` e tooltip. Ligado = fundo `sand`. |
 | Card de template | `RadioGroup` item | Branco, raio 12, borda `line-soft`, padding 12; esboço proporcional às medidas em caixa `paper` de 116 px (retângulos `sketch`); nome Newsreader 17; total mono 12 + “N fotos”. Selecionado: borda + anel `accent` (2 px). Maior que a área útil: ícone de aviso + “Maior que a área útil” em `warning-ink`, sem bloquear. |

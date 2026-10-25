@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { access, constants, mkdir, rename, stat, writeFile } from 'node:fs/promises';
+import { access, constants, mkdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
 // Estrutura de PASTA_FOTOS (docs/specs/M0-setup.md §4.8).
@@ -34,4 +34,21 @@ export async function gravarAtomico(raiz: string, destino: string, conteudo: Buf
   await mkdir(dirname(destino), { recursive: true });
   await writeFile(tmp, conteudo);
   await rename(tmp, destino);
+}
+
+// Gravação em duas fases, para só trocar o arquivo definitivo depois que o banco aceitar a alteração (409 não deixa rastro).
+export async function gravarTemporario(raiz: string, conteudo: Buffer): Promise<string> {
+  const tmp = join(raiz, 'tmp', randomUUID());
+  await mkdir(join(raiz, 'tmp'), { recursive: true });
+  await writeFile(tmp, conteudo);
+  return tmp;
+}
+
+export async function promoverTemporario(tmp: string, destino: string): Promise<void> {
+  await mkdir(dirname(destino), { recursive: true });
+  await rename(tmp, destino);
+}
+
+export async function apagarArquivo(caminho: string): Promise<void> {
+  await rm(caminho, { force: true });
 }

@@ -8,3 +8,4 @@ tests/fixtures/imagens
 tests/fixtures/paredes
 test-results
 playwright-report
+.claude

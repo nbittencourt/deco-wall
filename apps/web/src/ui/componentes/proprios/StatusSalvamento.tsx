@@ -3,10 +3,15 @@ import { cn } from '../../../lib/utils';
 
 // DESIGN §6 / SV-08: quatro estados do salvamento. Cor nunca é o único sinal: o texto diz o estado.
 export type EstadoSalvamento =
-  { tipo: 'salvo' } | { tipo: 'alteracoes' } | { tipo: 'rascunho'; em: Date } | { tipo: 'conflito' };
+  | { tipo: 'salvo'; em?: Date }
+  | { tipo: 'salvando' }
+  | { tipo: 'alteracoes' }
+  | { tipo: 'rascunho'; em: Date }
+  | { tipo: 'conflito' };
 
 const PONTO: Record<EstadoSalvamento['tipo'], string> = {
   salvo: 'bg-success',
+  salvando: 'bg-warning-dot',
   alteracoes: 'bg-warning-dot',
   rascunho: 'bg-success',
   conflito: 'bg-danger',
@@ -15,7 +20,9 @@ const PONTO: Record<EstadoSalvamento['tipo'], string> = {
 export function textoSalvamento(estado: EstadoSalvamento): string {
   switch (estado.tipo) {
     case 'salvo':
-      return 'Salvo';
+      return estado.em ? `Salvo ${formatarHora(estado.em)}` : 'Salvo';
+    case 'salvando':
+      return 'Salvando…';
     case 'alteracoes':
       return 'Alterações não salvas';
     case 'rascunho':

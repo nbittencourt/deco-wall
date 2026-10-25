@@ -115,6 +115,13 @@ Pedido original do Nicholas:
 | 2026-10-24 | `.env` criado a partir do `.env.example` e pasta `C:\Users\nbitt\Pictures\ParedeFotos` criada para a validação. `.claude/launch.json` com `dev` e `start`; no painel do app, só o `start` (build servido pela API, porta 3001) subiu: o Vite do `dev` não abriu a porta lá dentro (sozinho, sobe normal). | Registrado |
 | 2026-10-24 | **M0 aceito pelo Nicholas** (validação visual T6d/T10). Divergências do header resolvidas: em 1280 só Área útil, Perspectiva, Calibrar e Parede vão para o menu "Parede ▾" (Comparar e Templates ficam); gap de 4 px e padding de 9 px nos botões fantasma (DESIGN §7); E2E de hover/foco nas dicas dos botões só de ícone. | Feito |
 | 2026-10-24 | Status de salvamento sai do header e fica só na barra de status, com o texto completo: "Alterações não salvas" e "Rascunho salvo às hh:mm" estouravam o header em 1280 e 1440. Diverge do protótipo 03a; DESIGN §7 e spec M1 §3.2 atualizadas. A marca "Parede" ao lado do voltar foi mantida. | Decidido |
+| 2026-10-24 | Repositório com remoto GitHub (`origin` = `github.com/nbittencourt/deco-wall`), configurado pelo Nicholas; substitui "git só local, sem GitHub" (17/10). Primeiro commit "M0 implementado" feito por ele; commits seguintes na `main`, sem push até pedido. | Decidido |
+| 2026-10-24 | **M1 implementado** em dois commits (TDD pedido pelo Nicholas): testes vermelhos (`test(m1)`), depois implementação (`feat(m1)`). Dispensados os pontos de validação da T4/T8; validação do Nicholas na T12. Registro em `docs/specs/M1-parede-e-escala.md` §12. | Feito |
+| 2026-10-24 | Dependências do M1 fixadas: `zustand` 5.0.16, `immer` 11.2.9 (spec §6) e `@fastify/multipart` 10.1.6 (ADR-13; **aprovado pelo Nicholas** quando perguntado). `bson` não foi necessário. | Decidido |
+| 2026-10-24 | **ADR-16:** medido no Chromium, o gargalo da retificação é a codificação WebP, não o warp (Leve 0,7 s; Alto/28 MP 3,0–3,2 s; imagem ruidosa até 7 s só no encode). Plano B de WebGL descartado. Orçamento de 3 s vale para Leve e Médio; o E2E do Alto guarda com teto de 4,5 s. **Decisão do Nicholas pendente** (opções na ADR-16: limitar a 4096 px, WebP 0,8 na retificada, vários Workers, JPEG sem transparência). | Pendente |
+| 2026-10-24 | Parede inteira derivada da parede gravada por uma só função do domínio (`paredeInteira`), no servidor e na web. Servidor ordena os cantos, recalcula `H` e confere o bitmap (±1 px); arquivos novos só trocam o definitivo depois do `updateOne` com revisão (409 sem rastro). Web adota as revisões de `variantesAlteradas`. | Decidido |
+| 2026-10-24 | **M1 aceito pelo Nicholas** (validação visual, T12). A decisão sobre o perfil Alto (ADR-16) continua pendente. | Feito |
+| 2026-10-24 | Pan com botão do meio e Espaço + arrastar funciona também sobre a área útil (camadas sem escuta com Espaço; `Konva.dragButtons = [0]`). Status "Salvo às hh:mm" / "Salvando…"; texto da Biblioteca sem escala diferente do `Alert` do canvas (evita a frase duplicada); selo "1 sem foto" fora do header até o M4; palco publica `window.__deco.paraTela` para os E2E. ESLint e Prettier ignoram `.claude/` (worktrees de outras sessões). Spike do Konva e `/editor` removidos (A-01). | Decidido |
 | 2026-10-24 | Regra: especificação de marco lê só a documentação do projeto, sem abrir código-fonte (`CLAUDE.md`, Regras de trabalho). | Decidido |
 | 2026-10-24 | Spec M2 v0.1 (rascunho) em `docs/specs/M2-biblioteca-e-composicao.md`, escrita em paralelo ao M1 a pedido do Nicholas; implementação só após o aceite do M1 (MS-01). | Feito |
 | 2026-10-24 | M2-01: com snap, seta = 1 passo e Shift + seta = 5 passos; sem snap, 1 cm e 5 cm. M2-02: Ctrl+Z desfaz; Ctrl+Y e Ctrl+Shift+Z refazem. M2-03: desfazer cobre fotos, área útil e borda padrão; grid fora; 100 passos por variante. | Decidido |
@@ -122,20 +129,20 @@ Pedido original do Nicholas:
 | 2026-10-24 | M2-05: `imagens.projetos` recebe o projeto no upload e no salvamento da variante; filtros Projeto e Variante mostram só o estado salvo (foto não salva não entra). | Decidido |
 | 2026-10-24 | M2-06: M2 desenha e edita placeholders (sem recorte); associação no M4. M2-07: "Excluídas" visível e inativo até o M4. M2-08: Trazer para frente / Enviar para trás andam uma posição por clique. | Decidido |
 | 2026-10-24 | M2-09: mudar tamanho ou orientação recentraliza o recorte. M2-10: mudar a borda mantém o canto sup.-esq. externo. M2-11: foto mantém ≥ 1 cm dentro da parede inteira nos movimentos do usuário (nunca ao refazer a escala). M2-12: com snap, X/Y digitados também encaixam. | Decidido |
-| 2026-10-24 | Repositório com remoto GitHub (`origin` = `github.com/nbittencourt/deco-wall`), configurado pelo Nicholas; substitui "git só local, sem GitHub" (17/10). Primeiro commit "M0 implementado" feito por ele; commits seguintes na `main`, sem push até pedido. | Decidido |
+| 2026-10-24 | Premissas A-01 a A-29 da spec M2 revisadas (spec v0.3, pronta). Alteradas: A-03 duplo clique na miniatura não adiciona (só botão "Adicionar" ou arrastar); A-12 pill "Sobreposição" na foto da camada superior; A-13 bounding box com toggle "Área total" na toolbar (padrão ligado, não persistido); A-17 soltar arquivos sobre a Biblioteca abre o diálogo com eles aguardando "Enviar"; A-19 arquivos de sistema contam como ignorados (RN-20). Confirmadas: foto nova no centro da área útil, setas agrupadas < 1 s, borda até 20 cm, linha "Fora da área" no painel, `GET /api/config` com `uploadMaxMb` (resolve o limite fixo do M1), TDD em dois commits como no M1. | Decidido |
 
 ## Questões em aberto
 
+- **ADR-16 (desempenho do perfil Alto, 28 MP, ≈ 3 s):** o Nicholas decide depois entre as opções da ADR (limitar a retificada a 4096 px, WebP 0,8 só na retificada, vários Workers, JPEG sem transparência). Até lá vale a decisão provisória: pipeline atual, teto de 4,5 s no E2E do Alto. Não bloqueia o M2.
 - Status HTTP de `/api/saude` quando algum componente está em erro: o teste verifica só o corpo. Definir na T5.
 
 ## Status
 
-- Fase atual: **M0 aceito (24/10).** Próximo: M1 (spec v0.2 pronta). Verde: Vitest 207 testes, Playwright 10/10, typecheck, lint e `format:check`.
-- Spikes (§5.6): **sharp** ✓ (`tests/spikes/sharp.test.ts`: JPEG com EXIF rotacionado vira WebP Leve com a orientação aplicada). **react-konva** ✓ (`tests/e2e/spike-konva.spec.ts`: Stage com retângulo arrastável; página `/dev/spike-konva`, removível após o M1).
-- Cobertura do domínio (`@vitest/coverage-v8` 5.0.5): instruções 91,7%, linhas 94,0%, funções 100%, ramos 84,3%.
-- `npm run seed:test` funciona (tsx 4.23.15, aprovada pelo Nicholas em 18/10). T1 fechada: ESLint, Prettier, `tsconfig`, typecheck, README e `git init` local.
-- M1: spec v0.2 pronta (`docs/specs/M1-parede-e-escala.md`); começa com a liberação do Nicholas.
-- Pendências: commits por tarefa (spec §8, não feitos porque o pedido não veio); chunk JS de 840 kB no build (sem code-splitting no M0).
+- Fase atual: **M1 aceito pelo Nicholas (24/10).** Verde: Vitest 589 testes (domínio, API, web), Playwright 35/35, typecheck, lint e `format:check`. Cobertura do domínio: instruções 97,7%, ramos 92,4%, linhas 99,1%.
+- Desempenho da retificação (E2E `desempenho.spec.ts`): **Leve 0,7 s**; **Alto (6144 × 4608) 3,0–3,2 s** (warp 0,9 s + WebP 2,0 s). Meta de 3 s não folgada no Alto: ver ADR-16 e a decisão pendente.
+- Entregue no M1: projetos (criar, listar, abrir, renomear, excluir), upload da parede (perfis, EXIF, troca sem fotos), modo Perspectiva (alças prontas, lupa, prévia sob demanda, retificação no Worker), calibração linear, área útil, grid, zoom/pan, salvamento manual (Ctrl+S, `beforeunload`, 409 entre abas), reparo na inicialização (A-18).
+- Próximo: M2 (spec v0.3 pronta, `docs/specs/M2-biblioteca-e-composicao.md`); começa com a liberação do Nicholas.
+- Pendências: decisão sobre o Alto (ADR-16); limite de upload no browser fixo em 50 MB (resolvido no M2 pela A-28, `GET /api/config`); chunk JS de ~917 kB (Konva no pacote principal, sem code-splitting); status HTTP de `/api/saude` com componente em erro (questão em aberto).
 
 ## Histórico
 
@@ -155,4 +162,5 @@ Pedido original do Nicholas:
 - 2026-10-17 — Marcos M0–M5 aprovados; spec M0 v0.6 revisada e pronta.
 - 2026-10-17 — M0 liberado: bootstrap do monorepo e testes escritos (domínio, API, Mongo, seed, fixtures); 13 arquivos de teste rodando em vermelho, por módulos ainda não implementados.
 - 2026-10-24 — Spec M1 v0.1 (rascunho) com 8 decisões (M1-01 a M1-08) e 20 premissas; PRD v0.11, ARCHITECTURE v0.6, DESIGN v0.3.
-- 2026-10-24 — Spec M2 v0.1 (rascunho) em `docs/specs/M2-biblioteca-e-composicao.md`, escrita em paralelo ao M1: 12 decisões (M2-01 a M2-12, tomadas no mesmo dia; spec v0.2) e 27 premissas a revisar; alterações no PRD, DESIGN, ARCHITECTURE e spec M0 listadas na §11 e adiadas. Regra nova no `CLAUDE.md`: spec de marco usa só a documentação, sem ler código.
+- 2026-10-24 — M1 implementado: domínio (geometria e escala), API (projetos, parede, escala, salvamento), web (store, palco Konva, modos, painéis) e E2E; ARCHITECTURE v0.7 (ADR-16, estrutura), spec M1 v0.3 (§12).
+- 2026-10-24 — Spec M2 v0.1 (rascunho) em `docs/specs/M2-biblioteca-e-composicao.md`, escrita em paralelo ao M1: 12 decisões (M2-01 a M2-12, tomadas no mesmo dia; spec v0.2) e 29 premissas revisadas (spec v0.3, pronta); PRD v0.12, DESIGN v0.4, ARCHITECTURE v0.8 e spec M0 atualizados (§11). Regra nova no `CLAUDE.md`: spec de marco usa só a documentação, sem ler código.

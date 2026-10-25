@@ -1,5 +1,5 @@
 import fastifyStatic from '@fastify/static';
-import Fastify, { type FastifyInstance } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -7,7 +7,8 @@ import { prepararPastaFotos, verificarPastaFotos } from './armazenamento/pasta';
 import { ErroConfiguracao, lerConfig, type Config } from './config';
 import { executarMigracoes } from './migracoes/executar';
 import { conectarMongo } from './repositorios/mongo';
-import { registrarSaude } from './rotas/saude';
+import { criarApp } from './app';
+import { repararInconsistencias } from './servicos/reparo';
 import type { MongoClient } from 'mongodb';
 
 // Ponto de entrada da API (docs/specs/M0-setup.md §5.3, T7). Em produção local a API serve o build da web.
@@ -54,8 +55,17 @@ async function iniciar(config: Config): Promise<void> {
   }
   await executarMigracoes(mongo.db());
 
-  const app = Fastify({ logger: true });
-  await registrarSaude(app, { pastaFotos: config.pastaFotos, mongo });
+  // A-18: sem transações, restos de falhas anteriores são corrigidos na inicialização.
+  const reparo = await repararInconsistencias(mongo.db(), new Date());
+  const app = await criarApp({
+    pastaFotos: config.pastaFotos,
+    mongo,
+    uploadMaxMb: config.uploadMaxMb,
+    logger: true,
+  });
+  if (reparo.variantesCriadas + reparo.variantesApagadas + reparo.rascunhosApagados > 0) {
+    app.log.warn(reparo, 'Inconsistências corrigidas na inicialização');
+  }
   const servindoWeb = await registrarWeb(app);
   if (!servindoWeb) {
     app.log.warn('apps/web/dist não encontrado: rode "npm run build" para servir a interface.');

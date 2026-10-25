@@ -6,7 +6,13 @@ import tseslint from 'typescript-eslint';
 // ESLint flat + typescript-eslint + react-hooks (ADR-10). Prettier cuida da formatação.
 export default tseslint.config(
   {
-    ignores: ['**/dist/**', '**/node_modules/**', 'tests/fixtures/imagens/**', 'tests/fixtures/paredes/**'],
+    ignores: [
+      '**/dist/**',
+      '**/node_modules/**',
+      '.claude/**', // worktrees de outras sessões do Claude
+      'tests/fixtures/imagens/**',
+      'tests/fixtures/paredes/**',
+    ],
   },
   js.configs.recommended,
   tseslint.configs.recommended,

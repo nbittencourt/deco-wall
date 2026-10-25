@@ -79,7 +79,12 @@ describe('StatusApi (consome /api/saude)', () => {
   });
 });
 
-describe('textoSalvamento (SV-08)', () => {
+describe('textoSalvamento (SV-08, M1-01)', () => {
+  it('"salvo" traz a hora do hard save quando conhecida; "salvando" aparece durante a gravação', () => {
+    expect(textoSalvamento({ tipo: 'salvo', em: new Date('2026-10-12T17:35:00Z') })).toBe('Salvo às 14:35');
+    expect(textoSalvamento({ tipo: 'salvando' })).toBe('Salvando…');
+  });
+
   it('descreve os quatro estados', () => {
     expect(textoSalvamento({ tipo: 'salvo' })).toBe('Salvo');
     expect(textoSalvamento({ tipo: 'alteracoes' })).toBe('Alterações não salvas');
