@@ -15,7 +15,7 @@ async function listarImagens(request: import('@playwright/test').APIRequestConte
   return (await (await request.get('/api/imagens')).json()) as (ImagemE2E & { larguraPx: number })[];
 }
 
-test.describe('upload em lote (RF-20, RF-21, DV-10, M2-07)', () => {
+test.describe('upload em lote (RF-20, RF-21, DV-10, A-17, A-18)', () => {
   test('perfil → fila → enviar: concluídas, falha listada e ignorados contados; persiste ao recarregar', async ({
     page,
     request,
@@ -38,16 +38,17 @@ test.describe('upload em lote (RF-20, RF-21, DV-10, M2-07)', () => {
       caminhoImagem('documento.heic'), // formato não suportado: ignorado antes de enviar (RN-20, RF-15)
     ]);
 
+    // Escolher os arquivos já inicia o envio (A-17); o inválido por formato vai para a lista com o motivo.
     await expect(dialogo.getByText('1 arquivo ignorado por formato')).toBeVisible();
-    await expect(dialogo.getByText('Aguardando')).toHaveCount(3);
-    // Nada foi enviado ainda (M2-07).
-    expect((await listarImagens(request)).length).toBe(antes);
-
-    await dialogo.getByRole('button', { name: 'Enviar 3 fotos' }).click();
+    await expect(dialogo.getByText('Formato não suportado', { exact: true })).toBeVisible();
+    await expect(dialogo.getByRole('button', { name: /^Enviar \d/ })).toHaveCount(0);
     await expect(dialogo.getByText('2 de 3 enviadas')).toBeVisible({ timeout: 20_000 });
-    await expect(dialogo.getByText('Falhou: Formato não suportado. Use JPG, PNG ou WEBP.')).toBeVisible();
-    await expect(dialogo.getByRole('button', { name: 'Tentar de novo' })).toBeVisible();
-    await expect(dialogo.getByText('Concluída')).toHaveCount(2);
+    // O servidor recusa o que não é imagem (415): sem "Tentar de novo".
+    await expect(dialogo.getByText('Não foi possível ler a imagem.')).toBeVisible();
+    await expect(dialogo.getByRole('button', { name: 'Tentar de novo' })).toHaveCount(0);
+    await expect(dialogo.getByText(/^Concluída/)).toHaveCount(2);
+    // A qualidade continua travada com o lote terminado, enquanto o diálogo está aberto.
+    await expect(dialogo.getByRole('radio', { name: /Leve/ })).toBeDisabled();
 
     await dialogo.getByRole('button', { name: 'Concluir' }).click();
     await expect(dialogo).toBeHidden();
@@ -64,17 +65,24 @@ test.describe('upload em lote (RF-20, RF-21, DV-10, M2-07)', () => {
     await expect(page.getByRole('button', { name: 'retrato.jpg, Retrato' }).first()).toBeVisible();
   });
 
-  test('cancelar a fila antes de enviar não grava nada; a mesma foto duas vezes são duas imagens (RN-25)', async ({
+  test('arquivos soltos aguardam o "Enviar"; cancelar não grava nada; a mesma foto duas vezes são duas imagens (RN-25)', async ({
     page,
     request,
   }) => {
     const p = await criarProjetoComEscalaLinear(request, nomeUnico('Upload 2'));
     const antes = (await listarImagens(request)).length;
     await page.goto(`/projetos/${p.id}`);
-
-    await page.getByRole('button', { name: 'Carregar fotos' }).click();
+    const biblioteca = page.getByRole('complementary', { name: 'Biblioteca' });
     const dialogo = page.getByRole('dialog', { name: 'Carregar fotos' });
-    await dialogo.getByTestId('entrada-arquivos').setInputFiles([caminhoImagem('quadrada.jpg')]);
+
+    const dataTransfer = await page.evaluateHandle(() => {
+      const dt = new DataTransfer();
+      dt.items.add(new File([new Uint8Array(10)], 'solta.jpg', { type: 'image/jpeg' }));
+      return dt;
+    });
+    await biblioteca.dispatchEvent('dragover', { dataTransfer });
+    await biblioteca.dispatchEvent('drop', { dataTransfer });
+    await expect(dialogo.getByText('Aguardando')).toBeVisible();
     await dialogo.getByRole('button', { name: 'Cancelar' }).click();
     await expect(dialogo).toBeHidden();
     expect((await listarImagens(request)).length).toBe(antes);
@@ -82,14 +90,13 @@ test.describe('upload em lote (RF-20, RF-21, DV-10, M2-07)', () => {
     for (let i = 0; i < 2; i++) {
       await page.getByRole('button', { name: 'Carregar fotos' }).click();
       await dialogo.getByTestId('entrada-arquivos').setInputFiles([caminhoImagem('quadrada.jpg')]);
-      await dialogo.getByRole('button', { name: 'Enviar 1 foto' }).click();
       await expect(dialogo.getByText('1 de 1 enviadas')).toBeVisible({ timeout: 15_000 });
       await dialogo.getByRole('button', { name: 'Concluir' }).click();
     }
     expect((await listarImagens(request)).length).toBe(antes + 2);
   });
 
-  test('"Selecionar pasta" enfileira os arquivos da pasta, ignorando os que não são imagem (RF-20, RN-20)', async ({
+  test('"Selecionar pasta" envia os arquivos da pasta, ignorando os que não são imagem (RF-20, RN-20)', async ({
     page,
     request,
   }) => {
@@ -97,14 +104,17 @@ test.describe('upload em lote (RF-20, RF-21, DV-10, M2-07)', () => {
     await page.goto(`/projetos/${p.id}`);
     await page.getByRole('button', { name: 'Carregar fotos' }).click();
     const dialogo = page.getByRole('dialog', { name: 'Carregar fotos' });
-    // A pasta das fixtures tem 7 arquivos com extensão de imagem e 1 HEIC (RN-20).
+    // A pasta das fixtures tem 7 arquivos com extensão de imagem (um deles é texto renomeado) e 1 HEIC (RN-20).
     await dialogo.getByTestId('entrada-pasta').setInputFiles(dirname(caminhoImagem('retrato.jpg')));
-    await expect(dialogo.getByText('Aguardando')).toHaveCount(7);
     await expect(dialogo.getByText('1 arquivo ignorado por formato')).toBeVisible();
-    await expect(dialogo.getByRole('button', { name: 'Enviar 7 fotos' })).toBeVisible();
+    await expect(dialogo.getByText('6 de 7 enviadas')).toBeVisible({ timeout: 40_000 });
+    await expect(dialogo.getByRole('button', { name: 'Concluir' })).toBeVisible();
   });
 
-  test('soltar arquivos sobre a coluna abre o diálogo com a fila pronta', async ({ page, request }) => {
+  test('soltar arquivos sobre a coluna abre o diálogo com os arquivos aguardando o "Enviar" (A-17)', async ({
+    page,
+    request,
+  }) => {
     const p = await criarProjetoComEscalaLinear(request, nomeUnico('Soltar'));
     await page.goto(`/projetos/${p.id}`);
     const biblioteca = page.getByRole('complementary', { name: 'Biblioteca' });
@@ -121,6 +131,7 @@ test.describe('upload em lote (RF-20, RF-21, DV-10, M2-07)', () => {
     const dialogo = page.getByRole('dialog', { name: 'Carregar fotos' });
     await expect(dialogo).toBeVisible();
     await expect(dialogo.getByText('solta.jpg')).toBeVisible();
+    await expect(dialogo.getByText('Aguardando')).toBeVisible();
     await expect(dialogo.getByRole('button', { name: 'Enviar 1 foto' })).toBeVisible();
   });
 });
@@ -141,12 +152,18 @@ test.describe('biblioteca global e filtros (RF-27, RF-28, PRD aceite 10)', () =>
     // Filtro "Projeto": a imagem do projeto A não é do B (carregada em outro e não usada aqui).
     const naBiblioteca = page.getByRole('complementary', { name: 'Biblioteca' });
     await naBiblioteca.getByRole('radio', { name: 'Projeto' }).click();
-    await expect(naBiblioteca.getByText('Nenhuma foto neste filtro.')).toBeVisible();
+    await expect(naBiblioteca.getByText('Nenhuma foto neste projeto ainda.')).toBeVisible();
 
-    // Usada numa foto da variante aberta (mesmo sem salvar), passa a ser "do projeto" e "da variante".
+    // Os filtros mostram só o estado salvo (M2-05): adicionada e não salva, a foto ainda não é do projeto.
     await naBiblioteca.getByRole('radio', { name: 'Todas' }).click();
-    await naBiblioteca.getByRole('button', { name: 'paisagem.jpg, Paisagem' }).first().dblclick();
+    await naBiblioteca.getByRole('button', { name: 'paisagem.jpg, Paisagem' }).first().click();
+    await page.getByRole('button', { name: 'Adicionar', exact: true }).click();
     await naBiblioteca.getByRole('radio', { name: 'Variante' }).click();
+    await expect(naBiblioteca.getByText('Nenhuma foto salva nesta variante ainda.')).toBeVisible();
+
+    // Depois do Salvar, a biblioteca recarrega: a imagem passa a ser "do projeto" e "da variante".
+    await page.keyboard.press('Control+s');
+    await expect(page.getByText(/Salvo às \d{2}:\d{2}/)).toBeVisible();
     await expect(naBiblioteca.getByRole('button', { name: 'paisagem.jpg, Paisagem' })).toHaveCount(1);
     await naBiblioteca.getByRole('radio', { name: 'Projeto' }).click();
     await expect(naBiblioteca.getByRole('button', { name: 'paisagem.jpg, Paisagem' })).toHaveCount(1);
@@ -160,16 +177,19 @@ test.describe('biblioteca global e filtros (RF-27, RF-28, PRD aceite 10)', () =>
     await expect(page.getByRole('menuitem', { name: 'Excluídas' })).toHaveAttribute('aria-disabled', 'true');
   });
 
-  test('sem escala: "Carregar fotos" inativo e a biblioteca avisa (M2-01)', async ({ page, request }) => {
+  test('sem escala: "Carregar fotos" ativo, miniaturas sem arrastar e o texto da biblioteca (A-20, §3.1)', async ({
+    page,
+    request,
+  }) => {
     const res = await request.post('/api/projetos', { data: { nome: nomeUnico('Sem escala') } });
     const { projeto } = (await res.json()) as { projeto: { _id: string } };
     await page.goto(`/projetos/${projeto._id}`);
-    await expect(page.getByRole('button', { name: 'Carregar fotos' })).toHaveAttribute(
+    await expect(page.getByRole('button', { name: 'Carregar fotos' })).not.toHaveAttribute(
       'aria-disabled',
       'true',
     );
-    await expect(
-      page.getByText('As fotos ficam disponíveis depois que a escala da parede for definida.'),
-    ).toBeVisible();
+    await expect(page.getByText('Defina a escala da parede para colocar fotos nela.')).toBeVisible();
+    await page.getByRole('button', { name: 'Carregar fotos' }).click();
+    await expect(page.getByRole('dialog', { name: 'Carregar fotos' })).toBeVisible();
   });
 });

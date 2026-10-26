@@ -28,6 +28,13 @@ describe('criarClienteHttp — JSON', () => {
     expect(fetcher.mock.calls[0]![0]).toBe('/api/projetos');
   });
 
+  it('obterConfig faz GET /api/config e devolve o limite de upload (A-28)', async () => {
+    const fetcher = fetcherCom(resposta({ uploadMaxMb: 12 }));
+    const api = criarClienteHttp(fetcher);
+    await expect(api.obterConfig()).resolves.toEqual({ uploadMaxMb: 12 });
+    expect(fetcher.mock.calls[0]![0]).toBe('/api/config');
+  });
+
   it('criarProjeto faz POST com o nome (ou corpo vazio)', async () => {
     const fetcher = fetcherCom(resposta({ projeto: {}, variantes: [] }, 201), resposta({}, 201));
     const api = criarClienteHttp(fetcher);

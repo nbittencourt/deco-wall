@@ -26,7 +26,7 @@ function montar(sobrescrita: Partial<PropsPainelComposicao> = {}) {
     areaUtil: AREA,
     paredeInteira: PAREDE,
     grid: GRID,
-    resumo: { quantidade: 0, caixa: null, comSobreposicao: 0, foraDosLimites: 0 },
+    resumo: { fotos: 0, areaTotal: null, sobrepostas: 0, semFoto: 0, foraDaArea: 0 },
     bordaPadrao: { larguraCm: 0, cor: '#FFFFFF' },
     onAlterarBordaPadrao: vi.fn(),
     onRecalibrar: vi.fn(),
@@ -60,22 +60,41 @@ describe('seções', () => {
     expect(screen.getByText('Área total')).toBeTruthy();
     expect(screen.getByText('—')).toBeTruthy();
     expect(screen.queryByText('Sobreposições')).toBeNull();
-    expect(screen.queryByText('Fora dos limites')).toBeNull();
+    expect(screen.queryByText('Sem foto')).toBeNull();
+    expect(screen.queryByText('Fora da área')).toBeNull();
   });
 
-  it('resumo com fotos: quantidade, bounding box e alertas só quando maiores que zero (RF-62, B-14)', () => {
+  it('área total aparece com 1 foto ou mais (A-13, RF-62)', () => {
     montar({
       resumo: {
-        quantidade: 3,
-        caixa: { xCm: 10, yCm: 10, larguraCm: 90, alturaCm: 47 },
-        comSobreposicao: 2,
-        foraDosLimites: 1,
+        fotos: 1,
+        areaTotal: { xCm: 0, yCm: 0, larguraCm: 10, alturaCm: 15 },
+        sobrepostas: 0,
+        semFoto: 0,
+        foraDaArea: 0,
       },
     });
-    expect(screen.getByText('3')).toBeTruthy();
+    expect(screen.getByText('10,0 × 15,0 cm')).toBeTruthy();
+  });
+
+  it('linhas de alerta só com valor > 0, com "N fotos" e `danger-ink` (A-14)', () => {
+    montar({
+      resumo: {
+        fotos: 5,
+        areaTotal: { xCm: 10, yCm: 10, larguraCm: 90, alturaCm: 47 },
+        sobrepostas: 2,
+        semFoto: 1,
+        foraDaArea: 1,
+      },
+    });
+    expect(screen.getByText('5')).toBeTruthy();
     expect(screen.getByText('90,0 × 47,0 cm')).toBeTruthy();
     expect(screen.getByText('Sobreposições')).toBeTruthy();
-    expect(screen.getByText('Fora dos limites')).toBeTruthy();
+    expect(screen.getByText('2 fotos').className).toContain('text-danger-ink');
+    expect(screen.getByText('Sem foto')).toBeTruthy();
+    expect(screen.getByText('Fora da área')).toBeTruthy();
+    expect(screen.getByText('1 foto').className).toContain('text-danger-ink');
+    expect(screen.queryByText('Fora dos limites')).toBeNull();
   });
 });
 

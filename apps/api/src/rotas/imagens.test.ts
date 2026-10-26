@@ -1,3 +1,4 @@
+import { request as requisicaoHttp } from 'node:http';
 import { access, readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ObjectId } from 'mongodb';
@@ -171,7 +172,7 @@ describe('POST /api/imagens — upload (RF-20, RF-25)', () => {
 });
 
 describe('POST /api/imagens — recusas', () => {
-  it('415 para conteúdo que não é imagem (mesmo com extensão .jpg) e para HEIC (RN-20, RF-15)', async () => {
+  it('415 "Não foi possível ler a imagem." para texto renomeado para .jpg e para HEIC (RN-20, §5)', async () => {
     const projeto = await projetoNovo();
     for (const arquivo of ['texto-invalido.jpg', 'documento.heic']) {
       const res = await enviarImagemApi(t.app, {
@@ -180,7 +181,7 @@ describe('POST /api/imagens — recusas', () => {
         nome: arquivo,
       });
       expect(res.statusCode, arquivo).toBe(415);
-      expect(res.json()).toEqual({ erro: 'Formato não suportado. Use JPG, PNG ou WEBP.' });
+      expect(res.json()).toEqual({ erro: 'Não foi possível ler a imagem.' });
     }
   });
 
@@ -214,6 +215,70 @@ describe('POST /api/imagens — recusas', () => {
     const antes = await readdir(join(t.pasta, 'imagens'));
     await enviarImagemApi(t.app, { projetoId: projeto._id, arquivo: await lerImagem('texto-invalido.jpg') });
     await enviarImagemApi(t.app, { projetoId: projeto._id, arquivo: Buffer.alloc(2 * 1024 * 1024, 1) });
+    expect(await t.db.collection('imagens').countDocuments()).toBe(0);
+    expect(await readdir(join(t.pasta, 'imagens'))).toEqual(antes);
+    expect(await readdir(join(t.pasta, 'tmp'))).toEqual([]);
+  });
+});
+
+describe('POST /api/imagens — upload abortado pelo cliente (DV-10, §5)', () => {
+  it('conexão cortada no meio do corpo: nenhum documento, nenhum arquivo, nada em tmp/', async () => {
+    const projeto = await projetoNovo();
+    const antes = await readdir(join(t.pasta, 'imagens'));
+    await t.app.listen({ port: 0, host: '127.0.0.1' });
+    try {
+      const { port } = t.app.server.address() as { port: number };
+      const limite = '----corte';
+      const cabeca = Buffer.from(
+        `--${limite}
+
+Content-Disposition: form-data; name="perfil"
+
+
+
+leve
+
+` +
+          `--${limite}
+
+Content-Disposition: form-data; name="projetoId"
+
+
+
+${projeto._id}
+
+` +
+          `--${limite}
+
+Content-Disposition: form-data; name="arquivo"; filename="x.jpg"
+
+` +
+          `Content-Type: image/jpeg
+
+
+
+`,
+      );
+      const metade = (await lerImagem('paisagem.jpg')).subarray(0, 2000);
+      await new Promise<void>((resolve) => {
+        const req = requisicaoHttp({
+          host: '127.0.0.1',
+          port,
+          path: '/api/imagens',
+          method: 'POST',
+          headers: {
+            'content-type': `multipart/form-data; boundary=${limite}`,
+            'content-length': String(cabeca.length + metade.length + 50_000),
+          },
+        });
+        req.on('error', () => undefined);
+        req.on('close', () => resolve());
+        req.write(Buffer.concat([cabeca, metade]), () => setTimeout(() => req.destroy(), 100));
+      });
+      await new Promise((r) => setTimeout(r, 300));
+    } finally {
+      await t.app.server.close?.();
+    }
     expect(await t.db.collection('imagens').countDocuments()).toBe(0);
     expect(await readdir(join(t.pasta, 'imagens'))).toEqual(antes);
     expect(await readdir(join(t.pasta, 'tmp'))).toEqual([]);

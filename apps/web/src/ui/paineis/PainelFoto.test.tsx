@@ -1,5 +1,5 @@
 import { tamanhoSugerido, type FotoNaParede } from '@deco-wall/domain';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { ImagemDto } from '../../infra/dto';
 import { TooltipProvider } from '../componentes/ui/tooltip';
@@ -85,7 +85,7 @@ describe('cabeçalho e resumo', () => {
 
   it('tamanho no gatilho, tamanho externo e posição com vírgula decimal (RN-02, DS-02)', () => {
     montar();
-    expect(screen.getByRole('combobox', { name: 'Tamanho' }).textContent).toContain('20 × 30');
+    expect(screen.getByRole('combobox', { name: 'Tamanho' }).textContent).toBe('20 × 30 cm'); // A-10
     expect(screen.getByText('24,0 × 34,0 cm')).toBeTruthy(); // 20 × 30 com borda de 2 cm
     expect(campo('X').value).toBe('112,5');
     expect(campo('Y').value).toBe('40,0');
@@ -94,7 +94,7 @@ describe('cabeçalho e resumo', () => {
 
   it('tamanho personalizado aparece com 1 casa decimal', () => {
     montar({ foto: { ...FOTO, tamanho: { sugeridoId: null, larguraCm: 21, alturaCm: 29.7 } } });
-    expect(screen.getByRole('combobox', { name: 'Tamanho' }).textContent).toContain('21,0 × 29,7');
+    expect(screen.getByRole('combobox', { name: 'Tamanho' }).textContent).toBe('21,0 × 29,7 cm');
   });
 });
 
@@ -106,10 +106,22 @@ describe('orientação (RN-05, RN-28)', () => {
     expect(props.onTrocarOrientacao).toHaveBeenCalledWith('paisagem');
   });
 
-  it('tamanho quadrado: orientação inativa', () => {
+  it('tamanho quadrado: orientação inativa, com o tooltip "Quadrado: sem orientação" (A-10)', async () => {
     montar({ foto: { ...FOTO, tamanho: tamanhoSugerido('13x13') } });
     expect((screen.getByRole('radio', { name: 'Retrato' }) as HTMLButtonElement).disabled).toBe(true);
     expect((screen.getByRole('radio', { name: 'Paisagem' }) as HTMLButtonElement).disabled).toBe(true);
+    const grupo = screen.getByRole('radiogroup', { name: 'Orientação' });
+    fireEvent.pointerMove(grupo.parentElement!, { pointerType: 'mouse' });
+    fireEvent.pointerMove(grupo, { pointerType: 'mouse' });
+    expect((await screen.findAllByText('Quadrado: sem orientação')).length).toBeGreaterThan(0);
+  });
+
+  it('de um quadrado para um sugerido, a orientação vem da imagem; do contrário, mantém a atual (A-10)', () => {
+    const props = montar({ foto: { ...FOTO, tamanho: tamanhoSugerido('13x13') } });
+    fireEvent.click(screen.getByRole('combobox', { name: 'Tamanho' }));
+    fireEvent.click(screen.getByRole('option', { name: '20 × 30 cm' }));
+    // Imagem retrato → retrato (largura 20, altura 30)
+    expect(props.onTrocarTamanho).toHaveBeenCalledWith(tamanhoSugerido('20x30', 'retrato'));
   });
 });
 
@@ -147,6 +159,14 @@ describe('campos (B-04)', () => {
     expect(props.onMover).toHaveBeenLastCalledWith(112.5, 12);
   });
 
+  it('Esc restaura o valor do campo sem aplicar (A-09)', () => {
+    const props = montar();
+    fireEvent.change(campo('X'), { target: { value: '99' } });
+    fireEvent.keyDown(campo('X'), { key: 'Escape' });
+    expect(campo('X').value).toBe('112,5');
+    expect(props.onMover).not.toHaveBeenCalled();
+  });
+
   it('o campo acompanha a foto quando ela muda por fora (desfazer, arrastar)', () => {
     const { rerender } = render(
       <TooltipProvider>
@@ -180,18 +200,26 @@ function baseProps(sobrescrita: Partial<PropsPainelFoto> = {}): PropsPainelFoto 
 }
 
 describe('alertas e ações', () => {
-  it('mostra o texto de cada alerta da foto (RN-11, RN-12, RN-34)', () => {
+  it('mostra o texto de cada alerta da foto (RN-11, RN-12, RN-34, A-15)', () => {
     montar({ alertas: { sobreposicao: true, fora: 'parede' } });
-    expect(screen.getByText('Esta foto passa dos limites da parede.')).toBeTruthy();
+    expect(screen.getByText('Esta foto está fora da parede.')).toBeTruthy();
     expect(screen.getByText('Esta foto sobrepõe outra na parede.')).toBeTruthy();
   });
 
   it('fora da área útil tem texto próprio; sem alerta, sem caixa', () => {
     montar({ alertas: { sobreposicao: false, fora: 'area-util' } });
-    expect(screen.getByText('Esta foto passa dos limites da área útil.')).toBeTruthy();
+    expect(screen.getByText('Esta foto está fora da área útil.')).toBeTruthy();
     cleanup();
     montar({ alertas: { sobreposicao: false, fora: null } });
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('"Remover" tem o tooltip que diz que a imagem continua na biblioteca (M2-04)', async () => {
+    montar();
+    act(() => screen.getByRole('button', { name: 'Remover' }).focus());
+    expect(
+      (await screen.findAllByText('Tira a foto desta variante. A imagem continua na biblioteca.')).length,
+    ).toBeGreaterThan(0);
   });
 
   it('Ajustar recorte, Duplicar e Remover chamam as ações', () => {
@@ -202,5 +230,36 @@ describe('alertas e ações', () => {
     expect(props.onAjustarRecorte).toHaveBeenCalledTimes(1);
     expect(props.onDuplicar).toHaveBeenCalledTimes(1);
     expect(props.onRemover).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('placeholder (M2-06, A-15)', () => {
+  const PLACEHOLDER: FotoNaParede = { ...FOTO, imagemId: null };
+
+  it('cabeçalho "Sem foto" com o ícone de imagem cortada', () => {
+    montar({ foto: PLACEHOLDER, imagem: undefined });
+    expect(screen.getByText('Sem foto')).toBeTruthy();
+    expect(screen.queryByText('Imagem indisponível')).toBeNull();
+    expect(screen.getByTestId('icone-sem-foto')).toBeTruthy();
+  });
+
+  it('"Ajustar recorte" fica inativo, com o tooltip "Sem imagem para enquadrar."', async () => {
+    const props = montar({ foto: PLACEHOLDER, imagem: undefined });
+    const botao = screen.getByRole('button', { name: 'Ajustar recorte' });
+    expect(botao.getAttribute('aria-disabled')).toBe('true');
+    fireEvent.click(botao);
+    expect(props.onAjustarRecorte).not.toHaveBeenCalled();
+    act(() => botao.focus());
+    expect((await screen.findAllByText('Sem imagem para enquadrar.')).length).toBeGreaterThan(0);
+  });
+
+  it('tamanho, orientação, borda, posição, Duplicar e Remover continuam ativos', () => {
+    const props = montar({ foto: PLACEHOLDER, imagem: undefined });
+    fireEvent.click(screen.getByRole('radio', { name: 'Paisagem' }));
+    expect(props.onTrocarOrientacao).toHaveBeenCalledWith('paisagem');
+    fireEvent.click(screen.getByRole('button', { name: 'Duplicar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Remover' }));
+    expect(props.onDuplicar).toHaveBeenCalled();
+    expect(props.onRemover).toHaveBeenCalled();
   });
 });

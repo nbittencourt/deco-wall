@@ -3,11 +3,13 @@ import {
   BORDA_PADRAO,
   AREA_UTIL_MIN_CM,
   CORES_GRID,
-  DESLOCAMENTO_DUPLICAR_CM,
+  AGRUPAR_SETAS_MS,
+  BORDA_MAX_CM,
+  DESLOCAMENTO_SEM_SNAP_CM,
+  HISTORICO_LIMITE,
+  MINIMO_DENTRO_CM,
   GRID_PADRAO,
   GRID_PASSO_MIN_PX,
-  LIMITE_BORDA_CM,
-  LIMITE_HISTORICO,
   LIMITE_NOME_PROJETO,
   LIMITE_PASSO_GRID_CM,
   LIMITE_PERSONALIZADO_CM,
@@ -15,7 +17,6 @@ import {
   MARGEM_RETIFICACAO,
   NOME_PROJETO_PADRAO,
   NOME_VARIANTE_PADRAO,
-  PASSO_CASCATA_CM,
   PASSOS_GRID_CM,
   PERFIL_PADRAO,
   PERFIS,
@@ -197,21 +198,28 @@ describe('constantes do M2 (docs/specs/M2-biblioteca-e-composicao.md §4.1)', ()
     expect(THUMB_FOTO_PX).toBe(256);
   });
 
-  it('histórico de 100 passos por variante (RN-18, M2-02)', () => {
-    expect(LIMITE_HISTORICO).toBe(100);
+  it('histórico de 100 passos por variante (RN-18, M2-03)', () => {
+    expect(HISTORICO_LIMITE).toBe(100);
   });
 
-  it('alertas com tolerância de 0,05 cm (RN-36)', () => {
+  it('alertas com tolerância de 0,05 cm (§4.5)', () => {
     expect(TOLERANCIA_CM).toBe(0.05);
   });
 
-  it('duplicar e a cascata deslocam 5 cm (B-06, M2-04)', () => {
-    expect(DESLOCAMENTO_DUPLICAR_CM).toBe(5);
-    expect(PASSO_CASCATA_CM).toBe(5);
+  it('duplicar e a cascata sem snap deslocam 5 cm (A-04, A-25)', () => {
+    expect(DESLOCAMENTO_SEM_SNAP_CM).toBe(5);
   });
 
-  it('borda de 0 a 20 cm (B-04)', () => {
-    expect(LIMITE_BORDA_CM).toEqual({ min: 0, max: 20 });
+  it('borda até 20 cm (A-09)', () => {
+    expect(BORDA_MAX_CM).toBe(20);
+  });
+
+  it('a foto mantém 1 cm dentro da parede inteira (M2-11)', () => {
+    expect(MINIMO_DENTRO_CM).toBe(1);
+  });
+
+  it('setas seguidas com menos de 1 s formam 1 passo de desfazer (A-08)', () => {
+    expect(AGRUPAR_SETAS_MS).toBe(1000);
   });
 
   it('upload com 3 envios em paralelo (DV-10)', () => {

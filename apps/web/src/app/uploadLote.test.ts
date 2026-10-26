@@ -101,7 +101,7 @@ describe('fila', () => {
     expect(pendentes[0]!.perfil).toBe('alto');
   });
 
-  it('depois de iniciar o perfil fica travado e não entram mais arquivos', () => {
+  it('depois de iniciar o perfil fica travado e os arquivos novos entram na mesma fila, com o mesmo perfil (A-17)', () => {
     const { enviar } = enviadorFalso();
     const lote = criarLoteUpload({ enviar, perfil: 'leve', limiteMb: 50 });
     lote.adicionar([arquivo('a.jpg')]);
@@ -110,8 +110,47 @@ describe('fila', () => {
     lote.adicionar([arquivo('b.jpg')]);
     const estado = lote.estado();
     expect(estado.perfil).toBe('leve');
-    expect(estado.itens).toHaveLength(1);
+    expect(estado.itens).toHaveLength(2);
     expect(estado.enviando).toBe(true);
+    expect(enviar).toHaveBeenCalledTimes(2);
+    expect(enviar.mock.calls.map(([, perfil]) => perfil)).toEqual(['leve', 'leve']);
+  });
+
+  it('iniciarNaHora: o envio começa assim que os arquivos entram; os que passam de 3 ficam "na fila"', () => {
+    const { enviar } = enviadorFalso();
+    const lote = criarLoteUpload({ enviar, perfil: 'medio', limiteMb: 50, iniciarNaHora: true });
+    lote.adicionar(['1', '2', '3', '4'].map((n) => arquivo(`${n}.jpg`)));
+    expect(nomes(lote, 'enviando')).toEqual(['1.jpg', '2.jpg', '3.jpg']);
+    expect(nomes(lote, 'na-fila')).toEqual(['4.jpg']);
+    expect(lote.estado().iniciado).toBe(true);
+    expect(lote.estado().perfil).toBe('medio');
+    expect(enviar.mock.calls[0]![1]).toBe('medio');
+  });
+
+  it('sem iniciarNaHora, os arquivos ficam "aguardando" até "iniciar" (arquivos soltos sobre a Biblioteca)', () => {
+    const { enviar } = enviadorFalso();
+    const lote = criarLoteUpload({ enviar, perfil: 'leve', limiteMb: 50 });
+    lote.adicionar([arquivo('a.jpg')]);
+    expect(nomes(lote, 'aguardando')).toEqual(['a.jpg']);
+    expect(enviar).not.toHaveBeenCalled();
+  });
+
+  it('com iniciarNaHora, arquivos acrescentados depois entram na mesma fila', () => {
+    const { enviar } = enviadorFalso();
+    const lote = criarLoteUpload({ enviar, perfil: 'leve', limiteMb: 50, iniciarNaHora: true });
+    lote.adicionar([arquivo('a.jpg')]);
+    lote.adicionar([arquivo('b.jpg')]);
+    expect(enviar).toHaveBeenCalledTimes(2);
+    expect(lote.estado().total).toBe(2);
+  });
+
+  it('só os inválidos: nada é enviado e o lote não começa', () => {
+    const { enviar } = enviadorFalso();
+    const lote = criarLoteUpload({ enviar, perfil: 'leve', limiteMb: 50, iniciarNaHora: true });
+    lote.adicionar([arquivo('x.heic', 'image/heic')]);
+    expect(enviar).not.toHaveBeenCalled();
+    expect(lote.estado().iniciado).toBe(false);
+    expect(lote.estado().ignorados).toHaveLength(1);
   });
 });
 
@@ -123,7 +162,7 @@ describe('envio (DV-10)', () => {
     lote.iniciar();
 
     expect(nomes(lote, 'enviando')).toEqual(['1.jpg', '2.jpg', '3.jpg']);
-    expect(nomes(lote, 'aguardando')).toEqual(['4.jpg', '5.jpg']);
+    expect(nomes(lote, 'na-fila')).toEqual(['4.jpg', '5.jpg']);
 
     pendentes[0]!.resolver();
     await vi.waitFor(() => expect(nomes(lote, 'concluida')).toEqual(['1.jpg']));
@@ -165,7 +204,7 @@ describe('envio (DV-10)', () => {
     expect(lote.estado().concluidas).toBe(3);
   });
 
-  it('o lote termina quando a fila esvazia e o perfil destrava', async () => {
+  it('o lote termina quando a fila esvazia, mas o perfil continua travado até fechar o diálogo (A-17)', async () => {
     const { enviar, pendentes } = enviadorFalso();
     const lote = criarLoteUpload({ enviar, perfil: 'leve', limiteMb: 50 });
     lote.adicionar([arquivo('a.jpg')]);
@@ -173,7 +212,33 @@ describe('envio (DV-10)', () => {
     pendentes[0]!.resolver();
     await vi.waitFor(() => expect(lote.estado().enviando).toBe(false));
     lote.definirPerfil('medio');
-    expect(lote.estado().perfil).toBe('medio');
+    expect(lote.estado().perfil).toBe('leve');
+    expect(lote.estado().iniciado).toBe(true);
+  });
+
+  it('falha de rede ou 5xx pode ser repetida; erro 4xx (415, 413) não (A-18)', async () => {
+    const { enviar, pendentes } = enviadorFalso();
+    const lote = criarLoteUpload({ enviar, perfil: 'leve', limiteMb: 50 });
+    lote.adicionar([
+      arquivo('rede.jpg'),
+      arquivo('erro.jpg'),
+      arquivo('ilegivel.jpg'),
+      arquivo('grande.jpg'),
+    ]);
+    lote.iniciar();
+    pendentes[0]!.rejeitar(new ErroApi(0, { erro: 'Servidor local indisponível.' }));
+    pendentes[1]!.rejeitar(new ErroApi(500, { erro: 'Erro interno do servidor.' }));
+    pendentes[2]!.rejeitar(new ErroApi(415, { erro: 'Não foi possível ler a imagem.' }));
+    await vi.waitFor(() => expect(nomes(lote, 'falhou')).toHaveLength(3));
+    pendentes[3]!.rejeitar(new ErroApi(413, { erro: 'Arquivo maior que 1 MB.' }));
+    await vi.waitFor(() => expect(nomes(lote, 'falhou')).toHaveLength(4));
+    const porNome = Object.fromEntries(lote.estado().itens.map((i) => [i.nome, i.podeRepetir]));
+    expect(porNome).toEqual({
+      'rede.jpg': true,
+      'erro.jpg': true,
+      'ilegivel.jpg': false,
+      'grande.jpg': false,
+    });
   });
 });
 

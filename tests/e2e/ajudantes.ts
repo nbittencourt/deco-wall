@@ -221,3 +221,69 @@ export async function lerCampo(page: Page, rotulo: string): Promise<number> {
   const texto = await page.getByLabel(rotulo, { exact: true }).inputValue();
   return Number(texto.replace(',', '.'));
 }
+
+// Contrato de teste da cena (T14, spec M2 §3.7, A-12, A-13, A-16, M2-06): o Palco publica as anotações
+// desenhadas por cima das fotos (pills, bounding box, textos de imagem indisponível) e a opacidade de cada foto.
+export interface AnotacaoCena {
+  tipo:
+    | 'sobreposicao'
+    | 'fora-da-parede'
+    | 'fora-da-area-util'
+    | 'area-total'
+    | 'selecao'
+    | 'imagem-indisponivel'
+    | 'placeholder';
+  fotoId: string | null;
+  texto: string;
+}
+
+interface PalcoAnotacoes {
+  anotacoesDaCena(): AnotacaoCena[];
+  opacidadeDaFoto(id: string): number | null;
+}
+
+export async function anotacoesDaCena(page: Page): Promise<AnotacaoCena[]> {
+  await esperarPalco(page);
+  return page.evaluate(() => (window as unknown as { __deco: PalcoAnotacoes }).__deco.anotacoesDaCena());
+}
+
+export async function opacidadeDaFoto(page: Page, id: string): Promise<number | null> {
+  await esperarPalco(page);
+  return page.evaluate(
+    (alvo) => (window as unknown as { __deco: PalcoAnotacoes }).__deco.opacidadeDaFoto(alvo),
+    id,
+  );
+}
+
+// Salva a variante pela API (fotos prontas), para cenários que não passam pela tela.
+export async function salvarVarianteApi(
+  request: APIRequestContext,
+  projeto: ProjetoE2E,
+  fotos: unknown[],
+  areaUtil: { xCm: number; yCm: number; larguraCm: number; alturaCm: number } | null = null,
+) {
+  const atual = (await lerProjeto(request, projeto.id)).variantes[0]!;
+  const res = await request.put(`/api/projetos/${projeto.id}/variantes/${projeto.varianteId}`, {
+    data: {
+      sessaoId: 'e2e',
+      revisaoBase: atual.revisao,
+      grid: { visivel: true, snap: true, passoCm: 5, principalACada: 5, cor: '#1F1B16', opacidade: 0.08 },
+      bordaPadrao: { larguraCm: 0, cor: '#FFFFFF' },
+      areaUtil: areaUtil ?? atual.areaUtil,
+      fotos,
+    },
+  });
+  return res;
+}
+
+export const fotoDaApi = (n: number, imagemId: string | null, sobrescrita: Record<string, unknown> = {}) => ({
+  _id: n.toString(16).padStart(24, '0'),
+  imagemId,
+  imagemAnteriorId: null,
+  tamanho: { sugeridoId: '10x15', larguraCm: 10, alturaCm: 15 },
+  xCm: 50,
+  yCm: 50,
+  recorte: { offsetX: 0, offsetY: 0 },
+  borda: { larguraCm: 0, cor: '#FFFFFF' },
+  ...sobrescrita,
+});

@@ -1,17 +1,21 @@
 /// <reference lib="dom" />
 import { expect, test, type Page } from '@playwright/test';
 import {
+  anotacoesDaCena,
   caminhoImagem,
   centroDaFoto,
   criarProjetoComEscalaLinear,
   enviarImagem,
   esperarPalco,
+  fotoDaApi,
   idsDasFotos,
   lerCampo,
   lerProjeto,
   nomeUnico,
+  opacidadeDaFoto,
   pxPorCmNaTela,
   retanguloDaFoto,
+  salvarVarianteApi,
 } from './ajudantes';
 
 // Composição na parede (spec M2 §3.3 a §3.7, §7; PRD aceite 1, 2, 2a, 3, 4, 7 e 12; RF-30 a RF-35, RF-41,
@@ -267,13 +271,75 @@ test.describe('mover (RF-34, RF-53, RN-16; PRD aceite 4)', () => {
     expect(await lerCampo(page, 'X')).toBe(145);
   });
 
-  test('X e Y digitados valem como digitados, a 0,1 cm, sem encaixar no grid', async ({ page, request }) => {
+  test('com snap, X e Y digitados vão para a linha mais próxima e o campo mostra o valor encaixado (M2-12)', async ({
+    page,
+    request,
+  }) => {
     const p = await cenario(request);
     await abrir(page, p.id);
     await adicionar(page, 'retrato.jpg');
     await aplicar(page, 'X', '12,3');
     await aplicar(page, 'Y', '-4');
+    expect([await lerCampo(page, 'X'), await lerCampo(page, 'Y')]).toEqual([10, -5]);
+    // Digitado igual ao atual depois de encaixar: o campo também mostra o valor encaixado.
+    await aplicar(page, 'X', '11');
+    expect(await lerCampo(page, 'X')).toBe(10);
+  });
+
+  test('sem snap, X e Y digitados valem como digitados, a 0,1 cm', async ({ page, request }) => {
+    const p = await cenario(request);
+    await abrir(page, p.id);
+    await page.getByRole('button', { name: 'Snap ao grid' }).click();
+    await adicionar(page, 'retrato.jpg');
+    await aplicar(page, 'X', '12,3');
+    await aplicar(page, 'Y', '-4');
     expect([await lerCampo(page, 'X'), await lerCampo(page, 'Y')]).toEqual([12.3, -4]);
+  });
+
+  test('a foto não some da parede: arrastar longe mantém 1 cm dentro dela (M2-11)', async ({
+    page,
+    request,
+  }) => {
+    const p = await cenario(request);
+    await abrir(page, p.id);
+    await adicionar(page, 'retrato.jpg');
+    const [id] = await idsDasFotos(page);
+    const centro = await centroDaFoto(page, id!);
+    const esc = await pxPorCmNaTela(page);
+    await page.mouse.move(centro.x, centro.y);
+    await page.mouse.down();
+    await page.mouse.move(centro.x + 900 * esc, centro.y - 900 * esc, { steps: 12 });
+    await page.mouse.up();
+    expect(await lerCampo(page, 'X')).toBeLessThanOrEqual(299);
+    expect(await lerCampo(page, 'Y')).toBeGreaterThanOrEqual(-14);
+  });
+
+  test('a posição aparece ao vivo na barra de status durante o arraste (A-07)', async ({ page, request }) => {
+    const p = await cenario(request);
+    await abrir(page, p.id);
+    await adicionar(page, 'retrato.jpg');
+    const [id] = await idsDasFotos(page);
+    const centro = await centroDaFoto(page, id!);
+    const esc = await pxPorCmNaTela(page);
+    await expect(page.locator('footer').getByText('X 145,0 · Y 105,0 cm')).toBeVisible();
+    await page.mouse.move(centro.x, centro.y);
+    await page.mouse.down();
+    await page.mouse.move(centro.x + 30 * esc, centro.y + 20 * esc, { steps: 10 });
+    // Ainda com o botão pressionado: a barra já mostra a posição nova.
+    await expect(page.locator('footer').getByText('X 175,0 · Y 125,0 cm')).toBeVisible();
+    await page.mouse.up();
+    expect(await lerCampo(page, 'X')).toBe(175);
+  });
+
+  test('setas seguidas formam 1 passo: um Ctrl+Z volta tudo (A-08)', async ({ page, request }) => {
+    const p = await cenario(request);
+    await abrir(page, p.id);
+    await adicionar(page, 'retrato.jpg');
+    await page.locator('footer').click();
+    for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowRight');
+    expect(await lerCampo(page, 'X')).toBe(160);
+    await page.keyboard.press('Control+z');
+    expect(await lerCampo(page, 'X')).toBe(145);
   });
 });
 
@@ -290,22 +356,19 @@ test.describe('alertas e medidas da composição (RN-11, RN-12, RN-34, RF-62)', 
 
     // Fora da parede (a foto selecionada é a segunda).
     await aplicar(page, 'X', '295');
-    await expect(page.getByText('Esta foto passa dos limites da parede.')).toBeVisible();
+    await expect(page.getByText('Esta foto está fora da parede.')).toBeVisible();
 
     // Sem seleção: o painel Composição resume (2 fotos, bounding box, 1 fora dos limites).
     await page.locator('footer').click(); // tira o foco do campo: Esc em campo é do campo
     await page.keyboard.press('Escape');
     await expect(page.getByRole('heading', { level: 2, name: 'Composição' })).toBeVisible();
-    await expect(page.getByText('Fora dos limites')).toBeVisible();
+    await expect(page.getByText('Fora da área', { exact: true })).toBeVisible();
     await expect(page.getByText('Sobreposições')).toBeHidden(); // a segunda saiu de cima da primeira
     // Bounding box: de x = 145 até 295 + 10 = 305 (160 cm) e de y = 105 até 110 + 15 = 125 (20 cm).
     await expect(page.getByText('160,0 × 20,0 cm')).toBeVisible();
   });
 
-  test('foto na área útil menor que a parede: "passa dos limites da área útil" (RN-34)', async ({
-    page,
-    request,
-  }) => {
+  test('foto na área útil menor que a parede: "fora da área útil" (RN-34)', async ({ page, request }) => {
     const p = await cenario(request);
     await page.request.put(`/api/projetos/${p.id}/variantes/${p.varianteId}`, {
       data: {
@@ -320,7 +383,7 @@ test.describe('alertas e medidas da composição (RN-11, RN-12, RN-34, RF-62)', 
     await abrir(page, p.id);
     await adicionar(page, 'retrato.jpg');
     await aplicar(page, 'X', '20'); // dentro da parede (300 × 225), fora da área útil (50–150)
-    await expect(page.getByText('Esta foto passa dos limites da área útil.')).toBeVisible();
+    await expect(page.getByText('Esta foto está fora da área útil.')).toBeVisible();
   });
 });
 
@@ -462,7 +525,9 @@ test.describe('salvar e reabrir (PRD aceite 7)', () => {
     expect(Math.abs(r!.altura - 33 * esc)).toBeLessThanOrEqual(1);
   });
 
-  test('o servidor recusa fotos sem escala ou com imagem inexistente (422)', async ({ request }) => {
+  test('o servidor só recusa imagem inexistente (422 com a lista); sem escala também salva (M2-14, §5)', async ({
+    request,
+  }) => {
     const sem = await (
       await request.post('/api/projetos', { data: { nome: nomeUnico('Sem escala') } })
     ).json();
@@ -472,20 +537,160 @@ test.describe('salvar e reabrir (PRD aceite 7)', () => {
       bordaPadrao: { larguraCm: 0, cor: '#FFFFFF' },
       areaUtil: null,
     };
-    const foto = {
-      _id: '0'.repeat(23) + '1',
-      imagemId: '0'.repeat(23) + '2',
-      imagemAnteriorId: null,
-      tamanho: { sugeridoId: '10x15', larguraCm: 10, alturaCm: 15 },
-      xCm: 0,
-      yCm: 0,
-      recorte: { offsetX: 0, offsetY: 0 },
-      borda: { larguraCm: 0, cor: '#FFFFFF' },
-    };
-    const res = await request.put(`/api/projetos/${sem.projeto._id}/variantes/${sem.variantes[0]._id}`, {
-      data: { ...base, revisaoBase: 1, fotos: [foto] },
+    const inexistente = '0'.repeat(23) + '2';
+    const url = `/api/projetos/${sem.projeto._id}/variantes/${sem.variantes[0]._id}`;
+    const recusada = await request.put(url, {
+      data: { ...base, revisaoBase: 1, fotos: [fotoDaApi(1, inexistente)] },
     });
-    expect(res.status()).toBe(422);
+    expect(recusada.status()).toBe(422);
+    expect(((await recusada.json()) as { detalhes: unknown }).detalhes).toEqual({
+      imagensInexistentes: [inexistente],
+    });
+    const placeholder = await request.put(url, {
+      data: { ...base, revisaoBase: 1, fotos: [fotoDaApi(1, null)] },
+    });
+    expect(placeholder.status()).toBe(200);
+  });
+});
+
+test.describe('destaques e bounding box no canvas (A-12, A-13, A-16, M2-06)', () => {
+  test('a pill "Sobreposição" fica só na foto da camada superior', async ({ page, request }) => {
+    const p = await cenario(request);
+    await abrir(page, p.id);
+    await adicionar(page, 'retrato.jpg');
+    await page.getByRole('button', { name: 'Adicionar', exact: true }).click(); // cascata +5/+5: sobrepõe
+    const [primeira, segunda] = await idsDasFotos(page);
+    const pills = async () => (await anotacoesDaCena(page)).filter((a) => a.tipo === 'sobreposicao');
+    expect(await pills()).toEqual([expect.objectContaining({ fotoId: segunda, texto: 'Sobreposição' })]);
+
+    await page.getByRole('button', { name: 'Enviar para trás' }).click(); // agora a primeira fica acima
+    expect(await pills()).toEqual([expect.objectContaining({ fotoId: primeira })]);
+  });
+
+  test('"Fora da parede" e "Fora da área útil" em pill abaixo da foto; "Fora da parede" prevalece', async ({
+    page,
+    request,
+  }) => {
+    const p = await cenario(request);
+    await abrir(page, p.id);
+    await adicionar(page, 'retrato.jpg');
+    await aplicar(page, 'X', '295');
+    const [id] = await idsDasFotos(page);
+    const notas = (await anotacoesDaCena(page)).filter((a) => a.fotoId === id);
+    expect(notas.map((a) => a.tipo)).toContain('fora-da-parede');
+    expect(notas.map((a) => a.tipo)).not.toContain('fora-da-area-util');
+    expect(notas.find((a) => a.tipo === 'fora-da-parede')!.texto).toBe('Fora da parede');
+  });
+
+  test('o toggle "Área total" mostra e esconde a caixa; ligada, aparece já com 1 foto', async ({
+    page,
+    request,
+  }) => {
+    const p = await cenario(request);
+    await abrir(page, p.id);
+    await adicionar(page, 'retrato.jpg');
+    const caixa = async () => (await anotacoesDaCena(page)).filter((a) => a.tipo === 'area-total');
+    expect(await caixa()).toEqual([expect.objectContaining({ texto: '10,0 × 15,0 cm' })]);
+
+    const toggle = page.getByRole('button', { name: 'Área total', exact: true });
+    await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    await toggle.click();
+    expect(await caixa()).toEqual([]);
+    await toggle.click();
+    expect((await caixa()).length).toBe(1);
+  });
+
+  test('no painel Composição, a área total aparece com 1 foto', async ({ page, request }) => {
+    const p = await cenario(request);
+    await abrir(page, p.id);
+    await adicionar(page, 'retrato.jpg');
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('heading', { level: 2, name: 'Composição' })).toBeVisible();
+    await expect(page.getByText('10,0 × 15,0 cm')).toBeVisible();
+  });
+
+  test('imagem que não carrega: retângulo com "Imagem indisponível" no canvas e no painel (A-16)', async ({
+    page,
+    request,
+  }) => {
+    const p = await cenario(request);
+    await page.route(/\/api\/imagens\/[0-9a-f]+\/arquivo\?tipo=render/, (rota) =>
+      rota.fulfill({ status: 404, body: '' }),
+    );
+    await abrir(page, p.id);
+    await adicionar(page, 'retrato.jpg');
+    const [id] = await idsDasFotos(page);
+    await expect
+      .poll(async () => (await anotacoesDaCena(page)).filter((a) => a.tipo === 'imagem-indisponivel'))
+      .toEqual([expect.objectContaining({ fotoId: id, texto: 'Imagem indisponível' })]);
+    await expect(page.getByText('Imagem indisponível')).toBeVisible(); // no painel
+  });
+
+  test('placeholder: desenhado com o tamanho, painel "Sem foto" e linha "Sem foto" na Composição (M2-06)', async ({
+    page,
+    request,
+  }) => {
+    const p = await cenario(request);
+    const res = await salvarVarianteApi(request, p, [fotoDaApi(1, null, { xCm: 100, yCm: 80 })]);
+    expect(res.status()).toBe(200);
+    await abrir(page, p.id);
+    const [id] = await idsDasFotos(page);
+    expect(await anotacoesDaCena(page)).toContainEqual(
+      expect.objectContaining({ tipo: 'placeholder', fotoId: id, texto: '10 × 15' }),
+    );
+
+    // Composição: a linha "Sem foto" já aparece.
+    await expect(page.getByText('Sem foto', { exact: true })).toBeVisible();
+
+    const centro = await centroDaFoto(page, id!);
+    await page.mouse.click(centro.x, centro.y);
+    await expect(page.getByText('Sem foto', { exact: true })).toBeVisible(); // cabeçalho do painel da foto
+    await expect(page.getByRole('button', { name: 'Ajustar recorte' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+    await escolherTamanho(page, '20 × 30 cm'); // tamanho continua editável
+    expect(await lerCampo(page, 'X')).toBe(100);
+  });
+});
+
+test.describe('modo de recorte: as outras fotos (A-11)', () => {
+  test('ficam a 35% e sem interação; Ctrl+S não salva durante o modo', async ({ page, request }) => {
+    const p = await cenario(request);
+    await abrir(page, p.id);
+    await adicionar(page, 'retrato.jpg');
+    await aplicar(page, 'X', '60');
+    await page.locator('footer').click();
+    await adicionar(page, 'retrato.jpg');
+    await aplicar(page, 'X', '200');
+    const [primeira, segunda] = await idsDasFotos(page);
+    await page.getByRole('button', { name: 'Ajustar recorte' }).click();
+    await expect(page.getByText('O restante da parede fica bloqueado até concluir')).toBeVisible();
+
+    expect(await opacidadeDaFoto(page, primeira!)).toBeCloseTo(0.35, 2);
+    expect(await opacidadeDaFoto(page, segunda!)).toBeCloseTo(1, 2);
+
+    // Clicar na outra foto não faz nada; Ctrl+S também não.
+    const outra = await centroDaFoto(page, primeira!);
+    await page.mouse.click(outra.x, outra.y);
+    await expect(page.getByText('O restante da parede fica bloqueado até concluir')).toBeVisible();
+    await page.keyboard.press('Control+s');
+    expect((await lerProjeto(request, p.id)).variantes[0]!.fotos).toHaveLength(0);
+  });
+});
+
+test.describe('status depois de desfazer (A-26)', () => {
+  test('voltar ao conteúdo salvo volta a "Salvo às hh:mm"', async ({ page, request }) => {
+    const p = await cenario(request);
+    await abrir(page, p.id);
+    await adicionar(page, 'retrato.jpg');
+    await page.keyboard.press('Control+s');
+    await expect(page.getByText(/Salvo às \d{2}:\d{2}/)).toBeVisible();
+    await aplicar(page, 'X', '60');
+    await expect(page.getByText('Alterações não salvas')).toBeVisible();
+    await page.locator('footer').click();
+    await page.keyboard.press('Control+z');
+    await expect(page.getByText(/Salvo às \d{2}:\d{2}/)).toBeVisible();
   });
 });
 
@@ -509,7 +714,6 @@ test.describe('rede (RNF-01)', () => {
       .getByRole('dialog')
       .getByTestId('entrada-arquivos')
       .setInputFiles([caminhoImagem('quadrada.jpg')]);
-    await page.getByRole('button', { name: 'Enviar 1 foto' }).click();
     await expect(page.getByText('1 de 1 enviadas')).toBeVisible({ timeout: 15_000 });
     await page.getByRole('button', { name: 'Concluir' }).click();
     await page.keyboard.press('Control+s');

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   formatarCm,
+  formatarBytes,
   formatarCmCurto,
   formatarData,
   formatarDimensao,
@@ -9,6 +10,7 @@ import {
   formatarHora,
   formatarMetaProjeto,
   formatarTamanho,
+  formatarTamanhoComUnidade,
   lerCm,
 } from './formatadores';
 
@@ -128,5 +130,32 @@ describe('lerCm (campos numéricos com vírgula decimal)', () => {
     expect(lerCm('1,2,3')).toBeNull();
     expect(lerCm('1e3')).toBeNull();
     expect(lerCm('12 cm')).toBeNull();
+  });
+});
+
+describe('formatarTamanhoComUnidade (A-10)', () => {
+  it('sugerido: sem casa decimal; personalizado: 1 casa; sempre com "cm"', () => {
+    expect(formatarTamanhoComUnidade({ sugeridoId: '20x30', larguraCm: 20, alturaCm: 30 })).toBe(
+      '20 × 30 cm',
+    );
+    expect(formatarTamanhoComUnidade({ sugeridoId: '20x30', larguraCm: 30, alturaCm: 20 })).toBe(
+      '30 × 20 cm',
+    );
+    expect(formatarTamanhoComUnidade({ sugeridoId: null, larguraCm: 21, alturaCm: 29.7 })).toBe(
+      '21,0 × 29,7 cm',
+    );
+  });
+});
+
+describe('formatarBytes (A-18)', () => {
+  it('KB sem casa decimal e MB com uma, vírgula decimal', () => {
+    expect(formatarBytes(412 * 1024)).toBe('412 KB');
+    expect(formatarBytes(1.2 * 1024 * 1024)).toBe('1,2 MB');
+    expect(formatarBytes(10 * 1024 * 1024)).toBe('10,0 MB');
+  });
+
+  it('abaixo de 1 KB, em bytes; arredonda KB para o inteiro mais próximo', () => {
+    expect(formatarBytes(512)).toBe('512 B');
+    expect(formatarBytes(1536)).toBe('2 KB');
   });
 });

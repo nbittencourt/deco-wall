@@ -15,12 +15,36 @@ describe('validarArquivoImagem', () => {
     expect(validarArquivoImagem({ nome, tipo, tamanhoBytes: 1000 }, 50)).toBeNull();
   });
 
-  it('sem tipo MIME (arrastar no Windows), decide pela extensão, sem diferenciar maiúsculas', () => {
-    expect(validarArquivoImagem({ nome: 'FOTO.JPG', tipo: '', tamanhoBytes: 1000 }, 50)).toBeNull();
+  it('exige extensão E tipo (A-19): sem tipo MIME, recusa mesmo com extensão válida', () => {
+    expect(validarArquivoImagem({ nome: 'FOTO.JPG', tipo: 'image/jpeg', tamanhoBytes: 1000 }, 50)).toBeNull();
+    expect(validarArquivoImagem({ nome: 'FOTO.JPG', tipo: '', tamanhoBytes: 1000 }, 50)).toBe(
+      MENSAGEM_FORMATO_NAO_SUPORTADO,
+    );
     expect(validarArquivoImagem({ nome: 'parede.docx', tipo: '', tamanhoBytes: 1000 }, 50)).toBe(
-      'Formato não suportado. Use JPG, PNG ou WEBP.',
+      MENSAGEM_FORMATO_NAO_SUPORTADO,
     );
   });
+
+  it('tipo válido com extensão inválida, e o contrário, são recusados', () => {
+    expect(validarArquivoImagem({ nome: 'foto.gif', tipo: 'image/jpeg', tamanhoBytes: 1000 }, 50)).toBe(
+      MENSAGEM_FORMATO_NAO_SUPORTADO,
+    );
+    expect(validarArquivoImagem({ nome: 'foto.jpg', tipo: 'image/gif', tamanhoBytes: 1000 }, 50)).toBe(
+      MENSAGEM_FORMATO_NAO_SUPORTADO,
+    );
+    expect(validarArquivoImagem({ nome: 'foto', tipo: 'image/png', tamanhoBytes: 1000 }, 50)).toBe(
+      MENSAGEM_FORMATO_NAO_SUPORTADO,
+    );
+  });
+
+  it.each(['Thumbs.db', 'desktop.ini', '.DS_Store', '.oculto'])(
+    'arquivo de sistema da pasta (%s) é recusado e conta como ignorado (A-19, RN-20)',
+    (nome) => {
+      expect(validarArquivoImagem({ nome, tipo: '', tamanhoBytes: 100 }, 50)).toBe(
+        MENSAGEM_FORMATO_NAO_SUPORTADO,
+      );
+    },
+  );
 
   it('recusa HEIC, GIF e outros formatos', () => {
     for (const [nome, tipo] of [
