@@ -51,6 +51,7 @@ npm run e2e
 - **Nunca** alterar, mover ou excluir arquivos fora do escopo pedido sem autorização explícita.
 - Ao tomar ou confirmar uma decisão relevante (stack, escopo, mudança de requisito), registrar em `MEMORY.md` (seção Decisões) e, se mudar requisito, atualizar `docs/PRD.md`.
 - Ao concluir uma etapa do roadmap, atualizar o Status em `MEMORY.md`.
+- **Gates de aprovação (exigência forte, sem exceção).** Cada etapa só começa com a anterior aprovada: **marco** só com o marco anterior aceito pelo Nicholas; **spec** do marco só com o marco anterior aceito; **implementação** só com a spec concluída; **código** só com os testes escritos (TDD: commit `test(...)` vermelho antes do `feat(...)`/`fix(...)`). Gate não aprovado não se contorna: parar e perguntar.
 - Em dúvida de requisito, consultar o PRD; se ambíguo, perguntar antes de implementar.
 - **Especificação de marco (`docs/specs/`): ler só a documentação do projeto**, sem abrir o código-fonte. A base é o PRD e as specs já escritas, junto com DESIGN, ARCHITECTURE, `MEMORY.md` e os protótipos de `docs/design/`.
 - Priorizar documentação oficial das libs (Konva, React, MDN para File System Access API).

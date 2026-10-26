@@ -134,6 +134,7 @@ Pedido original do Nicholas:
 | 2026-10-25 | M2-13: o desfazer volta ao `zundo` (ADR-03); a pilha própria `historico.ts` sai e a store é reestruturada para isolar `{ fotos, areaUtil, bordaPadrao }`; se o `zundo` não servir, parar e perguntar. M2-14: saem os acréscimos da implementação no salvamento (422 sem escala, imagem excluída, `_id` repetido) e o RN-36; o salvamento só confere imagens inexistentes (§5). M2-15: domínio em `composicao/` e `biblioteca/` (spec §4.1); `fotos/` sai. | Decidido |
 | 2026-10-25 | **Spec M2 v0.4 concluída** pelo Nicholas, depois de escritas as lacunas (§13) e as tarefas de ajuste (T14 a T23). Mudança de comportamento do M2 a partir daqui só com nova decisão dele. | Decidido |
 | 2026-10-25 | Dependência nova do M2: `bson` 7.3.3 no `apps/web` (ADR-07; mesma versão do driver do MongoDB). | Decidido |
+| 2026-10-26 | **Regra dos gates de aprovação (Nicholas):** exigência forte para avançar de etapa. Marco só com o marco anterior aceito; spec só com o marco anterior aceito; implementação só com a spec concluída; código só com os testes escritos. Evita repetir o M2 de 25/10 (implementado sobre spec não mesclada). Registrada em `CLAUDE.md` (Regras de trabalho). | Decidido |
 
 ## Questões em aberto
 
