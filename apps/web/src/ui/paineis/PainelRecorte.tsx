@@ -3,7 +3,7 @@ import {
   formatarDimensao,
   formatarTamanho,
   LIMITE_PERSONALIZADO_CM,
-  orientacaoDoTamanho,
+  orientacaoDe,
   tamanhoExterno,
   tamanhoPersonalizado,
   tamanhoSugerido,
@@ -37,8 +37,8 @@ export function PainelRecorte({
   onConcluir,
   onCancelar,
 }: PropsPainelRecorte) {
-  const externo = tamanhoExterno({ tamanho, borda });
-  const orientacao = orientacaoDoTamanho(tamanho);
+  const externo = tamanhoExterno(tamanho, borda);
+  const orientacao = orientacaoDe(tamanho);
   const { min, max } = LIMITE_PERSONALIZADO_CM;
 
   // Largura e altura mudam uma de cada vez; a outra mantém o valor atual (RN-28).
@@ -49,8 +49,8 @@ export function PainelRecorte({
       lado === 'larguraCm' ? cm : tamanho.larguraCm,
       lado === 'alturaCm' ? cm : tamanho.alturaCm,
     );
-    if (!novo) return validarLadoPersonalizado(Number.NaN);
-    onTamanho(novo);
+    if (!novo.ok) return novo.erro;
+    onTamanho(novo.tamanho);
     return null;
   };
 

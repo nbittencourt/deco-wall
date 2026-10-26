@@ -2,8 +2,8 @@ import {
   formatarCm,
   formatarDimensao,
   formatarTamanho,
-  LIMITE_BORDA_CM,
-  orientacaoDoTamanho,
+  BORDA_MAX_CM,
+  orientacaoDe,
   tamanhoExterno,
   tamanhoSugerido,
   type AlertasDaFoto,
@@ -37,7 +37,7 @@ export interface PropsPainelFoto {
   onRemover: () => void;
 }
 
-const MENSAGEM_BORDA = `Entre ${formatarCm(LIMITE_BORDA_CM.min)} e ${formatarCm(LIMITE_BORDA_CM.max)} cm.`;
+const MENSAGEM_BORDA = `Entre ${formatarCm(0)} e ${formatarCm(BORDA_MAX_CM)} cm.`;
 
 export function PainelFoto({
   foto,
@@ -52,9 +52,9 @@ export function PainelFoto({
   onDuplicar,
   onRemover,
 }: PropsPainelFoto) {
-  const orientacao = orientacaoDoTamanho(foto.tamanho);
+  const orientacao = orientacaoDe(foto.tamanho);
   const quadrado = orientacao === 'quadrado';
-  const externo = tamanhoExterno(foto);
+  const externo = tamanhoExterno(foto.tamanho, foto.borda);
   const orientacaoDaImagem = imagem
     ? imagem.orientacaoNatural === 'paisagem'
       ? 'Paisagem natural'
@@ -126,7 +126,7 @@ export function PainelFoto({
             rotuloOculto
             valor={foto.borda.larguraCm}
             onConfirmar={(cm) => {
-              if (cm < LIMITE_BORDA_CM.min || cm > LIMITE_BORDA_CM.max) return MENSAGEM_BORDA;
+              if (cm < 0 || cm > BORDA_MAX_CM) return MENSAGEM_BORDA;
               onAlterarBorda({ larguraCm: cm });
               return null;
             }}

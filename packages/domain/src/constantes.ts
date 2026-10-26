@@ -99,9 +99,12 @@ export const LIMITE_NOME_PROJETO = 100;
 // ---- M2 (docs/specs/M2-biblioteca-e-composicao.md §4.1) ----
 
 export const THUMB_FOTO_PX = 256; // ADR-05: miniatura das imagens da biblioteca
-export const LIMITE_HISTORICO = 100; // RN-18, M2-02: passos de desfazer por variante
-export const TOLERANCIA_CM = 0.05; // RN-36: ruído de arredondamento nos alertas de posição
-export const DESLOCAMENTO_DUPLICAR_CM = 5; // B-06
-export const PASSO_CASCATA_CM = 5; // M2-04: foto nova sobre outra no mesmo lugar
-export const LIMITE_BORDA_CM = { min: 0, max: 20 } as const; // B-04
-export const UPLOAD_PARALELO = 3; // DV-10
+export const UPLOAD_PARALELO = 3; // DV-10: envios simultâneos
+export const HISTORICO_LIMITE = 100; // M2-03, ADR-03: passos de desfazer por variante
+export const BORDA_MAX_CM = 20; // A-09: borda de 0 a 20 cm
+export const TOLERANCIA_CM = 0.05; // §4.5: ruído de arredondamento nos alertas de posição
+export const MINIMO_DENTRO_CM = 1; // M2-11: parte da foto que fica dentro da parede inteira
+export const DESLOCAMENTO_SEM_SNAP_CM = 5; // A-04, A-25: cascata e cópia sem snap
+export const AGRUPAR_SETAS_MS = 1000; // A-08: setas seguidas formam 1 passo de desfazer
+export const CASCATA_TENTATIVAS = 10; // A-04: deslocamentos da foto nova sobre outra
+export const PASSOS_COM_SHIFT = 5; // M2-01: Shift + seta anda 5 passos (ou 5 cm sem snap)

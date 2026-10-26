@@ -34,6 +34,22 @@ export function formatarTamanho(t: {
   return `${formatarCm(t.larguraCm)} × ${formatarCm(t.alturaCm)}`;
 }
 
+// A-10: "20 × 30 cm" para sugerido (sem casa decimal) e "21,0 × 29,7 cm" para personalizado.
+export function formatarTamanhoComUnidade(t: {
+  sugeridoId: string | null;
+  larguraCm: number;
+  alturaCm: number;
+}): string {
+  return `${formatarTamanho(t)} cm`;
+}
+
+// A-18: tamanho do arquivo — "512 B", "412 KB" (inteiro) e "1,2 MB" (uma casa, vírgula decimal).
+export function formatarBytes(bytes: number): string {
+  if (bytes < 1024) return `${Math.round(bytes)} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1).replace('.', ',')} MB`;
+}
+
 function horaBrasilia(data: Date): string {
   return new Intl.DateTimeFormat('en-GB', {
     timeZone: FUSO_BRASILIA,

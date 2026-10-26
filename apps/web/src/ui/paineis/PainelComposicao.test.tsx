@@ -80,14 +80,14 @@ describe('seções', () => {
   it('linhas de alerta só com valor > 0, com "N fotos" e `danger-ink` (A-14)', () => {
     montar({
       resumo: {
-        fotos: 5,
+        fotos: 7,
         areaTotal: { xCm: 10, yCm: 10, larguraCm: 90, alturaCm: 47 },
         sobrepostas: 2,
         semFoto: 1,
         foraDaArea: 1,
       },
     });
-    expect(screen.getByText('5')).toBeTruthy();
+    expect(screen.getByText('7')).toBeTruthy();
     expect(screen.getByText('90,0 × 47,0 cm')).toBeTruthy();
     expect(screen.getByText('Sobreposições')).toBeTruthy();
     expect(screen.getByText('2 fotos').className).toContain('text-danger-ink');

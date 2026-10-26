@@ -238,7 +238,7 @@ export function Palco({ cena, onEstado, ref }: PropsPalco) {
         if (!retangulo || !atual || !('fotos' in atualCena)) return null;
         const foto = atualCena.fotos.find((f) => f.id === id);
         if (!foto) return null;
-        const externo = tamanhoExterno(foto);
+        const externo = tamanhoExterno(foto.tamanho, foto.borda);
         return {
           x: retangulo.left + foto.xCm * atual.escala + atual.x,
           y: retangulo.top + foto.yCm * atual.escala + atual.y,

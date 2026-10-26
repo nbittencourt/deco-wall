@@ -1,8 +1,8 @@
 import {
-  calcularAlertas,
+  alertasDaComposicao,
+  alertasPorFoto,
   formatarCm,
   formatarHora,
-  resumoDaComposicao,
   type DirecaoSeta,
   type Perfil,
 } from '@deco-wall/domain';
@@ -231,13 +231,10 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
       : null;
 
   const alertas = useMemo(
-    () => calcularAlertas(variante.fotos, dados.interior, variante.areaUtil),
+    () => alertasPorFoto(variante.fotos, dados.interior, variante.areaUtil),
     [variante.fotos, dados.interior, variante.areaUtil],
   );
-  const resumo = useMemo(
-    () => resumoDaComposicao(variante.fotos, dados.interior, variante.areaUtil),
-    [variante.fotos, dados.interior, variante.areaUtil],
-  );
+  const resumo = useMemo(() => alertasDaComposicao(variante, dados.interior), [variante, dados.interior]);
 
   // "Adicionar" (M2-04): precisa de escala e de uma foto escolhida na biblioteca.
   const motivoAdicionar =

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LIMITE_HISTORICO } from './constantes';
+import { HISTORICO_LIMITE } from './constantes';
 import {
   criarHistorico,
   desfazer,
@@ -22,7 +22,7 @@ describe('historico', () => {
   });
 
   it('o limite é de 100 passos', () => {
-    expect(LIMITE_HISTORICO).toBe(100);
+    expect(HISTORICO_LIMITE).toBe(100);
   });
 
   it('registrar guarda o estado anterior; desfazer devolve-o e guarda o atual para refazer', () => {
@@ -66,10 +66,10 @@ describe('historico', () => {
     expect(h.passado).toEqual([2, 3, 4]);
   });
 
-  it('o limite padrão é LIMITE_HISTORICO', () => {
+  it('o limite padrão é HISTORICO_LIMITE', () => {
     let h: Historico<number> = criarHistorico<number>();
-    for (let i = 0; i < LIMITE_HISTORICO + 10; i += 1) h = registrar(h, i);
-    expect(h.passado).toHaveLength(LIMITE_HISTORICO);
+    for (let i = 0; i < HISTORICO_LIMITE + 10; i += 1) h = registrar(h, i);
+    expect(h.passado).toHaveLength(HISTORICO_LIMITE);
     expect(h.passado[0]).toBe(10);
   });
 

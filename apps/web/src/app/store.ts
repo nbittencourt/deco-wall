@@ -1,26 +1,24 @@
 import {
-  aplicarBorda,
-  aplicarTamanho,
   areaUtilForaDaParede,
   arredondarCm,
-  criarFoto,
+  BORDA_MAX_CM,
   criarHistorico,
   desfazer as desfazerHistorico,
   duplicarFoto as duplicarFotoDaComposicao,
   enviarParaTras as enviarParaTrasNaOrdem,
-  LIMITE_BORDA_CM,
   limitarAreaUtil,
-  moverPorSeta as moverPorSetaDoDominio,
+  moverPorTeclado,
+  mudarBorda,
+  mudarTamanho,
+  novaFoto,
+  orientacaoDe,
+  alternarOrientacao,
   paredeInteira,
   podeDesfazer as historicoPodeDesfazer,
   podeRefazer as historicoPodeRefazer,
-  posicaoDoDrop,
-  posicaoInicial,
   refazer as refazerHistorico,
   registrar,
-  tamanhoExterno,
   trazerParaFrente as trazerParaFrenteNaOrdem,
-  trocarOrientacao as trocarOrientacaoDoTamanho,
   type AreaUtil,
   type Borda,
   type DirecaoSeta,
@@ -197,8 +195,7 @@ const mesmoConteudo = (a: ConteudoVariante, b: ConteudoVariante) => JSON.stringi
 const mesmoTamanho = (a: Tamanho, b: Tamanho) =>
   a.sugeridoId === b.sugeridoId && a.larguraCm === b.larguraCm && a.alturaCm === b.alturaCm;
 
-const limitarBorda = (cm: number) =>
-  arredondarCm(Math.min(Math.max(cm, LIMITE_BORDA_CM.min), LIMITE_BORDA_CM.max));
+const limitarBorda = (cm: number) => arredondarCm(Math.min(Math.max(cm, 0), BORDA_MAX_CM));
 
 export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): StoreEditor {
   const gerarId = opcoes.gerarId ?? (() => new ObjectId().toHexString());
@@ -533,17 +530,18 @@ export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): Sto
           if (!variante || !imagem || !parede) return null; // RF-13, RN-08: sem escala não há fotos
 
           const id = gerarId();
-          const nova = criarFoto({ id, imagem, bordaPadrao: variante.bordaPadrao, posicao: { x: 0, y: 0 } });
-          const externo = tamanhoExterno(nova);
-          const grid = { snap: variante.grid.snap, passoCm: variante.grid.passoCm };
-          const posicao = centroCm
-            ? posicaoDoDrop({ ponto: centroCm, externo, grid })
-            : posicaoInicial({ area: variante.areaUtil ?? parede, fotos: variante.fotos, externo, grid });
+          // A-04: no botão, o centro da área útil; ao soltar, o ponto de soltura.
+          const area = variante.areaUtil ?? parede;
+          const nova = novaFoto({
+            id,
+            imagem,
+            bordaPadrao: variante.bordaPadrao,
+            centroCm: centroCm ?? { x: area.xCm + area.larguraCm / 2, y: area.yCm + area.alturaCm / 2 },
+            grid: { snap: variante.grid.snap, passoCm: variante.grid.passoCm },
+            fotos: variante.fotos,
+          });
 
-          alterarConteudo((c) => ({
-            ...c,
-            fotos: [...c.fotos, { ...nova, xCm: posicao.x, yCm: posicao.y }],
-          }));
+          alterarConteudo((c) => ({ ...c, fotos: [...c.fotos, nova] }));
           set((estado) => {
             estado.ui.selecaoId = id;
           });
@@ -570,29 +568,31 @@ export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): Sto
           const variante = get().documento.variante;
           if (!variante) return;
           trocarFoto(id, (f) => {
-            const p = moverPorSetaDoDominio(f, direcao, {
-              snap: variante.grid.snap,
-              passoCm: variante.grid.passoCm,
-              shift,
-            });
-            return { ...f, xCm: p.x, yCm: p.y };
+            return {
+              ...f,
+              ...moverPorTeclado(f, direcao, {
+                shift,
+                grid: { snap: variante.grid.snap, passoCm: variante.grid.passoCm },
+              }),
+            };
           });
         },
 
         trocarTamanho(id, tamanho) {
-          trocarFoto(id, (f) => aplicarTamanho(f, tamanho));
+          trocarFoto(id, (f) => mudarTamanho(f, tamanho));
         },
 
         trocarOrientacao(id, orientacao) {
           trocarFoto(id, (f) => {
-            const tamanho = trocarOrientacaoDoTamanho(f.tamanho, orientacao);
-            return mesmoTamanho(tamanho, f.tamanho) ? f : aplicarTamanho(f, tamanho);
+            const atual = orientacaoDe(f.tamanho);
+            if (atual === 'quadrado' || atual === orientacao) return f;
+            return mudarTamanho(f, alternarOrientacao(f.tamanho));
           });
         },
 
         alterarBordaDaFoto(id, parcial) {
           trocarFoto(id, (f) =>
-            aplicarBorda(f, {
+            mudarBorda(f, {
               larguraCm:
                 parcial.larguraCm === undefined ? f.borda.larguraCm : limitarBorda(parcial.larguraCm),
               cor: parcial.cor ?? f.borda.cor,
@@ -680,7 +680,7 @@ export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): Sto
           const rascunho = get().ui.recorte;
           if (!rascunho) return;
           trocarFoto(rascunho.fotoId, (f) => {
-            const base = mesmoTamanho(rascunho.tamanho, f.tamanho) ? f : aplicarTamanho(f, rascunho.tamanho);
+            const base = mesmoTamanho(rascunho.tamanho, f.tamanho) ? f : mudarTamanho(f, rascunho.tamanho);
             return { ...base, recorte: { ...rascunho.offset } };
           });
           set((estado) => {

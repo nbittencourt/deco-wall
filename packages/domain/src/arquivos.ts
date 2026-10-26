@@ -13,13 +13,14 @@ export interface ArquivoImagem {
   tamanhoBytes: number;
 }
 
-// Devolve a mensagem de recusa (pt-BR) ou null quando o arquivo pode ser enviado.
+// Devolve a mensagem de recusa (pt-BR) ou null quando o arquivo pode ser enviado. A-19: vale a extensão E o tipo
+// (jpg, jpeg, png ou webp e image/jpeg, image/png ou image/webp). Arquivo sem tipo, ou de sistema da pasta
+// (Thumbs.db, desktop.ini, ocultos), é recusado como qualquer outro formato e conta nos ignorados (RN-20).
 export function validarArquivoImagem(arquivo: ArquivoImagem, limiteMb: number): string | null {
   const extensao = arquivo.nome.includes('.') ? arquivo.nome.split('.').pop()!.toLowerCase() : '';
-  // Alguns sistemas não informam o tipo ao arrastar o arquivo: nesse caso vale a extensão.
-  const formatoOk =
-    TIPOS_ACEITOS.has(arquivo.tipo) || (arquivo.tipo === '' && EXTENSOES_ACEITAS.has(extensao));
-  if (!formatoOk) return MENSAGEM_FORMATO_NAO_SUPORTADO;
+  if (!EXTENSOES_ACEITAS.has(extensao) || !TIPOS_ACEITOS.has(arquivo.tipo)) {
+    return MENSAGEM_FORMATO_NAO_SUPORTADO;
+  }
   if (arquivo.tamanhoBytes > limiteMb * 1024 * 1024) return `Arquivo maior que ${limiteMb} MB.`;
   return null;
 }

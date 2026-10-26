@@ -3,12 +3,13 @@ import {
   formatarCm,
   formatarDimensao,
   lerCm,
-  LIMITE_BORDA_CM,
+  BORDA_MAX_CM,
   LIMITE_PASSO_GRID_CM,
   PASSOS_GRID_CM,
   type AreaUtil,
   type Borda,
   type Grid,
+  type ResumoDaComposicao,
 } from '@deco-wall/domain';
 import { useId, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { BotaoInativo, CampoEmBreve } from '../componentes/proprios/BotaoEmBreve';
@@ -29,8 +30,8 @@ export interface PropsPainelComposicao {
   areaUtil: AreaUtil | null;
   paredeInteira: AreaUtil | null;
   grid: Grid;
-  // M2: resumo da composição (RF-62, B-05, B-14) e borda padrão das fotos novas (RN-03).
-  resumo: { quantidade: number; caixa: AreaUtil | null; comSobreposicao: number; foraDosLimites: number };
+  // M2: resumo da composição (RF-62, A-14) e borda padrão das fotos novas (RN-03).
+  resumo: ResumoDaComposicao;
   bordaPadrao: Borda;
   onAlterarBordaPadrao: (parcial: Partial<Borda>) => void;
   onRecalibrar: () => void;
@@ -55,6 +56,8 @@ function Secao({ titulo, acao, children }: { titulo: string; acao?: ReactNode; c
   );
 }
 
+const textoDeFotos = (n: number) => `${n} ${n === 1 ? 'foto' : 'fotos'}`;
+
 const METODO: Record<'perspectiva' | 'linear', string> = { perspectiva: 'Perspectiva', linear: 'Linear' };
 
 export function PainelComposicao({
@@ -76,21 +79,31 @@ export function PainelComposicao({
 
       <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-body-sm">
         <dt className="text-ink-2">Fotos</dt>
-        <dd className="text-right font-mono text-medida text-ink">{resumo.quantidade}</dd>
+        <dd className="text-right font-mono text-medida text-ink">{resumo.fotos}</dd>
         <dt className="text-ink-2">Área total</dt>
         <dd className="text-right font-mono text-medida text-ink">
-          {resumo.caixa ? formatarDimensao(resumo.caixa.larguraCm, resumo.caixa.alturaCm) : '—'}
+          {resumo.areaTotal ? formatarDimensao(resumo.areaTotal.larguraCm, resumo.areaTotal.alturaCm) : '—'}
         </dd>
-        {resumo.comSobreposicao > 0 && (
+        {resumo.sobrepostas > 0 && (
           <>
             <dt className="text-ink-2">Sobreposições</dt>
-            <dd className="text-right font-mono text-medida text-danger-ink">{resumo.comSobreposicao}</dd>
+            <dd className="text-right font-mono text-medida text-danger-ink">
+              {textoDeFotos(resumo.sobrepostas)}
+            </dd>
           </>
         )}
-        {resumo.foraDosLimites > 0 && (
+        {resumo.semFoto > 0 && (
           <>
-            <dt className="text-ink-2">Fora dos limites</dt>
-            <dd className="text-right font-mono text-medida text-danger-ink">{resumo.foraDosLimites}</dd>
+            <dt className="text-ink-2">Sem foto</dt>
+            <dd className="text-right font-mono text-medida text-ink">{resumo.semFoto}</dd>
+          </>
+        )}
+        {resumo.foraDaArea > 0 && (
+          <>
+            <dt className="text-ink-2">Fora da área</dt>
+            <dd className="text-right font-mono text-medida text-danger-ink">
+              {textoDeFotos(resumo.foraDaArea)}
+            </dd>
           </>
         )}
       </dl>
@@ -133,8 +146,8 @@ export function PainelComposicao({
             valor={bordaPadrao.larguraCm}
             className="flex-1"
             onConfirmar={(cm) => {
-              if (cm < LIMITE_BORDA_CM.min || cm > LIMITE_BORDA_CM.max) {
-                return `Entre ${formatarCm(LIMITE_BORDA_CM.min)} e ${formatarCm(LIMITE_BORDA_CM.max)} cm.`;
+              if (cm < 0 || cm > BORDA_MAX_CM) {
+                return `Entre ${formatarCm(0)} e ${formatarCm(BORDA_MAX_CM)} cm.`;
               }
               onAlterarBordaPadrao({ larguraCm: cm });
               return null;

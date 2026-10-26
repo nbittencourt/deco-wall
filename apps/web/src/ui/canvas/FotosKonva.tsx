@@ -1,11 +1,11 @@
 import {
-  calcularAlertas,
-  caixaDaComposicao,
-  caixaExterna,
+  alertasPorFoto,
+  boundingBox,
+  calcularRecorte,
   deslocarRecorte,
   encaixarPosicao,
   formatarDimensao,
-  recorteCover,
+  retanguloExterno,
   tamanhoExterno,
   type AlertasDaFoto,
   type AreaUtil,
@@ -67,11 +67,11 @@ function FotoNode({
   onAbrirRecorte?: (id: string) => void;
 }) {
   const imagem = useImagem(foto.imagem?.url ?? null);
-  const externo = tamanhoExterno(foto);
+  const externo = tamanhoExterno(foto.tamanho, foto.borda);
   const borda = foto.borda.larguraCm;
   const recorte =
     imagem && foto.imagem
-      ? recorteCover(
+      ? calcularRecorte(
           { larguraPx: foto.imagem.larguraPx, alturaPx: foto.imagem.alturaPx },
           foto.tamanho,
           foto.recorte,
@@ -82,7 +82,7 @@ function FotoNode({
   // recebe a posição final no `dragend`.
   const posicaoDoNo = (no: Konva.Node): Pt => {
     const bruta = { x: no.x(), y: no.y() };
-    return grid?.snap ? encaixarPosicao(bruta, grid.passoCm) : bruta;
+    return grid ? encaixarPosicao(bruta, grid) : bruta;
   };
 
   return (
@@ -196,7 +196,7 @@ export function CamadaRecorte({ cena }: { cena: CenaRecorte }) {
     ? Math.max(quadro.larguraCm / medidas.larguraPx, quadro.alturaCm / medidas.alturaPx)
     : 1;
   const posicaoDaImagem = (o: typeof offset): Pt => {
-    const r = recorteCover(medidas!, tamanho, o);
+    const r = calcularRecorte(medidas!, tamanho, o);
     return { x: quadro.xCm - r.x * cmPorPx, y: quadro.yCm - r.y * cmPorPx };
   };
 
@@ -218,10 +218,13 @@ export function CamadaRecorte({ cena }: { cena: CenaRecorte }) {
           onDragMove={(e) => {
             const base = inicio.current;
             if (!base) return;
-            const novo = deslocarRecorte(medidas, tamanho, base.offset, {
-              x: e.target.x() - base.x,
-              y: e.target.y() - base.y,
-            });
+            // Mover a imagem no quadro em cm equivale a mover `delta / cmPorPx` px da imagem.
+            const novo = deslocarRecorte(
+              base.offset,
+              { x: (e.target.x() - base.x) / cmPorPx, y: (e.target.y() - base.y) / cmPorPx },
+              medidas,
+              tamanho,
+            );
             e.target.position(posicaoDaImagem(novo));
             onOffsetChange(novo);
           }}
@@ -329,7 +332,7 @@ export function SobreposicaoFotos({
   const fotos = useMemo(() => comArrasto(cena.fotos, arrasto), [cena.fotos, arrasto]);
   const alertas = useMemo(
     () =>
-      calcularAlertas(
+      alertasPorFoto(
         fotos.map((f) => ({ _id: f.id, xCm: f.xCm, yCm: f.yCm, tamanho: f.tamanho, borda: f.borda })),
         cena.paredeInteira,
         cena.areaUtil,
@@ -343,7 +346,7 @@ export function SobreposicaoFotos({
     return { x: topo.x, y: topo.y, largura: caixa.larguraCm * vp.escala, altura: caixa.alturaCm * vp.escala };
   };
 
-  const caixaGeral = fotos.length >= 2 ? caixaDaComposicao(fotos) : null;
+  const caixaGeral = fotos.length >= 2 ? boundingBox(fotos) : null;
   const geral = caixaGeral ? emTela(caixaGeral) : null;
   const folga = MEDIDAS_CANVAS.folgaBoundingBoxPx;
   const selecionada = fotos.find((f) => f.id === cena.selecaoId);
@@ -375,7 +378,7 @@ export function SobreposicaoFotos({
       {fotos.map((foto) => {
         const textos = textosDoAlerta(alertas.get(foto.id) ?? { sobreposicao: false, fora: null });
         if (textos.length === 0) return null;
-        const r = emTela(caixaExterna(foto));
+        const r = emTela(retanguloExterno(foto));
         const d = MEDIDAS_CANVAS.offsetSobreposicaoPx;
         let x = r.x;
         return (
@@ -413,7 +416,7 @@ export function SobreposicaoFotos({
 }
 
 function SelecaoDaFoto({ foto, vp }: { foto: FotoCena; vp: Viewport }) {
-  const caixa = caixaExterna(foto);
+  const caixa = retanguloExterno(foto);
   const topo = aTela(vp, { x: caixa.xCm, y: caixa.yCm });
   const largura = caixa.larguraCm * vp.escala;
   const altura = caixa.alturaCm * vp.escala;

@@ -26,7 +26,7 @@ describe('boundingBox', () => {
       foto(1, { xCm: 10, yCm: 20, tamanho: { sugeridoId: '10x15', larguraCm: 10, alturaCm: 15 } }),
       foto(2, { xCm: 60, yCm: 5, borda: { larguraCm: 2, cor: '#FFFFFF' } }), // externo 24 × 34
     ];
-    expect(boundingBox(fotos)).toEqual({ xCm: 10, yCm: 5, larguraCm: 74, alturaCm: 39 });
+    expect(boundingBox(fotos)).toEqual({ xCm: 10, yCm: 5, larguraCm: 74, alturaCm: 34 });
   });
 
   it('placeholders entram no cálculo', () => {

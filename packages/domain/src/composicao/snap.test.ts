@@ -11,7 +11,7 @@ describe('encaixar', () => {
   });
 
   it('passo fracionário (2,5), sem ruído de ponto flutuante', () => {
-    expect(encaixar(6.3, 2.5)).toBe(5);
+    expect(encaixar(6.2, 2.5)).toBe(5);
     expect(encaixar(6.4, 2.5)).toBe(7.5);
     expect(encaixar(0.3, 0.1)).toBe(0.3);
   });
