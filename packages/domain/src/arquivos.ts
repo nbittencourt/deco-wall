@@ -3,6 +3,8 @@
 // (File) e em testes sem depender de APIs do browser.
 
 export const MENSAGEM_FORMATO_NAO_SUPORTADO = 'Formato não suportado. Use JPG, PNG ou WEBP.';
+// A-18, §5: o servidor não conseguiu decodificar o conteúdo (texto renomeado, arquivo corrompido, HEIC).
+export const MENSAGEM_IMAGEM_ILEGIVEL = 'Não foi possível ler a imagem.';
 
 const TIPOS_ACEITOS = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const EXTENSOES_ACEITAS = new Set(['jpg', 'jpeg', 'png', 'webp']);

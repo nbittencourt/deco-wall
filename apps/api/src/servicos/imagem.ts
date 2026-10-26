@@ -1,5 +1,6 @@
 import {
   MENSAGEM_FORMATO_NAO_SUPORTADO,
+  MENSAGEM_IMAGEM_ILEGIVEL,
   PERFIS,
   THUMB_FOTO_PX,
   THUMB_PAREDE_PX,
@@ -12,18 +13,22 @@ import { ErroHttp } from '../erros';
 
 const FORMATOS_ACEITOS = new Set(['jpeg', 'png', 'webp']);
 
-// O formato é decidido pelo conteúdo, não pela extensão nem pelo tipo MIME informado.
-export async function lerMetadados(buffer: Buffer): Promise<Metadata> {
+// O formato é decidido pelo conteúdo, não pela extensão nem pelo tipo MIME informado. `ilegivel` é a mensagem
+// para o que o sharp nem consegue abrir: a parede mantém a do M1; as fotos da biblioteca usam a do §5.
+export async function lerMetadados(
+  buffer: Buffer,
+  ilegivel: string = MENSAGEM_FORMATO_NAO_SUPORTADO,
+): Promise<Metadata> {
+  let meta: Metadata;
   try {
-    const meta = await sharp(buffer).metadata();
-    if (!meta.format || !FORMATOS_ACEITOS.has(meta.format)) {
-      throw new ErroHttp(415, MENSAGEM_FORMATO_NAO_SUPORTADO);
-    }
-    return meta;
-  } catch (erro) {
-    if (erro instanceof ErroHttp) throw erro;
+    meta = await sharp(buffer).metadata();
+  } catch {
+    throw new ErroHttp(415, ilegivel);
+  }
+  if (!meta.format || !FORMATOS_ACEITOS.has(meta.format)) {
     throw new ErroHttp(415, MENSAGEM_FORMATO_NAO_SUPORTADO);
   }
+  return meta;
 }
 
 export interface ParedeProcessada {
@@ -73,7 +78,7 @@ export interface FotoProcessada {
 // Foto da biblioteca (RF-25, ADR-05): EXIF aplicado, lado maior do perfil sem ampliar, WebP; miniatura de 256 px.
 // RN-04: largura maior que a altura é paisagem; senão, retrato (a quadrada vale retrato).
 export async function processarFoto(buffer: Buffer, perfil: Perfil): Promise<FotoProcessada> {
-  await lerMetadados(buffer);
+  await lerMetadados(buffer, MENSAGEM_IMAGEM_ILEGIVEL);
   const { ladoFotoPx, qualidadeWebp } = PERFIS[perfil];
   try {
     const principal = await sharp(buffer)
@@ -96,6 +101,6 @@ export async function processarFoto(buffer: Buffer, perfil: Perfil): Promise<Fot
     };
   } catch {
     // Cabeçalho válido mas pixels corrompidos.
-    throw new ErroHttp(415, MENSAGEM_FORMATO_NAO_SUPORTADO);
+    throw new ErroHttp(415, MENSAGEM_IMAGEM_ILEGIVEL);
   }
 }

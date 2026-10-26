@@ -21,15 +21,15 @@ export interface DependenciasApp {
 
 export async function criarApp(deps: DependenciasApp): Promise<FastifyInstance> {
   const uploadMaxMb = deps.uploadMaxMb ?? 50;
+  // O limite do corpo JSON acompanha o do upload; o multipart tem limite próprio por arquivo.
+  const app = Fastify({ logger: deps.logger ?? false, bodyLimit: (uploadMaxMb + 1) * 1024 * 1024 });
   const ctx: ContextoApi = {
     db: deps.mongo.db(),
     pastaFotos: deps.pastaFotos,
     uploadMaxMb,
     agora: deps.agora ?? (() => new Date()),
+    log: app.log,
   };
-
-  // O limite do corpo JSON acompanha o do upload; o multipart tem limite próprio por arquivo.
-  const app = Fastify({ logger: deps.logger ?? false, bodyLimit: (uploadMaxMb + 1) * 1024 * 1024 });
   await app.register(multipart, { limits: { fileSize: uploadMaxMb * 1024 * 1024, files: 2, fields: 10 } });
 
   app.setErrorHandler((erro, request, reply) => {
@@ -42,6 +42,8 @@ export async function criarApp(deps: DependenciasApp): Promise<FastifyInstance> 
     return reply.code(500).send({ erro: 'Erro interno do servidor.' });
   });
 
+  // A-28: o browser lê o limite real de upload ao abrir o editor.
+  app.get('/api/config', async () => ({ uploadMaxMb }));
   await registrarSaude(app, { pastaFotos: deps.pastaFotos, mongo: deps.mongo });
   await registrarProjetos(app, ctx);
   await registrarParede(app, ctx);

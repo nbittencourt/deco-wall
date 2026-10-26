@@ -26,32 +26,25 @@ function imagensUsadas(fotos: CorpoSalvarVariante['fotos']): ObjectId[] {
   return [...ids].map((id) => new ObjectId(id));
 }
 
-// M2-06: fotos só com escala definida (RN-08), com ids únicos e com imagens que existem e estão ativas.
-async function conferirFotos(
-  ctx: ContextoApi,
-  idProjeto: ObjectId,
-  fotos: CorpoSalvarVariante['fotos'],
-): Promise<void> {
-  if (fotos.length === 0) return;
-
-  const projeto = await ctx.db.collection('projetos').findOne({ _id: idProjeto });
-  const escala = (projeto?.parede as { escala?: { metodo?: string | null } } | null | undefined)?.escala;
-  if (!escala?.metodo) throw new ErroHttp(422, 'Defina a escala da parede antes de posicionar fotos.');
-
-  if (new Set(fotos.map((f) => f._id)).size !== fotos.length) {
-    throw new ErroHttp(422, 'Há fotos com o mesmo identificador.');
-  }
-
+// §5: todo `imagemId` não nulo precisa existir em `imagens`; senão, 422 com a lista. A imagem excluída conta
+// como existente (a exclusão e o placeholder automático são do M4), e o placeholder (`imagemId` nulo) é aceito.
+async function conferirImagens(ctx: ContextoApi, fotos: CorpoSalvarVariante['fotos']): Promise<void> {
   const ids = imagensUsadas(fotos);
-  if (ids.length > 0) {
-    const ativas = await ctx.db.collection('imagens').countDocuments({ _id: { $in: ids }, excluidaEm: null });
-    if (ativas !== ids.length) {
-      throw new ErroHttp(422, 'Há fotos que usam imagens inexistentes ou excluídas.');
-    }
+  if (ids.length === 0) return;
+  const existentes = await ctx.db
+    .collection('imagens')
+    .find({ _id: { $in: ids } }, { projection: { _id: 1 } })
+    .toArray();
+  const achadas = new Set(existentes.map((d) => d._id.toHexString()));
+  const imagensInexistentes = ids.map((id) => id.toHexString()).filter((id) => !achadas.has(id));
+  if (imagensInexistentes.length > 0) {
+    const erro = 'Há fotos que usam imagens inexistentes.';
+    throw new ErroHttp(422, erro, { erro, detalhes: { imagensInexistentes } });
   }
 }
 
-// DM-05: "fotos do projeto" = carregadas no projeto ou usadas em qualquer variante dele.
+// DM-05, M2-05: "fotos do projeto" = carregadas no projeto ou usadas em qualquer variante dele. Falha aqui não
+// desfaz o salvamento: vai para o log e o próximo salvamento repete, porque cada um associa todas as imagens usadas.
 async function registrarProjetoNasImagens(
   ctx: ContextoApi,
   idProjeto: ObjectId,
@@ -59,9 +52,13 @@ async function registrarProjetoNasImagens(
 ): Promise<void> {
   const ids = imagensUsadas(fotos);
   if (ids.length === 0) return;
-  await ctx.db
-    .collection('imagens')
-    .updateMany({ _id: { $in: ids } }, { $addToSet: { projetos: idProjeto } });
+  try {
+    await ctx.db
+      .collection('imagens')
+      .updateMany({ _id: { $in: ids } }, { $addToSet: { projetos: idProjeto } });
+  } catch (erro) {
+    ctx.log.error(erro, 'Não foi possível associar o projeto às imagens usadas.');
+  }
 }
 
 export async function salvarVariante(
@@ -78,7 +75,7 @@ export async function salvarVariante(
   const existente = await variantes.findOne({ _id: idVariante, projetoId: idProjeto });
   if (!existente) throw naoEncontrado('Variante não encontrada.');
 
-  await conferirFotos(ctx, idProjeto, corpo.fotos);
+  await conferirImagens(ctx, corpo.fotos);
 
   const salvaEm = ctx.agora();
   // SV-04: a escrita só vale se a revisão oficial ainda for a que esta sessão carregou.
