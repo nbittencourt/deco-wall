@@ -1,11 +1,11 @@
+import { filtrarBiblioteca, type FiltroBiblioteca } from '@deco-wall/domain';
 import { Ellipsis, ImagePlus } from 'lucide-react';
 import { useState, type DragEvent } from 'react';
 import { arrastandoArquivos, lerArquivosSoltos } from '../../../app/arquivosSoltos';
-import { filtrarImagens, type FiltroBiblioteca } from '../../../app/biblioteca';
 import { useEditor, useStoreEditor } from '../../../app/StoreContext';
 import { urlArquivoImagem } from '../../../infra/clienteApi';
 import type { ClienteApi } from '../../../infra/dto';
-import { BotaoInativo, CampoEmBreve, TEXTO_EM_BREVE } from '../../componentes/proprios/BotaoEmBreve';
+import { CampoEmBreve, TEXTO_EM_BREVE } from '../../componentes/proprios/BotaoEmBreve';
 import { ComDica } from '../../componentes/proprios/ComDica';
 import { Button } from '../../componentes/ui/button';
 import {
@@ -17,7 +17,6 @@ import {
 import { ToggleGroup, ToggleGroupItem } from '../../componentes/ui/toggle-group';
 import { cn } from '../../../lib/utils';
 import { DialogoUpload } from './DialogoUpload';
-import { MOTIVO_SEM_ESCALA } from './HeaderEditor';
 
 // Coluna Biblioteca (protótipo 03; spec M2 §3.1): fotos de todos os projetos (RF-27), filtros (RF-28),
 // miniaturas com nome e orientação (RF-22), "Carregar fotos" (RF-20) e arrastar para o canvas (RF-30).
@@ -27,18 +26,21 @@ export const TIPO_ARRASTO_IMAGEM = 'application/x-deco-imagem';
 
 const ROTULO_ORIENTACAO = { retrato: 'Retrato', paisagem: 'Paisagem' } as const;
 
-export function Biblioteca({
-  api,
-  temEscala,
-  limiteMb = 50,
-}: {
-  api: ClienteApi;
-  temEscala: boolean;
-  limiteMb?: number;
-}) {
+const ROTULO_NATURAL = { retrato: 'Retrato natural', paisagem: 'Paisagem natural' } as const;
+
+// §3.1: um texto por filtro.
+const TEXTO_VAZIO: Record<FiltroBiblioteca, string> = {
+  todas: 'Nenhuma foto na biblioteca. Carregue fotos para começar.',
+  projeto: 'Nenhuma foto neste projeto ainda.',
+  variante: 'Nenhuma foto salva nesta variante ainda.',
+};
+
+export function Biblioteca({ api, temEscala }: { api: ClienteApi; temEscala: boolean }) {
   const store = useStoreEditor();
   const projeto = useEditor((s) => s.documento.projeto)!;
-  const fotos = useEditor((s) => s.conteudo?.fotos);
+  // M2-05: os filtros olham o estado salvo, não as fotos ainda não salvas.
+  const fotosSalvas = useEditor((s) => s.documento.salvo?.conteudo.fotos);
+  const limiteMb = useEditor((s) => s.config.uploadMaxMb);
   const imagens = useEditor((s) => s.biblioteca.imagens);
   const erro = useEditor((s) => s.biblioteca.erro);
   const escolhida = useEditor((s) => s.ui.bibliotecaSelecaoId);
@@ -50,13 +52,16 @@ export function Biblioteca({
   });
   const [recebendo, setRecebendo] = useState(false);
 
-  const visiveis = filtrarImagens(imagens, filtro, projeto._id, fotos ?? []);
+  const visiveis = filtrarBiblioteca(imagens, filtro, {
+    projetoId: projeto._id,
+    fotosSalvas: fotosSalvas ?? [],
+  });
 
   const aoSoltarArquivos = (evento: DragEvent) => {
     if (!arrastandoArquivos(evento.dataTransfer)) return;
     evento.preventDefault();
     setRecebendo(false);
-    if (!temEscala) return;
+    // A-20: a biblioteca é global, então soltar arquivos vale também sem escala.
     void lerArquivosSoltos(evento.dataTransfer).then((arquivos) => {
       if (arquivos.length > 0) setDialogo({ aberto: true, arquivos });
     });
@@ -67,7 +72,7 @@ export function Biblioteca({
       onDragOver={(e) => {
         if (!arrastandoArquivos(e.dataTransfer)) return;
         e.preventDefault();
-        if (temEscala) setRecebendo(true);
+        setRecebendo(true);
       }}
       onDragLeave={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setRecebendo(false);
@@ -81,24 +86,15 @@ export function Biblioteca({
     >
       <div className="flex items-baseline justify-between">
         <h2 className="text-display-sm text-ink">Biblioteca</h2>
-        {imagens.length > 0 && (
-          <span className="text-xs text-ink-3">
-            {imagens.length} {imagens.length === 1 ? 'foto' : 'fotos'}
-          </span>
-        )}
+        <span className="text-xs text-ink-3">
+          {visiveis.length} {visiveis.length === 1 ? 'foto' : 'fotos'}
+        </span>
       </div>
 
-      {temEscala ? (
-        <Button className="w-full" onClick={() => setDialogo({ aberto: true, arquivos: [] })}>
-          <ImagePlus aria-hidden="true" />
-          Carregar fotos
-        </Button>
-      ) : (
-        <BotaoInativo variant="default" className="w-full" motivo={MOTIVO_SEM_ESCALA}>
-          <ImagePlus aria-hidden="true" />
-          Carregar fotos
-        </BotaoInativo>
-      )}
+      <Button className="w-full" onClick={() => setDialogo({ aberto: true, arquivos: [] })}>
+        <ImagePlus aria-hidden="true" />
+        Carregar fotos
+      </Button>
 
       <div className="flex items-center gap-2">
         <ToggleGroup
@@ -139,16 +135,12 @@ export function Biblioteca({
       {erro && <p className="text-body-sm text-danger-ink">{erro}</p>}
 
       {!temEscala && (
-        <p className="text-body-sm text-ink-2">
-          As fotos ficam disponíveis depois que a escala da parede for definida.
-        </p>
+        <p className="text-body-sm text-ink-2">Defina a escala da parede para colocar fotos nela.</p>
       )}
 
       {visiveis.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-line p-6 text-center">
-          <p className="text-body-sm text-ink-2">
-            {imagens.length === 0 ? 'Nenhuma foto na biblioteca ainda.' : 'Nenhuma foto neste filtro.'}
-          </p>
+          <p className="text-body-sm text-ink-2">{TEXTO_VAZIO[filtro]}</p>
         </div>
       ) : (
         <ul className="grid grid-cols-2 gap-3">
@@ -161,9 +153,8 @@ export function Biblioteca({
                   draggable={temEscala}
                   aria-pressed={selecionada}
                   aria-label={`${imagem.nomeOriginal}, ${ROTULO_ORIENTACAO[imagem.orientacaoNatural]}`}
-                  title={temEscala ? 'Arraste para a parede ou clique duas vezes para adicionar' : undefined}
+                  title={`${imagem.nomeOriginal} · ${ROTULO_NATURAL[imagem.orientacaoNatural]}`}
                   onClick={() => store.getState().selecionarImagemDaBiblioteca(imagem._id)}
-                  onDoubleClick={() => temEscala && store.getState().adicionarFoto(imagem._id)}
                   onDragStart={(evento) => {
                     evento.dataTransfer.setData(TIPO_ARRASTO_IMAGEM, imagem._id);
                     evento.dataTransfer.effectAllowed = 'copy';
@@ -173,7 +164,7 @@ export function Biblioteca({
                 >
                   <span
                     className={cn(
-                      'block h-[88px] overflow-hidden rounded-[6px] bg-sand',
+                      'block h-[92px] overflow-hidden rounded-[6px] bg-sand',
                       selecionada ? 'ring-2 ring-accent' : 'ring-1 ring-line-soft',
                     )}
                   >

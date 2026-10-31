@@ -340,12 +340,12 @@ describe('parede com escala', () => {
     }
   });
 
-  it('"Carregar fotos" fica ativo com escala e inativo sem escala (M2-01)', async () => {
+  it('"Carregar fotos" fica ativo com e sem escala: a biblioteca é global (A-20)', async () => {
     await montar({ parede: PAREDE_LINEAR, areaUtil: AREA_LINEAR });
     expect(screen.getByRole('button', { name: 'Carregar fotos' }).getAttribute('aria-disabled')).toBeNull();
     cleanup();
     await montar({ parede: PAREDE_SEM_ESCALA });
-    expect(screen.getByRole('button', { name: 'Carregar fotos' }).getAttribute('aria-disabled')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Carregar fotos' }).getAttribute('aria-disabled')).toBeNull();
   });
 });
 
