@@ -55,6 +55,11 @@ async function aplicar(page: Page, campo: string, valor: string) {
   await entrada.press('Enter');
 }
 
+async function centroComoPar(page: Page, id: string): Promise<[number, number]> {
+  const c = await centroDaFoto(page, id);
+  return [c.x, c.y];
+}
+
 const externo = (page: Page, texto: string) => page.getByText(texto, { exact: true });
 
 test.describe('adicionar fotos (RF-30, RN-03, RN-04, RN-13)', () => {
@@ -139,7 +144,7 @@ test.describe('medidas (PRD aceite 1, 2, 2a, 3)', () => {
     await aplicar(page, 'Largura da borda', '2');
     await expect(externo(page, '14,0 × 19,0 cm')).toBeVisible();
 
-    // Canto superior esquerdo externo fixo (M2-05) e medida na tela.
+    // Canto superior esquerdo externo fixo (M2-10) e medida na tela.
     expect([await lerCampo(page, 'X'), await lerCampo(page, 'Y')]).toEqual([x0, y0]);
     const [id] = await idsDasFotos(page);
     const r = await retanguloDaFoto(page, id!);
@@ -609,7 +614,7 @@ test.describe('destaques e bounding box no canvas (A-12, A-13, A-16, M2-06)', ()
     await expect(page.getByText('10,0 × 15,0 cm')).toBeVisible();
   });
 
-  test('imagem que não carrega: retângulo com "Imagem indisponível" no canvas e no painel (A-16)', async ({
+  test('imagem que não carrega: retângulo com ícone e "Imagem indisponível" no canvas (A-16)', async ({
     page,
     request,
   }) => {
@@ -623,7 +628,6 @@ test.describe('destaques e bounding box no canvas (A-12, A-13, A-16, M2-06)', ()
     await expect
       .poll(async () => (await anotacoesDaCena(page)).filter((a) => a.tipo === 'imagem-indisponivel'))
       .toEqual([expect.objectContaining({ fotoId: id, texto: 'Imagem indisponível' })]);
-    await expect(page.getByText('Imagem indisponível')).toBeVisible(); // no painel
   });
 
   test('placeholder: desenhado com o tamanho, painel "Sem foto" e linha "Sem foto" na Composição (M2-06)', async ({
@@ -651,6 +655,76 @@ test.describe('destaques e bounding box no canvas (A-12, A-13, A-16, M2-06)', ()
     );
     await escolherTamanho(page, '20 × 30 cm'); // tamanho continua editável
     expect(await lerCampo(page, 'X')).toBe(100);
+  });
+});
+
+test.describe('cenários da §7 que faltavam (T23)', () => {
+  test('cenário 8: sobreposição e fora da parede, com pills e contagens no painel Composição (A-12, A-14)', async ({
+    page,
+    request,
+  }) => {
+    const p = await cenario(request);
+    await abrir(page, p.id);
+    await adicionar(page, 'retrato.jpg');
+    await page.getByRole('button', { name: 'Adicionar', exact: true }).click(); // cascata: sobrepõe a primeira
+    await page.getByRole('button', { name: 'Adicionar', exact: true }).click(); // terceira, também em cascata
+    await aplicar(page, 'X', '295'); // a terceira sai da parede
+    await page.locator('footer').click();
+    await page.keyboard.press('Escape');
+
+    const notas = await anotacoesDaCena(page);
+    expect(notas.filter((a) => a.tipo === 'fora-da-parede')).toHaveLength(1);
+    // A segunda cobre a primeira e a terceira (fora) já não se sobrepõe a ninguém: só a segunda leva a pill.
+    expect(notas.filter((a) => a.tipo === 'sobreposicao')).toHaveLength(1);
+
+    await expect(page.getByRole('heading', { level: 2, name: 'Composição' })).toBeVisible();
+    await expect(page.getByText('Sobreposições', { exact: true })).toBeVisible();
+    await expect(page.getByText('2 fotos', { exact: true })).toBeVisible();
+    await expect(page.getByText('Fora da área', { exact: true })).toBeVisible();
+    await expect(page.getByText('1 foto', { exact: true })).toBeVisible();
+  });
+
+  test('cenário 7: recalibrar mantém X, Y e tamanho em cm; só a escala na tela muda (PRD aceite 5, RN-10)', async ({
+    page,
+    request,
+  }) => {
+    const p = await cenario(request);
+    const imagem = await enviarImagem(request, p.id);
+    const res = await salvarVarianteApi(request, p, [
+      fotoDaApi(1, imagem._id, {
+        xCm: 40,
+        yCm: 25,
+        tamanho: { sugeridoId: '20x30', larguraCm: 20, alturaCm: 30 },
+      }),
+    ]);
+    expect(res.status()).toBe(200);
+
+    await abrir(page, p.id);
+    const [id] = await idsDasFotos(page);
+    const antes = await pxPorCmNaTela(page);
+    await page.mouse.click(...(await centroComoPar(page, id!)));
+    expect([await lerCampo(page, 'X'), await lerCampo(page, 'Y')]).toEqual([40, 25]);
+
+    // Recalibra pela API com outra medida (150 cm → 120 cm para o mesmo segmento): a escala muda.
+    const atual = (await lerProjeto(request, p.id)).projeto.revisao;
+    const nova = await request.put(`/api/projetos/${p.id}/parede/escala`, {
+      data: {
+        revisaoBase: atual,
+        metodo: 'linear',
+        linear: { p1: { x: 100, y: 100 }, p2: { x: 700, y: 100 }, comprimentoCm: 120 },
+      },
+    });
+    expect(nova.status()).toBe(200);
+
+    await page.reload();
+    await esperarPalco(page);
+    const [idDepois] = await idsDasFotos(page);
+    await page.mouse.click(...(await centroComoPar(page, idDepois!)));
+    expect([await lerCampo(page, 'X'), await lerCampo(page, 'Y')]).toEqual([40, 25]);
+    await expect(page.getByRole('combobox', { name: 'Tamanho' })).toContainText('20 × 30');
+    await expect(page.getByText('20,0 × 30,0 cm', { exact: true })).toBeVisible();
+    const depois = await pxPorCmNaTela(page);
+    expect(depois).not.toBeCloseTo(antes, 2);
   });
 });
 

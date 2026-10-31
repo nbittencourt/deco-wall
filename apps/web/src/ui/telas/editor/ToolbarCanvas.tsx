@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { BotaoInativo } from '../../componentes/proprios/BotaoEmBreve';
 import { ComDica } from '../../componentes/proprios/ComDica';
 import { Button } from '../../componentes/ui/button';
+import { Toggle } from '../../componentes/ui/toggle';
 import type { PalcoApi } from '../../canvas/cena';
 
 // Toolbar do canvas (DESIGN §7): ações da composição (M2) e zoom. Sem o que a ação precisa, o botão fica
@@ -57,13 +58,16 @@ export interface PropsToolbarCanvas {
   palco: React.RefObject<PalcoApi | null>;
   // Sem parede não há o que enquadrar: os controles de zoom ficam sem efeito.
   comPalco: boolean;
-  // "Adicionar" precisa de escala e de uma foto escolhida na biblioteca (M2-01, M2-04).
+  // "Adicionar" precisa de escala e de uma foto escolhida na biblioteca (A-05).
   motivoAdicionar?: string;
   // Duplicar e ordem precisam de uma foto selecionada na parede.
   temSelecao: boolean;
   // M2-08: a ordem anda uma posição; no topo (ou no fundo) o botão fica inativo.
   noTopo: boolean;
   noFundo: boolean;
+  // A-13: mostra ou esconde a caixa "Área total" no canvas (estado da tela, fora do desfazer).
+  areaTotal: boolean;
+  onAreaTotal: (mostrar: boolean) => void;
   onAdicionar: () => void;
   onDuplicar: () => void;
   onTrazerParaFrente: () => void;
@@ -80,6 +84,8 @@ export function ToolbarCanvas({
   temSelecao,
   noTopo,
   noFundo,
+  areaTotal,
+  onAreaTotal,
   onAdicionar,
   onDuplicar,
   onTrazerParaFrente,
@@ -108,6 +114,10 @@ export function ToolbarCanvas({
         onAtivar={onEnviarParaTras}
       />
       <div className="flex-1" />
+      <Toggle pressed={areaTotal} onPressedChange={onAreaTotal} className="px-2">
+        Área total
+      </Toggle>
+      <span aria-hidden="true" className="mx-1 h-6 w-px bg-line" />
       <ComDica texto="Diminuir zoom">
         <Button
           variant="ghost"

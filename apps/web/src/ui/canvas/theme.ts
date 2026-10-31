@@ -24,6 +24,8 @@ export const CORES_CANVAS = {
   pillMedidaTexto: '#FFFFFF',
   // Foto cuja imagem ainda não carregou (ou não está na biblioteca).
   fotoSemImagem: '#EFEAE1',
+  // Ícone e texto de "Imagem indisponível" (`ink-3`).
+  textoSemImagem: '#6E655A',
 } as const;
 
 export const MEDIDAS_CANVAS = {

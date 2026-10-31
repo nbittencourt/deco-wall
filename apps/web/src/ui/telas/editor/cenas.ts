@@ -23,7 +23,7 @@ export function dadosDaParede(projeto: ProjetoDto): DadosParede {
   };
 }
 
-// As fotos da variante com a imagem resolvida na biblioteca (arquivo `render`, B-09).
+// As fotos da variante com a imagem resolvida na biblioteca (arquivo `render`, RNF-03).
 // O que a cena precisa da variante aberta: o grid (da variante) e o conteúdo desfazível (fotos e área útil).
 export interface VistaDaVariante {
   grid: Grid;
@@ -40,7 +40,8 @@ export function fotosDaCena(
     const imagem = foto.imagemId ? porId.get(foto.imagemId) : undefined;
     return {
       id: foto._id,
-      nome: imagem?.nomeOriginal ?? 'Imagem indisponível',
+      nome: foto.imagemId === null ? 'Sem foto' : (imagem?.nomeOriginal ?? 'Imagem indisponível'),
+      placeholder: foto.imagemId === null,
       xCm: foto.xCm,
       yCm: foto.yCm,
       tamanho: foto.tamanho,
@@ -59,6 +60,7 @@ export function fotosDaCena(
 
 export interface InteracaoDaCena {
   selecaoId?: string | null;
+  mostrarAreaTotal?: boolean;
   interativa?: boolean;
   onSelecionar?: (id: string | null) => void;
   onMoverFoto?: (id: string, xCm: number, yCm: number) => void;
@@ -82,6 +84,7 @@ export function cenaDaParede(
     tipo: 'parede' as const,
     chave,
     selecaoId: interacao.selecaoId ?? null,
+    mostrarAreaTotal: interacao.mostrarAreaTotal ?? true,
     interativa: interacao.interativa ?? false,
     onSelecionar: interacao.onSelecionar,
     onMoverFoto: interacao.onMoverFoto,

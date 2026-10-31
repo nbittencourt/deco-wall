@@ -1,13 +1,12 @@
 import {
-  alertasPorFoto,
-  boundingBox,
   calcularRecorte,
   deslocarRecorte,
   encaixarPosicao,
   formatarDimensao,
+  formatarTamanho,
+  limitarPosicao,
   retanguloExterno,
   tamanhoExterno,
-  type AlertasDaFoto,
   type AreaUtil,
   type Grid,
   type Pt,
@@ -15,11 +14,22 @@ import {
 } from '@deco-wall/domain';
 import Konva from 'konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Circle, Group, Image as KonvaImage, Label, Line, Path, Rect, Shape, Tag, Text } from 'react-konva';
+import {
+  caixaAreaTotal,
+  comArrasto,
+  destaquesDaCena,
+  imagemIndisponivel,
+  opacidadeDaFoto,
+  SEM_ALERTAS,
+  type Arrasto,
+} from './anotacoes';
 import type { CenaParede, CenaRecorte, FotoCena } from './cena';
 import { CORES_CANVAS, MEDIDAS_CANVAS } from './theme';
-import { useImagem } from './useImagem';
+import { useImagem, useImagemComEstado } from './useImagem';
+
+export type { Arrasto };
 
 // Fotos no Konva (docs/specs/M2-biblioteca-e-composicao.md §3.3, §3.5; DESIGN §2.2). Duas partes, como no
 // Palco: a cena em cm (as fotos e o modo de recorte) e a sobreposição em px de tela (seleção, alertas,
@@ -28,13 +38,6 @@ import { useImagem } from './useImagem';
 const FONTE_MONO = "'IBM Plex Mono', ui-monospace, monospace";
 const CONTORNO_BORDA = 'rgba(31, 27, 22, 0.18)';
 
-// Posição da foto enquanto é arrastada (ainda não está na store — B-03).
-export interface Arrasto {
-  id: string;
-  xCm: number;
-  yCm: number;
-}
-
 const aTela = (vp: Viewport, p: Pt): Pt => ({ x: p.x * vp.escala + vp.x, y: p.y * vp.escala + vp.y });
 
 function definirCursor(evento: KonvaEventObject<MouseEvent>, cursor: string) {
@@ -42,31 +45,80 @@ function definirCursor(evento: KonvaEventObject<MouseEvent>, cursor: string) {
   if (palco) palco.style.cursor = cursor;
 }
 
-function comArrasto(fotos: readonly FotoCena[], arrasto: Arrasto | null): FotoCena[] {
-  if (!arrasto) return [...fotos];
-  return fotos.map((f) => (f.id === arrasto.id ? { ...f, xCm: arrasto.xCm, yCm: arrasto.yCm } : f));
-}
-
 // ---- cena (cm) ----
+
+// Placeholder (DESIGN §2.2, M2-06): hachura de 45° em `danger` 20% sobre `#FBEDEA` e borda tracejada de 1,5 px. O
+// ícone e o tamanho em mono ficam na sobreposição (px de tela).
+const ESPACO_HACHURA_CM = 1.5;
+
+function Placeholder({ foto }: { foto: FotoCena }) {
+  const b = foto.borda.larguraCm;
+  const { larguraCm: l, alturaCm: a } = foto.tamanho;
+  return (
+    <Group x={b} y={b}>
+      {/* O fundo escuta o mouse: é ele que seleciona e arrasta o placeholder. */}
+      <Rect width={l} height={a} fill={CORES_CANVAS.placeholderFundo} />
+      <Shape
+        listening={false}
+        stroke={CORES_CANVAS.placeholderHachura}
+        strokeWidth={1}
+        strokeScaleEnabled={false}
+        sceneFunc={(ctx, forma) => {
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(0, 0, l, a);
+          ctx.clip();
+          ctx.beginPath();
+          for (let d = -a; d < l; d += ESPACO_HACHURA_CM) {
+            ctx.moveTo(d, a);
+            ctx.lineTo(d + a, 0);
+          }
+          ctx.strokeShape(forma);
+          ctx.restore();
+        }}
+      />
+      <Rect
+        listening={false}
+        width={l}
+        height={a}
+        stroke={CORES_CANVAS.placeholderBorda}
+        strokeWidth={MEDIDAS_CANVAS.bordaPlaceholderPx}
+        strokeScaleEnabled={false}
+        dash={[6, 4]}
+      />
+    </Group>
+  );
+}
 
 function FotoNode({
   foto,
   interativa,
   grid,
+  parede,
+  opacidade,
   onSelecionar,
   onArrasto,
   onSoltar,
   onAbrirRecorte,
+  onFalhaDaImagem,
 }: {
   foto: FotoCena;
   interativa: boolean;
   grid: Grid | null;
+  // M2-11: o limite de posição vale no arraste.
+  parede: AreaUtil | null;
+  opacidade: number;
   onSelecionar?: (id: string) => void;
+  onFalhaDaImagem: (id: string, falhou: boolean) => void;
   onArrasto: (arrasto: Arrasto) => void;
   onSoltar: (arrasto: Arrasto) => void;
   onAbrirRecorte?: (id: string) => void;
 }) {
-  const imagem = useImagem(foto.imagem?.url ?? null);
+  const { imagem, falhou } = useImagemComEstado(foto.imagem?.url ?? null);
+  useEffect(() => {
+    onFalhaDaImagem(foto.id, falhou);
+    return () => onFalhaDaImagem(foto.id, false);
+  }, [foto.id, falhou, onFalhaDaImagem]);
   const externo = tamanhoExterno(foto.tamanho, foto.borda);
   const borda = foto.borda.larguraCm;
   const recorte =
@@ -78,11 +130,17 @@ function FotoNode({
         )
       : null;
 
-  // M2-04, B-02: o canto superior esquerdo externo é encaixado no grid; o Konva move o nó, a store só
-  // recebe a posição final no `dragend`.
+  // A-04, M2-11: o canto superior esquerdo externo é encaixado no grid e limitado à parede; o Konva move o
+  // nó, a store só recebe a posição final no `dragend`.
   const posicaoDoNo = (no: Konva.Node): Pt => {
     const bruta = { x: no.x(), y: no.y() };
-    return grid ? encaixarPosicao(bruta, grid) : bruta;
+    const encaixada = grid ? encaixarPosicao(bruta, grid) : bruta;
+    if (!parede) return encaixada;
+    const limitada = limitarPosicao(
+      { xCm: encaixada.x, yCm: encaixada.y, tamanho: foto.tamanho, borda: foto.borda },
+      parede,
+    );
+    return { x: limitada.xCm, y: limitada.yCm };
   };
 
   return (
@@ -92,6 +150,7 @@ function FotoNode({
       y={foto.yCm}
       listening={interativa}
       draggable={interativa}
+      opacity={opacidade}
       onMouseDown={() => onSelecionar?.(foto.id)}
       onDblClick={() => onAbrirRecorte?.(foto.id)}
       onMouseEnter={(e) => definirCursor(e, 'move')}
@@ -126,6 +185,8 @@ function FotoNode({
           height={foto.tamanho.alturaCm}
           crop={{ x: recorte.x, y: recorte.y, width: recorte.largura, height: recorte.altura }}
         />
+      ) : foto.placeholder ? (
+        <Placeholder foto={foto} />
       ) : (
         <Rect
           x={borda}
@@ -144,12 +205,14 @@ export function FotosDaCena({
   ocultaId,
   onArrasto,
   onSoltar,
+  onFalhaDaImagem,
 }: {
   cena: CenaParede | CenaRecorte;
   // A foto que está no modo de recorte é desenhada à parte.
   ocultaId?: string;
   onArrasto: (arrasto: Arrasto) => void;
   onSoltar: (arrasto: Arrasto) => void;
+  onFalhaDaImagem: (id: string, falhou: boolean) => void;
 }) {
   const interativa = cena.tipo === 'parede' && cena.interativa;
   return (
@@ -162,11 +225,18 @@ export function FotosDaCena({
             foto={foto}
             interativa={interativa}
             grid={cena.grid}
+            parede={cena.paredeInteira}
+            opacidade={opacidadeDaFoto(cena, foto.id)}
             onSelecionar={cena.onSelecionar}
-            onArrasto={onArrasto}
+            onFalhaDaImagem={onFalhaDaImagem}
+            onArrasto={(a) => {
+              onArrasto(a);
+              cena.onArrastarFoto?.(a); // A-07: a barra de status mostra a posição ao vivo
+            }}
             onSoltar={(a) => {
               onSoltar(a);
               cena.onMoverFoto?.(a.id, a.xCm, a.yCm);
+              cena.onArrastarFoto?.(null);
             }}
             onAbrirRecorte={cena.onAbrirRecorte}
           />
@@ -312,33 +382,21 @@ const TEXTO_ALERTA = {
   sobreposicao: 'Sobreposição',
 } as const;
 
-function textosDoAlerta(alertas: AlertasDaFoto): string[] {
-  const textos: string[] = [];
-  if (alertas.fora) textos.push(TEXTO_ALERTA[alertas.fora]);
-  if (alertas.sobreposicao) textos.push(TEXTO_ALERTA.sobreposicao);
-  return textos;
-}
-
-// Seleção, alertas e bounding box das fotos do editor (spec M2 §3.3).
+// Seleção, alertas, placeholders, imagem indisponível e bounding box das fotos do editor (spec M2 §3.3, §3.7;
+// A-12, A-13, A-16). A decisão do que aparece vem de `anotacoes.ts`; aqui só o desenho, em px de tela.
 export function SobreposicaoFotos({
   cena,
   vp,
   arrasto,
+  falhas,
 }: {
-  cena: CenaParede;
+  cena: CenaParede | CenaRecorte;
   vp: Viewport;
   arrasto: Arrasto | null;
+  falhas: ReadonlySet<string>;
 }) {
   const fotos = useMemo(() => comArrasto(cena.fotos, arrasto), [cena.fotos, arrasto]);
-  const alertas = useMemo(
-    () =>
-      alertasPorFoto(
-        fotos.map((f) => ({ _id: f.id, xCm: f.xCm, yCm: f.yCm, tamanho: f.tamanho, borda: f.borda })),
-        cena.paredeInteira,
-        cena.areaUtil,
-      ),
-    [fotos, cena.paredeInteira, cena.areaUtil],
-  );
+  const { alertas, acima } = useMemo(() => destaquesDaCena(fotos, cena), [fotos, cena]);
   if (!cena.comEscala) return null;
 
   const emTela = (caixa: AreaUtil) => {
@@ -346,10 +404,12 @@ export function SobreposicaoFotos({
     return { x: topo.x, y: topo.y, largura: caixa.larguraCm * vp.escala, altura: caixa.alturaCm * vp.escala };
   };
 
-  const caixaGeral = fotos.length >= 2 ? boundingBox(fotos) : null;
+  // A-13: a caixa aparece com 1 foto ou mais, se o toggle "Área total" estiver ligado.
+  const caixaGeral = caixaAreaTotal(fotos, cena);
   const geral = caixaGeral ? emTela(caixaGeral) : null;
   const folga = MEDIDAS_CANVAS.folgaBoundingBoxPx;
   const selecionada = fotos.find((f) => f.id === cena.selecaoId);
+  const d = MEDIDAS_CANVAS.offsetSobreposicaoPx;
 
   return (
     <>
@@ -376,42 +436,120 @@ export function SobreposicaoFotos({
       )}
 
       {fotos.map((foto) => {
-        const textos = textosDoAlerta(alertas.get(foto.id) ?? { sobreposicao: false, fora: null });
-        if (textos.length === 0) return null;
         const r = emTela(retanguloExterno(foto));
-        const d = MEDIDAS_CANVAS.offsetSobreposicaoPx;
-        let x = r.x;
+        const a = alertas.get(foto.id) ?? SEM_ALERTAS;
         return (
           <Group key={foto.id} listening={false}>
-            <Rect
-              x={r.x - d}
-              y={r.y - d}
-              width={r.largura + 2 * d}
-              height={r.altura + 2 * d}
-              stroke={CORES_CANVAS.sobreposicao}
-              strokeWidth={MEDIDAS_CANVAS.bordaSobreposicaoPx}
-              dash={[6, 4]}
-            />
-            {textos.map((texto) => {
-              const pill = (
-                <Pill
-                  key={texto}
-                  x={x}
-                  y={r.y - d - 24}
-                  fundo={CORES_CANVAS.sobreposicao}
-                  icone
-                  texto={texto}
-                />
-              );
-              x += larguraDoPill(texto, true) + 6;
-              return pill;
-            })}
+            {foto.placeholder && <MarcaDoPlaceholder foto={foto} r={r} />}
+            {imagemIndisponivel(foto, falhas) && <MarcaDeImagemIndisponivel r={r} />}
+            {(a.sobreposicao || a.fora) && (
+              <Rect
+                x={r.x - d}
+                y={r.y - d}
+                width={r.largura + 2 * d}
+                height={r.altura + 2 * d}
+                stroke={CORES_CANVAS.sobreposicao}
+                strokeWidth={MEDIDAS_CANVAS.bordaSobreposicaoPx}
+                dash={[6, 4]}
+              />
+            )}
+            {/* A-12: "Sobreposição" no canto inferior direito da foto da camada superior. */}
+            {acima.has(foto.id) && (
+              <Pill
+                x={r.x + r.largura - 6}
+                y={r.y + r.altura - 6 - ALTURA_PILL_PX}
+                ancora="fim"
+                fundo={CORES_CANVAS.sobreposicao}
+                icone
+                texto={TEXTO_ALERTA.sobreposicao}
+              />
+            )}
+            {/* A-12: "Fora da parede" ou "Fora da área útil" em pill abaixo da foto, alinhada à direita. */}
+            {a.fora && (
+              <Pill
+                x={r.x + r.largura + d}
+                y={r.y + r.altura + d + 6}
+                ancora="fim"
+                fundo={CORES_CANVAS.sobreposicao}
+                icone
+                texto={TEXTO_ALERTA[a.fora]}
+              />
+            )}
           </Group>
         );
       })}
 
       {selecionada && <SelecaoDaFoto foto={selecionada} vp={vp} />}
     </>
+  );
+}
+
+const ALTURA_PILL_PX = 2 * PADDING_PILL_PX + MEDIDAS_CANVAS.fonteMedidaPx * 1.2;
+
+// Placeholder (DESIGN §2.2): ícone imagem-cortada `danger-ink` no centro e o tamanho em mono sobre branco 80%.
+function MarcaDoPlaceholder({
+  foto,
+  r,
+}: {
+  foto: FotoCena;
+  r: { x: number; y: number; largura: number; altura: number };
+}) {
+  const texto = formatarTamanho(foto.tamanho);
+  const largura = larguraDoPill(texto, false);
+  const cx = r.x + r.largura / 2;
+  const cy = r.y + r.altura / 2;
+  return (
+    <Group listening={false}>
+      <IconeImagemCortada x={cx} y={cy - 12} cor={CORES_CANVAS.placeholderTexto} />
+      <Label x={cx - largura / 2} y={cy + 4}>
+        <Tag fill="rgba(255, 255, 255, 0.8)" cornerRadius={4} />
+        <Text
+          text={texto}
+          fontFamily={FONTE_MONO}
+          fontSize={MEDIDAS_CANVAS.fonteMedidaPx}
+          fill={CORES_CANVAS.placeholderTexto}
+          padding={3}
+        />
+      </Label>
+    </Group>
+  );
+}
+
+// A-16: retângulo `sand` (desenhado na cena), ícone e o texto "Imagem indisponível" em `ink-3`.
+function MarcaDeImagemIndisponivel({ r }: { r: { x: number; y: number; largura: number; altura: number } }) {
+  const cx = r.x + r.largura / 2;
+  const cy = r.y + r.altura / 2;
+  return (
+    <Group listening={false}>
+      <IconeImagemCortada x={cx} y={cy - 14} cor={CORES_CANVAS.textoSemImagem} />
+      <Text
+        x={r.x}
+        y={cy + 4}
+        width={r.largura}
+        align="center"
+        text="Imagem indisponível"
+        fontFamily="'Instrument Sans', system-ui, sans-serif"
+        fontSize={11}
+        fill={CORES_CANVAS.textoSemImagem}
+        wrap="word"
+        ellipsis
+        height={32}
+      />
+    </Group>
+  );
+}
+
+function IconeImagemCortada({ x, y, cor }: { x: number; y: number; cor: string }) {
+  return (
+    <Path
+      x={x - 9}
+      y={y}
+      data="M2 2H14L16 4V14H2Z M2 12L6 8L10 12 M12 6.5A1 1 0 1 0 12.01 6.5 M0 0L18 16"
+      stroke={cor}
+      strokeWidth={1.4}
+      lineCap="round"
+      lineJoin="round"
+    />
   );
 }
 

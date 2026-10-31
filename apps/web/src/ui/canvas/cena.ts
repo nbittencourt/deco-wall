@@ -24,6 +24,8 @@ export interface FotoCena {
   borda: Borda;
   recorte: OffsetRecorte;
   imagem: { url: string; larguraPx: number; alturaPx: number } | null;
+  // M2-06: placeholder (sem imagem associada), desenhado com a hachura; diferente de "imagem indisponível".
+  placeholder: boolean;
 }
 
 // Modo de recorte (RN-14): a foto que está sendo enquadrada, com o rascunho de tamanho e recorte.
@@ -50,6 +52,8 @@ export interface CenaParede {
   // M2: fotos na parede, em ordem de empilhamento (a última fica por cima).
   fotos: FotoCena[];
   selecaoId: string | null;
+  // A-13: o toggle "Área total" da toolbar (estado da tela, padrão ligado).
+  mostrarAreaTotal: boolean;
   // Só no editor as fotos reagem ao mouse (selecionar, arrastar, duplo clique).
   interativa: boolean;
   onSelecionar?: (id: string | null) => void;

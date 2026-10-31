@@ -18,7 +18,7 @@ import {
 } from '@deco-wall/domain';
 import Konva from 'konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
-import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
+import { useCallback, useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
 import {
   Circle,
   Group,
@@ -43,6 +43,7 @@ import type {
   PalcoApi,
   RetanguloConteudo,
 } from './cena';
+import { anotacoesDaCena, opacidadeDaFoto, type Anotacao } from './anotacoes';
 import {
   CamadaRecorte,
   FotosDaCena,
@@ -74,6 +75,9 @@ declare global {
       dePagina: (x: number, y: number) => { x: number; y: number };
       retanguloDaFoto: (id: string) => { x: number; y: number; largura: number; altura: number } | null;
       idsDasFotos: () => string[];
+      // Pills, caixa "Área total", marcas de placeholder e de imagem indisponível (E2E: não existem no DOM).
+      anotacoesDaCena: () => Anotacao[];
+      opacidadeDaFoto: (id: string) => number | null;
     };
   }
 }
@@ -107,8 +111,21 @@ export function Palco({ cena, onEstado, ref }: PropsPalco) {
   const pan = useRef<{ x: number; y: number; vp: Viewport } | null>(null);
   // Espaço segurado: a cena deixa de receber o mouse e qualquer arrasto vira pan (A-06).
   const [espaco, setEspaco] = useState(false);
-  // Foto em arrasto: o contorno e os alertas acompanham o mouse antes de a store saber (B-03).
+  // Foto em arrasto: o contorno e os alertas acompanham o mouse antes de a store saber (A-07).
   const [arrasto, setArrasto] = useState<Arrasto | null>(null);
+  // Fotos cujo arquivo não carregou (A-16): viram "Imagem indisponível".
+  const [falhas, setFalhas] = useState<ReadonlySet<string>>(new Set());
+  const falhasAtuais = useRef(falhas);
+  const arrastoAtual = useRef(arrasto);
+  const registrarFalha = useCallback((id: string, falhou: boolean) => {
+    setFalhas((anterior) => {
+      if (anterior.has(id) === falhou) return anterior;
+      const novo = new Set(anterior);
+      if (falhou) novo.add(id);
+      else novo.delete(id);
+      return novo;
+    });
+  }, []);
   // Os rótulos do canvas são medidos na hora de criar o texto: sem a fonte mono pronta, a largura sai errada
   // e o rótulo é cortado. Quando ela carrega, a camada de rótulos é refeita.
   const [fonteMono, setFonteMono] = useState(false);
@@ -118,6 +135,8 @@ export function Palco({ cena, onEstado, ref }: PropsPalco) {
   useEffect(() => {
     vpAtual.current = vp;
     cenaAtual.current = cena;
+    falhasAtuais.current = falhas;
+    arrastoAtual.current = arrasto;
   });
 
   useEffect(() => {
@@ -246,6 +265,18 @@ export function Palco({ cena, onEstado, ref }: PropsPalco) {
           altura: externo.alturaCm * atual.escala,
         };
       },
+      anotacoesDaCena: () => {
+        const atualCena = cenaAtual.current;
+        return atualCena.tipo === 'parede' || atualCena.tipo === 'recorte'
+          ? anotacoesDaCena(atualCena, arrastoAtual.current, falhasAtuais.current)
+          : [];
+      },
+      opacidadeDaFoto: (id) => {
+        const atualCena = cenaAtual.current;
+        return atualCena.tipo === 'parede' || atualCena.tipo === 'recorte'
+          ? opacidadeDaFoto(atualCena, id)
+          : null;
+      },
     };
     return () => {
       delete window.__deco;
@@ -303,7 +334,7 @@ export function Palco({ cena, onEstado, ref }: PropsPalco) {
     const botao = evento.evt.button;
     // Com Espaço as camadas não escutam: o alvo é o próprio palco e o botão esquerdo também vale.
     const permitido = botao === 1 || (botao === 0 && (noFundo || espaco));
-    // Clicar na parede (fora das fotos) desseleciona a foto (B-01).
+    // Clicar na parede (fora das fotos) desseleciona a foto (A-06).
     if (botao === 0 && noFundo && cenaAtual.current.tipo === 'parede') cenaAtual.current.onSelecionar?.(null);
     if (!permitido || !vpAtual.current) return;
     if (botao === 1) evento.evt.preventDefault(); // sem o "autoscroll" do botão do meio
@@ -332,10 +363,11 @@ export function Palco({ cena, onEstado, ref }: PropsPalco) {
               tela={tela}
               onArrasto={setArrasto}
               onSoltar={() => setArrasto(null)}
+              onFalhaDaImagem={registrarFalha}
             />
           </Layer>
           <Layer key={String(fonteMono)} listening={!espaco}>
-            <Sobreposicao cena={cena} vp={vp} tela={tela} arrasto={arrasto} />
+            <Sobreposicao cena={cena} vp={vp} tela={tela} arrasto={arrasto} falhas={falhas} />
           </Layer>
         </Stage>
       )}
@@ -351,12 +383,14 @@ function CamadaCena({
   tela,
   onArrasto,
   onSoltar,
+  onFalhaDaImagem,
 }: {
   cena: Cena;
   vp: Viewport;
   tela: { largura: number; altura: number };
   onArrasto: (arrasto: Arrasto) => void;
   onSoltar: (arrasto: Arrasto) => void;
+  onFalhaDaImagem: (id: string, falhou: boolean) => void;
 }) {
   if (cena.tipo === 'perspectiva' || cena.tipo === 'calibracao') {
     return (
@@ -366,7 +400,16 @@ function CamadaCena({
       />
     );
   }
-  return <CamadaParede cena={cena} vp={vp} tela={tela} onArrasto={onArrasto} onSoltar={onSoltar} />;
+  return (
+    <CamadaParede
+      cena={cena}
+      vp={vp}
+      tela={tela}
+      onArrasto={onArrasto}
+      onSoltar={onSoltar}
+      onFalhaDaImagem={onFalhaDaImagem}
+    />
+  );
 }
 
 function ImagemDaCena({ url, retangulo }: { url: string; retangulo: RetanguloConteudo }) {
@@ -390,12 +433,14 @@ function CamadaParede({
   tela,
   onArrasto,
   onSoltar,
+  onFalhaDaImagem,
 }: {
   cena: CenaParede | CenaAreaUtil | CenaRecorte;
   vp: Viewport;
   tela: { largura: number; altura: number };
   onArrasto: (arrasto: Arrasto) => void;
   onSoltar: (arrasto: Arrasto) => void;
+  onFalhaDaImagem: (id: string, falhou: boolean) => void;
 }) {
   const noModoArea = cena.tipo === 'area-util';
   // No modo Área útil vale a área em edição; no editor, a salva na variante.
@@ -441,6 +486,7 @@ function CamadaParede({
           ocultaId={cena.tipo === 'recorte' ? cena.recorte.foto.id : undefined}
           onArrasto={onArrasto}
           onSoltar={onSoltar}
+          onFalhaDaImagem={onFalhaDaImagem}
         />
       )}
       {cena.tipo === 'recorte' && <CamadaRecorte cena={cena} />}
@@ -543,11 +589,13 @@ function Sobreposicao({
   vp,
   tela,
   arrasto,
+  falhas,
 }: {
   cena: Cena;
   vp: Viewport;
   tela: { largura: number; altura: number };
   arrasto: Arrasto | null;
+  falhas: ReadonlySet<string>;
 }) {
   switch (cena.tipo) {
     case 'perspectiva':
@@ -572,7 +620,7 @@ function Sobreposicao({
       return (
         <>
           <RotulosDaParede cena={cena} vp={vp} />
-          <SobreposicaoFotos cena={cena} vp={vp} arrasto={arrasto} />
+          <SobreposicaoFotos cena={cena} vp={vp} arrasto={arrasto} falhas={falhas} />
         </>
       );
   }

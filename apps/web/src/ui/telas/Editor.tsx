@@ -137,6 +137,7 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
 
   const palco = useRef<PalcoApi>(null);
   const [estadoPalco, setEstadoPalco] = useState<EstadoPalco>({ zoomPercentual: 100, gridOculto: false });
+  const [areaTotal, setAreaTotal] = useState(true); // A-13: padrão ligado; estado da tela
   const [trocando, setTrocando] = useState(false);
   const [dialogoTroca, setDialogoTroca] = useState(false);
   const [dialogoSair, setDialogoSair] = useState(false);
@@ -151,7 +152,7 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
   const posicaoNaPilha = variante.fotos.findIndex((f) => f._id === selecaoId);
   // A-07: no arraste, a barra mostra a posição ao vivo; fora dele, a da foto.
 
-  // Teclado da composição (RN-16, M2-09, B-07). As setas só movem com uma foto selecionada e o foco fora de
+  // Teclado da composição (RN-16, M2-01, A-08). As setas só movem com uma foto selecionada e o foco fora de
   // campos; menus e diálogos abertos têm prioridade.
   useEffect(() => {
     const aoTeclar = (evento: KeyboardEvent) => {
@@ -233,6 +234,7 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
     parede && !trocando
       ? cenaDaParede(projeto, variante, imagens, {
           selecaoId,
+          mostrarAreaTotal: areaTotal,
           interativa: true,
           onSelecionar: (id) => store.getState().selecionarFoto(id),
           onMoverFoto: (id, xCm, yCm) => store.getState().moverFoto(id, xCm, yCm),
@@ -247,7 +249,7 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
   );
   const resumo = useMemo(() => alertasDaComposicao(variante, dados.interior), [variante, dados.interior]);
 
-  // "Adicionar" (M2-04): precisa de escala e de uma foto escolhida na biblioteca.
+  // "Adicionar" (A-05): precisa de escala e de uma foto escolhida na biblioteca.
   const motivoAdicionar =
     dados.metodo === null
       ? 'Defina a escala primeiro.'
@@ -305,6 +307,8 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
             temSelecao={selecionada !== undefined}
             noTopo={posicaoNaPilha === variante.fotos.length - 1}
             noFundo={posicaoNaPilha === 0}
+            areaTotal={areaTotal}
+            onAreaTotal={setAreaTotal}
             onAdicionar={() => store.getState().adicionarFotoSelecionada()}
             onDuplicar={() => selecaoId && store.getState().duplicarFoto(selecaoId)}
             onTrazerParaFrente={() => selecaoId && store.getState().trazerParaFrente(selecaoId)}
