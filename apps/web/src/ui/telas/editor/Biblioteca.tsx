@@ -40,7 +40,6 @@ export function Biblioteca({ api, temEscala }: { api: ClienteApi; temEscala: boo
   const projeto = useEditor((s) => s.documento.projeto)!;
   // M2-05: os filtros olham o estado salvo, não as fotos ainda não salvas.
   const fotosSalvas = useEditor((s) => s.documento.salvo?.conteudo.fotos);
-  const limiteMb = useEditor((s) => s.config.uploadMaxMb);
   const imagens = useEditor((s) => s.biblioteca.imagens);
   const erro = useEditor((s) => s.biblioteca.erro);
   const escolhida = useEditor((s) => s.ui.bibliotecaSelecaoId);
@@ -192,7 +191,6 @@ export function Biblioteca({ api, temEscala }: { api: ClienteApi; temEscala: boo
         arquivosIniciais={dialogo.arquivos}
         projetoId={projeto._id}
         api={api}
-        limiteMb={limiteMb}
         onFechar={() => setDialogo({ aberto: false, arquivos: [] })}
       />
     </aside>

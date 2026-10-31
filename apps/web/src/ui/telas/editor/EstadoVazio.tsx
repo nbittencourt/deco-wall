@@ -7,8 +7,6 @@ import { ToggleGroup, ToggleGroupItem } from '../../componentes/ui/toggle-group'
 // Projeto sem parede (spec M1 §3.2; protótipo 02): convite, escolha da qualidade (RF-25) e envio da foto.
 // O formato e o tamanho são conferidos no browser antes do envio (RF-15).
 
-const LIMITE_UPLOAD_MB = 50;
-
 const PERFIS: { valor: Perfil; rotulo: string }[] = [
   { valor: 'leve', rotulo: 'Leve' },
   { valor: 'medio', rotulo: 'Médio' },
@@ -16,11 +14,14 @@ const PERFIS: { valor: Perfil; rotulo: string }[] = [
 ];
 
 export function EstadoVazio({
+  limiteMb,
   onArquivo,
   enviando,
   erro,
   onCancelar,
 }: {
+  // A-28: limite de upload do servidor.
+  limiteMb: number;
   onArquivo: (arquivo: File, perfil: Perfil) => void;
   // Fração de 0 a 1 do envio em andamento; null quando parado.
   enviando: number | null;
@@ -38,7 +39,7 @@ export function EstadoVazio({
     if (!arquivo) return;
     const motivo = validarArquivoImagem(
       { nome: arquivo.name, tipo: arquivo.type, tamanhoBytes: arquivo.size },
-      LIMITE_UPLOAD_MB,
+      limiteMb,
     );
     setRecusa(motivo);
     if (!motivo) onArquivo(arquivo, perfil);

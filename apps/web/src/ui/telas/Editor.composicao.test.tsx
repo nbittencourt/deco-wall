@@ -363,7 +363,7 @@ describe('barra de status (M2-01, §3.10, A-07)', () => {
   it('sem snap, a dica diz 1 cm e 5 cm', async () => {
     await montar();
     adicionarFoto('retrato.jpg');
-    fireEvent.click(screen.getByRole('switch', { name: 'Encaixar no grid' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Snap ao grid' }));
     expect(screen.getByText('Setas: 1 cm · Shift + setas: 5 cm')).toBeTruthy();
   });
 

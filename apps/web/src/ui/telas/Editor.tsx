@@ -122,6 +122,7 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
   const imagens = useEditor((s) => s.biblioteca.imagens);
   const sujo = useEditor((s) => s.documento.sujo);
   const salvamento = useEditor((s) => s.documento.salvamento);
+  const limiteMb = useEditor((s) => s.config.uploadMaxMb);
   const conflito = useEditor((s) => s.documento.conflito);
   const erroSalvamento = useEditor((s) => s.documento.erroSalvamento);
   const avisoAreaUtilFora = useEditor((s) => s.ui.avisoAreaUtilFora);
@@ -313,6 +314,7 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
               <Palco ref={palco} cena={cena} onEstado={setEstadoPalco} />
             ) : (
               <EstadoVazio
+                limiteMb={limiteMb}
                 enviando={progresso}
                 erro={erroEnvio}
                 onArquivo={(arquivo, perfil) => void aoEscolherArquivo(arquivo, perfil)}

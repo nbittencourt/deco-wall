@@ -1,4 +1,10 @@
-import { PERFIL_PADRAO, PERFIS, type Perfil } from '@deco-wall/domain';
+import {
+  formatarBytes,
+  MENSAGEM_FORMATO_NAO_SUPORTADO,
+  PERFIL_PADRAO,
+  PERFIS,
+  type Perfil,
+} from '@deco-wall/domain';
 import { FolderOpen, ImagePlus } from 'lucide-react';
 import { useRef, useState, useSyncExternalStore, type ChangeEvent, type DragEvent } from 'react';
 import { arrastandoArquivos, lerArquivosSoltos } from '../../../app/arquivosSoltos';
@@ -18,8 +24,9 @@ import {
 } from '../../componentes/ui/dialog';
 import { RadioCard, RadioGroup } from '../../componentes/ui/radio-group';
 
-// Diálogo "Carregar fotos" (protótipo 07; spec M2 §3.2; RF-20, RF-21, RF-25, DV-10, M2-07). Os arquivos
-// escolhidos ou arrastados ficam na fila; o envio começa em "Enviar N fotos", com o perfil já escolhido.
+// Diálogo "Carregar fotos" (protótipo 07; spec M2 §3.2; RF-20, RF-21, RF-25, DV-10, A-17, A-18). Selecionar
+// arquivos, selecionar pasta ou arrastar para o diálogo inicia o envio na hora, com a qualidade já escolhida.
+// Só os arquivos soltos sobre a Biblioteca abrem o diálogo "Aguardando", com o botão Enviar.
 
 const PERFIS_NA_TELA: { perfil: Perfil; nome: string }[] = [
   { perfil: 'leve', nome: 'Leve' },
@@ -32,7 +39,6 @@ export interface PropsDialogoUpload {
   onFechar: () => void;
   projetoId: string;
   api: ClienteApi;
-  limiteMb: number;
   arquivosIniciais?: File[];
 }
 
@@ -45,18 +51,20 @@ function ConteudoUpload({
   onFechar,
   projetoId,
   api,
-  limiteMb,
   arquivosIniciais = [],
 }: Omit<PropsDialogoUpload, 'aberto'>) {
   const store = useStoreEditor();
   const [lote] = useState(() => {
     const novo = criarLoteUpload({
       perfil: PERFIL_PADRAO,
-      limiteMb,
+      // A-28: o limite vem do servidor e pode chegar depois de o editor abrir.
+      limiteMb: () => store.getState().config.uploadMaxMb,
+      iniciarNaHora: true,
       enviar: (arquivo, perfil, opcoes) => api.enviarImagem({ arquivo, perfil, projetoId }, opcoes),
       aoConcluir: (imagem) => store.getState().adotarImagem(imagem),
     });
-    if (arquivosIniciais.length > 0) novo.adicionar(arquivosIniciais);
+    // Arquivos soltos sobre a Biblioteca esperam o "Enviar" (A-17).
+    if (arquivosIniciais.length > 0) novo.adicionar(arquivosIniciais, { iniciar: false });
     return novo;
   });
   const estado = useSyncExternalStore(lote.assinar, lote.estado);
@@ -74,7 +82,7 @@ function ConteudoUpload({
         estado.total;
 
   const aoEscolher = (evento: ChangeEvent<HTMLInputElement>) => {
-    lote.adicionar(Array.from(evento.target.files ?? []));
+    lote.adicionar(Array.from(evento.target.files ?? []), { iniciar: true });
     evento.target.value = ''; // permite escolher os mesmos arquivos de novo
   };
 
@@ -82,7 +90,9 @@ function ConteudoUpload({
     if (!arrastandoArquivos(evento.dataTransfer)) return;
     evento.preventDefault();
     setSobre(false);
-    void lerArquivosSoltos(evento.dataTransfer).then((arquivos) => lote.adicionar(arquivos));
+    void lerArquivosSoltos(evento.dataTransfer).then((arquivos) =>
+      lote.adicionar(arquivos, { iniciar: true }),
+    );
   };
 
   // Esc, clique fora e "Concluir" passam pela mesma pergunta quando ainda há envio em andamento.
@@ -91,7 +101,9 @@ function ConteudoUpload({
     else onFechar();
   };
 
-  const ignoradosPorFormato = estado.ignorados.filter((i) => i.motivo.startsWith('Formato')).length;
+  const ignoradosPorFormato = estado.ignorados.filter(
+    (i) => i.motivo === MENSAGEM_FORMATO_NAO_SUPORTADO,
+  ).length;
   const textoIgnorados =
     estado.ignorados.length === 0
       ? null
@@ -121,19 +133,11 @@ function ConteudoUpload({
 
           <div className="flex flex-col gap-4 px-6 pb-5">
             <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant="outline"
-                disabled={estado.enviando}
-                onClick={() => entradaArquivos.current?.click()}
-              >
+              <Button variant="outline" onClick={() => entradaArquivos.current?.click()}>
                 <ImagePlus aria-hidden="true" />
                 Selecionar arquivos
               </Button>
-              <Button
-                variant="outline"
-                disabled={estado.enviando}
-                onClick={() => entradaPasta.current?.click()}
-              >
+              <Button variant="outline" onClick={() => entradaPasta.current?.click()}>
                 <FolderOpen aria-hidden="true" />
                 Selecionar pasta
               </Button>
@@ -189,14 +193,7 @@ function ConteudoUpload({
                   <span className="font-medium text-ink">
                     {estado.concluidas} de {estado.total} enviadas
                   </span>
-                  {textoIgnorados && (
-                    <span
-                      className="text-ink-3"
-                      title={estado.ignorados.map((i) => `${i.nome}: ${i.motivo}`).join('\n')}
-                    >
-                      {textoIgnorados}
-                    </span>
-                  )}
+                  {textoIgnorados && <span className="text-ink-3">{textoIgnorados}</span>}
                 </div>
                 <div
                   role="progressbar"
@@ -211,13 +208,20 @@ function ConteudoUpload({
               </div>
             )}
 
-            {estado.itens.length > 0 && (
+            {(estado.itens.length > 0 || estado.ignorados.length > 0) && (
               <ul className="flex max-h-[240px] flex-col overflow-y-auto rounded-lg border border-line-soft">
                 {estado.itens.map((item) => (
                   <LinhaDoArquivo
                     key={item.id}
                     item={item}
                     onNovamente={() => lote.tentarNovamente(item.id)}
+                  />
+                ))}
+                {estado.ignorados.map((ignorado, i) => (
+                  <LinhaIgnorada
+                    key={`${ignorado.nome}-${i}`}
+                    nome={ignorado.nome}
+                    motivo={ignorado.motivo}
                   />
                 ))}
               </ul>
@@ -246,24 +250,22 @@ function ConteudoUpload({
           </div>
 
           <DialogFooter>
-            {estado.enviando ? (
+            {estado.enviando && (
               <Button variant="ghost" onClick={() => lote.cancelarRestantes()}>
                 Cancelar restantes
               </Button>
-            ) : (
-              podeEnviar && (
+            )}
+            {podeEnviar && (
+              <>
                 <Button variant="ghost" onClick={onFechar}>
                   Cancelar
                 </Button>
-              )
+                <Button onClick={() => lote.iniciar()}>
+                  {aguardando === 1 ? 'Enviar 1 foto' : `Enviar ${aguardando} fotos`}
+                </Button>
+              </>
             )}
-            {podeEnviar ? (
-              <Button onClick={() => lote.iniciar()}>
-                {aguardando === 1 ? 'Enviar 1 foto' : `Enviar ${aguardando} fotos`}
-              </Button>
-            ) : (
-              <Button onClick={pedirFechar}>Concluir</Button>
-            )}
+            {!estado.enviando && !podeEnviar && <Button onClick={pedirFechar}>Concluir</Button>}
           </DialogFooter>
         </div>
       </DialogContent>
@@ -271,24 +273,40 @@ function ConteudoUpload({
   );
 }
 
-function tamanhoLegivel(bytes: number): string {
-  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1).replace('.', ',')} MB`;
-  return `${Math.max(1, Math.round(bytes / 1024))} kB`;
-}
-
+// A-18: o texto de cada estado.
 function textoDoStatus(item: ItemUpload): string {
   switch (item.status) {
     case 'aguardando':
       return 'Aguardando';
+    case 'na-fila':
+      return 'Na fila';
     case 'enviando':
-      return `Enviando ${Math.round(item.progresso * 100)}%`;
+      return item.progresso >= 1 ? 'Processando…' : `Enviando ${Math.round(item.progresso * 100)}%`;
     case 'concluida':
-      return 'Concluída';
+      return item.imagem ? `Concluída · ${formatarBytes(item.imagem.bytes)}` : 'Concluída';
     case 'cancelada':
       return 'Cancelada';
-    case 'falhou':
-      return `Falhou: ${item.erro ?? 'não foi possível enviar.'}`;
+    case 'falhou': {
+      const motivo = item.erro ?? 'não foi possível enviar.';
+      // Erro do arquivo (415, 413): a mensagem do servidor basta; falha de rede ou 5xx pode repetir.
+      return item.podeRepetir === false ? motivo : `Falhou · ${motivo}`;
+    }
   }
+}
+
+function Miniatura({ imagemId }: { imagemId?: string }) {
+  return (
+    <span className="size-9 shrink-0 overflow-hidden rounded-xs bg-sand">
+      {imagemId && (
+        <img
+          src={urlArquivoImagem(imagemId, 'thumb')}
+          alt=""
+          className="size-full object-cover"
+          draggable={false}
+        />
+      )}
+    </span>
+  );
 }
 
 function LinhaDoArquivo({ item, onNovamente }: { item: ItemUpload; onNovamente: () => void }) {
@@ -298,28 +316,33 @@ function LinhaDoArquivo({ item, onNovamente }: { item: ItemUpload; onNovamente: 
       : item.status === 'falhou'
         ? 'text-danger-ink'
         : 'text-ink-3';
+  const repetir = (item.status === 'falhou' && item.podeRepetir !== false) || item.status === 'cancelada';
   return (
     <li className="flex items-center gap-3 border-b border-line-faint px-3 py-2 last:border-b-0">
-      <span className="size-9 shrink-0 overflow-hidden rounded-xs bg-sand">
-        {item.imagem && (
-          <img
-            src={urlArquivoImagem(item.imagem._id, 'thumb')}
-            alt=""
-            className="size-full object-cover"
-            draggable={false}
-          />
-        )}
-      </span>
+      <Miniatura imagemId={item.imagem?._id} />
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="truncate text-sm text-ink">{item.nome}</span>
         <span className={`truncate text-xs ${cor}`}>{textoDoStatus(item)}</span>
       </span>
-      {(item.status === 'falhou' || item.status === 'cancelada') && (
+      {repetir && (
         <Button variant="ghost" className="h-7 px-2 text-xs" onClick={onNovamente}>
           Tentar de novo
         </Button>
       )}
-      <span className="font-mono text-medida text-ink-3">{tamanhoLegivel(item.tamanhoBytes)}</span>
+    </li>
+  );
+}
+
+// RN-20: o arquivo recusado no browser aparece na lista, com o motivo.
+function LinhaIgnorada({ nome, motivo }: { nome: string; motivo: string }) {
+  const texto = motivo === MENSAGEM_FORMATO_NAO_SUPORTADO ? 'Formato não suportado' : motivo;
+  return (
+    <li className="flex items-center gap-3 border-b border-line-faint px-3 py-2 last:border-b-0">
+      <Miniatura />
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="truncate text-sm text-ink">{nome}</span>
+        <span className="truncate text-xs text-danger-ink">{texto}</span>
+      </span>
     </li>
   );
 }

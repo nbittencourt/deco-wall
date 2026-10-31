@@ -1,11 +1,13 @@
 import { UPLOAD_PARALELO, validarArquivoImagem, type Perfil } from '@deco-wall/domain';
-import type { ImagemDto } from '../infra/dto';
+import { ErroApi, type ImagemDto } from '../infra/dto';
 
 // Fila de upload da biblioteca (docs/specs/M2-biblioteca-e-composicao.md §3.2; RF-20, RF-21, RF-25, DV-10,
-// M2-07, B-10, B-11). Sem React: a tela só assina o estado. 1 requisição por arquivo, 3 em paralelo; a
-// falha de um arquivo não interrompe o lote; o perfil é único e fica travado enquanto o lote envia.
+// A-17, A-18). Sem React: a tela só assina o estado. 1 requisição por arquivo, 3 em paralelo; a falha de um
+// arquivo não interrompe o lote; o perfil é único e fica travado desde o primeiro envio (A-17): o lote vale
+// enquanto o diálogo está aberto, e arquivos acrescentados depois entram na mesma fila, com a mesma qualidade.
 
-export type StatusUpload = 'aguardando' | 'enviando' | 'concluida' | 'falhou' | 'cancelada';
+// 'aguardando': espera o "Enviar" (arquivos soltos sobre a Biblioteca); 'na-fila': o lote começou e falta vaga.
+export type StatusUpload = 'aguardando' | 'na-fila' | 'enviando' | 'concluida' | 'falhou' | 'cancelada';
 
 export interface ItemUpload {
   id: string;
@@ -15,6 +17,8 @@ export interface ItemUpload {
   // Fração de 0 a 1 do que já subiu.
   progresso: number;
   erro?: string;
+  // Falha de rede ou 5xx pode ser repetida; 4xx (415, 413) não: o arquivo é que não serve (A-18).
+  podeRepetir?: boolean;
   imagem?: ImagemDto;
 }
 
@@ -38,14 +42,18 @@ export interface OpcoesEnvioArquivo {
 export interface OpcoesLote {
   enviar: (arquivo: File, perfil: Perfil, opcoes: OpcoesEnvioArquivo) => Promise<ImagemDto>;
   perfil: Perfil;
-  limiteMb: number;
+  // O limite pode mudar até o envio (vem do servidor — A-28): aceita uma função.
+  limiteMb: number | (() => number);
   paralelo?: number;
   aoConcluir?: (imagem: ImagemDto) => void;
+  // O envio começa na hora em que os arquivos entram, sem esperar o "Enviar" (A-17).
+  iniciarNaHora?: boolean;
 }
 
 export interface LoteUpload {
   estado(): EstadoLote;
-  adicionar(arquivos: readonly File[]): void;
+  // `iniciar`: começa a enviar assim que os arquivos entram (padrão: o que o lote foi criado para fazer).
+  adicionar(arquivos: readonly File[], opcoes?: { iniciar?: boolean }): void;
   definirPerfil(perfil: Perfil): void;
   iniciar(): void;
   cancelarRestantes(): void;
@@ -67,6 +75,7 @@ function publico(i: ItemInterno): ItemUpload {
     status: i.status,
     progresso: i.progresso,
     erro: i.erro,
+    podeRepetir: i.podeRepetir,
     imagem: i.imagem,
   };
 }
@@ -86,7 +95,8 @@ export function criarLoteUpload(opcoes: OpcoesLote): LoteUpload {
   const ouvintes = new Set<() => void>();
 
   const emEnvio = () => itens.filter((i) => i.status === 'enviando').length;
-  const pendentes = () => itens.some((i) => i.status === 'aguardando' || i.status === 'enviando');
+  const pendentes = () =>
+    itens.some((i) => i.status === 'aguardando' || i.status === 'na-fila' || i.status === 'enviando');
 
   // O estado é um instantâneo imutável, recriado a cada mudança: serve a useSyncExternalStore.
   const notificar = () => {
@@ -118,6 +128,7 @@ export function criarLoteUpload(opcoes: OpcoesLote): LoteUpload {
       } else {
         item.status = 'falhou';
         item.erro = mensagemDe(erro);
+        item.podeRepetir = !(erro instanceof ErroApi) || erro.status === 0 || erro.status >= 500;
       }
     } finally {
       item.controle = null;
@@ -128,11 +139,11 @@ export function criarLoteUpload(opcoes: OpcoesLote): LoteUpload {
 
   function preencherVagas() {
     if (!iniciado) return;
+    for (const item of itens) if (item.status === 'aguardando') item.status = 'na-fila';
     for (const item of itens) {
       if (emEnvio() >= paralelo) break;
-      if (item.status === 'aguardando') void executar(item);
+      if (item.status === 'na-fila') void executar(item);
     }
-    if (!pendentes()) iniciado = false; // lote terminou: o perfil destrava
   }
 
   return {
@@ -149,12 +160,13 @@ export function criarLoteUpload(opcoes: OpcoesLote): LoteUpload {
       return instantaneo;
     },
 
-    adicionar(arquivos) {
-      if (iniciado) return;
+    adicionar(arquivos, opcoesAdicao = {}) {
+      const limiteMb = typeof opcoes.limiteMb === 'function' ? opcoes.limiteMb() : opcoes.limiteMb;
+      const antes = itens.length;
       for (const arquivo of arquivos) {
         const motivo = validarArquivoImagem(
           { nome: arquivo.name, tipo: arquivo.type, tamanhoBytes: arquivo.size },
-          opcoes.limiteMb,
+          limiteMb,
         );
         if (motivo) {
           ignorados.push({ nome: arquivo.name, motivo });
@@ -169,6 +181,11 @@ export function criarLoteUpload(opcoes: OpcoesLote): LoteUpload {
             controle: null,
           });
         }
+      }
+      // A-17: depois do primeiro envio, e com `iniciar`, o que entra já vai para a fila.
+      if (itens.length > antes && (iniciado || (opcoesAdicao.iniciar ?? opcoes.iniciarNaHora ?? false))) {
+        iniciado = true;
+        preencherVagas();
       }
       notificar();
     },
@@ -188,7 +205,7 @@ export function criarLoteUpload(opcoes: OpcoesLote): LoteUpload {
 
     cancelarRestantes() {
       for (const item of itens) {
-        if (item.status === 'aguardando') item.status = 'cancelada';
+        if (item.status === 'aguardando' || item.status === 'na-fila') item.status = 'cancelada';
         else if (item.status === 'enviando') item.controle?.abort();
       }
       notificar();
@@ -201,8 +218,9 @@ export function criarLoteUpload(opcoes: OpcoesLote): LoteUpload {
           (id === undefined || item.id === id) &&
           (item.status === 'falhou' || item.status === 'cancelada')
         ) {
-          item.status = 'aguardando';
+          item.status = 'na-fila';
           item.erro = undefined;
+          item.podeRepetir = undefined;
           item.progresso = 0;
           recolocou = true;
         }
