@@ -17,6 +17,9 @@ const PONTO: Record<EstadoSalvamento['tipo'], string> = {
   conflito: 'bg-danger',
 };
 
+// §3.10: à direita da barra de status, antes do status de salvamento.
+export const TEXTO_MEDIDAS_APROXIMADAS = 'Medidas aproximadas, parede considerada plana';
+
 export function textoSalvamento(estado: EstadoSalvamento): string {
   switch (estado.tipo) {
     case 'salvo':

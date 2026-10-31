@@ -3,6 +3,7 @@ import { useEditor, useStoreEditor, useVistaDaVariante } from '../../../../app/S
 import { Palco } from '../../../canvas/Palco';
 import { PainelRecorte } from '../../../paineis/PainelRecorte';
 import { cenaDaParede, cenaDoRecorte } from '../cenas';
+import { TEXTO_MEDIDAS_APROXIMADAS } from '../../../componentes/proprios/StatusSalvamento';
 import { LayoutModo } from './LayoutModo';
 import { useAtalhosDoModo } from './atalhos';
 
@@ -44,6 +45,15 @@ export function ModoRecorte() {
             O restante da parede fica bloqueado até concluir
           </span>
         </header>
+      }
+      rodape={
+        <footer className="flex h-8 shrink-0 items-center gap-4 border-t border-line-soft bg-surface px-4">
+          <span className="text-body-sm text-ink-2">
+            Arraste para reposicionar · Enter conclui · Esc cancela
+          </span>
+          <span className="flex-1" />
+          <span className="text-xs text-ink-3">{TEXTO_MEDIDAS_APROXIMADAS}</span>
+        </footer>
       }
       palco={<Palco cena={cena} />}
       painel={

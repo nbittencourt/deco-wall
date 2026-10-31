@@ -63,6 +63,7 @@ export interface InteracaoDaCena {
   onSelecionar?: (id: string | null) => void;
   onMoverFoto?: (id: string, xCm: number, yCm: number) => void;
   onAbrirRecorte?: (id: string) => void;
+  onArrastarFoto?: (arrasto: { id: string; xCm: number; yCm: number } | null) => void;
 }
 
 // Editor, Área útil e Recorte: a parede em cm (retificada ou a foto) com grid, área útil e fotos; sem escala,
@@ -85,6 +86,7 @@ export function cenaDaParede(
     onSelecionar: interacao.onSelecionar,
     onMoverFoto: interacao.onMoverFoto,
     onAbrirRecorte: interacao.onAbrirRecorte,
+    onArrastarFoto: interacao.onArrastarFoto,
   };
 
   if (parede.escala.metodo === 'perspectiva' && parede.retificada) {

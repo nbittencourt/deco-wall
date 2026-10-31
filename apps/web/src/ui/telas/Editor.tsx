@@ -16,7 +16,7 @@ import type { ClienteApi } from '../../infra/dto';
 import { Palco } from '../canvas/Palco';
 import type { EstadoPalco, PalcoApi } from '../canvas/cena';
 import { DialogoSairSemSalvar, DialogoTrocarParede } from '../componentes/proprios/DialogosProjeto';
-import { StatusSalvamento } from '../componentes/proprios/StatusSalvamento';
+import { StatusSalvamento, TEXTO_MEDIDAS_APROXIMADAS } from '../componentes/proprios/StatusSalvamento';
 import { Alert } from '../componentes/ui/alert';
 import { Button } from '../componentes/ui/button';
 import { PainelComposicao } from '../paineis/PainelComposicao';
@@ -113,6 +113,9 @@ const DIRECOES: Record<string, DirecaoSeta> = {
   ArrowDown: 'baixo',
 };
 
+const textoPosicao = (p: { xCm: number; yCm: number }) =>
+  `X ${formatarCm(p.xCm)} · Y ${formatarCm(p.yCm)} cm`;
+
 function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: string) => void }) {
   const store = useStoreEditor();
   const projeto = useEditor((s) => s.documento.projeto)!;
@@ -123,6 +126,7 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
   const sujo = useEditor((s) => s.documento.sujo);
   const salvamento = useEditor((s) => s.documento.salvamento);
   const limiteMb = useEditor((s) => s.config.uploadMaxMb);
+  const arrasto = useEditor((s) => s.ui.arrasto);
   const conflito = useEditor((s) => s.documento.conflito);
   const erroSalvamento = useEditor((s) => s.documento.erroSalvamento);
   const avisoAreaUtilFora = useEditor((s) => s.ui.avisoAreaUtilFora);
@@ -144,6 +148,8 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
   const dados = dadosDaParede(projeto);
   const temFotos = variante.fotos.length > 0;
   const selecionada = variante.fotos.find((f) => f._id === selecaoId);
+  const posicaoNaPilha = variante.fotos.findIndex((f) => f._id === selecaoId);
+  // A-07: no arraste, a barra mostra a posição ao vivo; fora dele, a da foto.
 
   // Teclado da composição (RN-16, M2-09, B-07). As setas só movem com uma foto selecionada e o foco fora de
   // campos; menus e diálogos abertos têm prioridade.
@@ -231,6 +237,7 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
           onSelecionar: (id) => store.getState().selecionarFoto(id),
           onMoverFoto: (id, xCm, yCm) => store.getState().moverFoto(id, xCm, yCm),
           onAbrirRecorte: (id) => store.getState().abrirRecorte(id),
+          onArrastarFoto: (a) => store.getState().definirArrasto(a),
         })
       : null;
 
@@ -257,8 +264,8 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
   };
 
   const dicaDeTeclas = variante.grid.snap
-    ? 'Setas movem 1 passo do grid · Shift + setas: 5 passos'
-    : 'Setas movem 1 cm · Shift + setas: 5 cm';
+    ? 'Setas: 1 passo do grid · Shift + setas: 5 passos'
+    : 'Setas: 1 cm · Shift + setas: 5 cm';
 
   return (
     <div className="flex h-dvh min-w-[1280px] flex-col">
@@ -296,6 +303,8 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
             comPalco={cena !== null}
             motivoAdicionar={motivoAdicionar}
             temSelecao={selecionada !== undefined}
+            noTopo={posicaoNaPilha === variante.fotos.length - 1}
+            noFundo={posicaoNaPilha === 0}
             onAdicionar={() => store.getState().adicionarFotoSelecionada()}
             onDuplicar={() => selecaoId && store.getState().duplicarFoto(selecaoId)}
             onTrazerParaFrente={() => selecaoId && store.getState().trazerParaFrente(selecaoId)}
@@ -426,7 +435,7 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
         <span className="min-w-0 truncate text-body-sm text-ink-2">
           {selecionada ? (
             <span className="font-mono text-medida">
-              X {formatarCm(selecionada.xCm)} · Y {formatarCm(selecionada.yCm)} cm
+              {textoPosicao(arrasto?.id === selecionada._id ? arrasto : selecionada)}
             </span>
           ) : (
             'Nenhuma foto selecionada'
@@ -434,6 +443,7 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
         </span>
         {selecionada && <span className="text-xs text-ink-3">{dicaDeTeclas}</span>}
         <span className="flex-1" />
+        <span className="text-xs text-ink-3">{TEXTO_MEDIDAS_APROXIMADAS}</span>
         <StatusSalvamento estado={salvamento} />
       </footer>
 

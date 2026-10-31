@@ -316,16 +316,15 @@ describe('adicionar, selecionar e remover (RF-30, RF-35)', () => {
     expect(screen.getByText('Nenhuma foto selecionada')).toBeTruthy();
   });
 
-  it('a foto escolhida no canvas habilita Duplicar e as ações de ordem', async () => {
+  it('a foto escolhida no canvas habilita Duplicar e a ação de ordem que ainda anda', async () => {
     await montar();
     expect(screen.getByRole('button', { name: 'Duplicar' }).getAttribute('aria-disabled')).toBe('true');
     expect(screen.getByRole('button', { name: 'Trazer para frente' }).getAttribute('aria-disabled')).toBe(
       'true',
     );
     adicionarFoto('retrato.jpg');
-    expect(
-      screen.getByRole('button', { name: 'Trazer para frente' }).getAttribute('aria-disabled'),
-    ).toBeNull();
+    adicionarFoto('paisagem.jpg'); // a segunda fica no topo: só "Enviar para trás" anda
+    expect(screen.getAllByRole('button', { name: 'Duplicar' })[0]!.getAttribute('aria-disabled')).toBeNull();
     expect(screen.getByRole('button', { name: 'Enviar para trás' }).getAttribute('aria-disabled')).toBeNull();
   });
 });

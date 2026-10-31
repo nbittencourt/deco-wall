@@ -56,6 +56,8 @@ export interface CenaParede {
   // Chamado uma vez, ao soltar a foto arrastada (já encaixada no grid, se o snap estiver ligado).
   onMoverFoto?: (id: string, xCm: number, yCm: number) => void;
   onAbrirRecorte?: (id: string) => void;
+  // A-07: posição da foto durante o arraste (null ao soltar); fora do desfazer.
+  onArrastarFoto?: (arrasto: { id: string; xCm: number; yCm: number } | null) => void;
 }
 
 export interface CenaAreaUtil extends Omit<CenaParede, 'tipo'> {

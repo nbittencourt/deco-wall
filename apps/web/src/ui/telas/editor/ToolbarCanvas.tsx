@@ -61,6 +61,9 @@ export interface PropsToolbarCanvas {
   motivoAdicionar?: string;
   // Duplicar e ordem precisam de uma foto selecionada na parede.
   temSelecao: boolean;
+  // M2-08: a ordem anda uma posição; no topo (ou no fundo) o botão fica inativo.
+  noTopo: boolean;
+  noFundo: boolean;
   onAdicionar: () => void;
   onDuplicar: () => void;
   onTrazerParaFrente: () => void;
@@ -75,12 +78,16 @@ export function ToolbarCanvas({
   comPalco,
   motivoAdicionar,
   temSelecao,
+  noTopo,
+  noFundo,
   onAdicionar,
   onDuplicar,
   onTrazerParaFrente,
   onEnviarParaTras,
 }: PropsToolbarCanvas) {
   const motivoSelecao = temSelecao ? undefined : MOTIVO_SEM_SELECAO;
+  const motivoFrente = motivoSelecao ?? (noTopo ? 'Esta foto já está no topo.' : undefined);
+  const motivoTras = motivoSelecao ?? (noFundo ? 'Esta foto já está no fundo.' : undefined);
   return (
     <div className="flex h-11 shrink-0 items-center gap-1 border-b border-line-soft bg-surface-muted px-3">
       <Acao rotulo="Adicionar" icone={Plus} motivo={motivoAdicionar} onAtivar={onAdicionar} />
@@ -90,14 +97,14 @@ export function ToolbarCanvas({
         somenteIcone
         rotulo="Trazer para frente"
         icone={BringToFront}
-        motivo={motivoSelecao}
+        motivo={motivoFrente}
         onAtivar={onTrazerParaFrente}
       />
       <Acao
         somenteIcone
         rotulo="Enviar para trás"
         icone={SendToBack}
-        motivo={motivoSelecao}
+        motivo={motivoTras}
         onAtivar={onEnviarParaTras}
       />
       <div className="flex-1" />

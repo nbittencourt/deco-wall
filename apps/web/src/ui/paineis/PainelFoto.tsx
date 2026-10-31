@@ -1,7 +1,7 @@
 import {
   formatarCm,
   formatarDimensao,
-  formatarTamanho,
+  formatarTamanhoComUnidade,
   BORDA_MAX_CM,
   orientacaoDe,
   tamanhoExterno,
@@ -11,10 +11,12 @@ import {
   type FotoNaParede,
   type Tamanho,
 } from '@deco-wall/domain';
-import { Copy, Crop } from 'lucide-react';
+import { Copy, Crop, ImageOff } from 'lucide-react';
 import { urlArquivoImagem } from '../../infra/clienteApi';
 import type { ImagemDto } from '../../infra/dto';
+import { BotaoInativo } from '../componentes/proprios/BotaoEmBreve';
 import { CampoCmEditavel } from '../componentes/proprios/CampoCmEditavel';
+import { ComDica } from '../componentes/proprios/ComDica';
 import { SeletorCor } from '../componentes/proprios/SeletorCor';
 import { SeletorTamanho, VALOR_PERSONALIZADO } from '../componentes/proprios/SeletorTamanho';
 import { Alert } from '../componentes/ui/alert';
@@ -37,6 +39,30 @@ export interface PropsPainelFoto {
   onRemover: () => void;
 }
 
+// Retrato · Paisagem (152 px); inativo em tamanho quadrado (RN-05).
+function seletorDeOrientacao(
+  orientacao: 'retrato' | 'paisagem' | 'quadrado',
+  onTrocar: (orientacao: 'retrato' | 'paisagem') => void,
+) {
+  const quadrado = orientacao === 'quadrado';
+  return (
+    <ToggleGroup
+      type="single"
+      aria-label="Orientação"
+      className="w-[152px]"
+      value={quadrado ? '' : orientacao}
+      onValueChange={(valor) => valor && onTrocar(valor as 'retrato' | 'paisagem')}
+    >
+      <ToggleGroupItem value="retrato" disabled={quadrado}>
+        Retrato
+      </ToggleGroupItem>
+      <ToggleGroupItem value="paisagem" disabled={quadrado}>
+        Paisagem
+      </ToggleGroupItem>
+    </ToggleGroup>
+  );
+}
+
 const MENSAGEM_BORDA = `Entre ${formatarCm(0)} e ${formatarCm(BORDA_MAX_CM)} cm.`;
 
 export function PainelFoto({
@@ -55,6 +81,7 @@ export function PainelFoto({
   const orientacao = orientacaoDe(foto.tamanho);
   const quadrado = orientacao === 'quadrado';
   const externo = tamanhoExterno(foto.tamanho, foto.borda);
+  const placeholder = foto.imagemId === null; // M2-06: sem imagem associada
   const orientacaoDaImagem = imagem
     ? imagem.orientacaoNatural === 'paisagem'
       ? 'Paisagem natural'
@@ -62,14 +89,17 @@ export function PainelFoto({
     : '';
 
   const avisos: string[] = [];
-  if (alertas?.fora === 'parede') avisos.push('Esta foto passa dos limites da parede.');
-  if (alertas?.fora === 'area-util') avisos.push('Esta foto passa dos limites da área útil.');
+  if (alertas?.fora === 'parede') avisos.push('Esta foto está fora da parede.');
+  if (alertas?.fora === 'area-util') avisos.push('Esta foto está fora da área útil.');
   if (alertas?.sobreposicao) avisos.push('Esta foto sobrepõe outra na parede.');
 
   return (
     <div className="flex flex-col gap-[18px]">
       <div className="flex items-center gap-3">
-        <div className="size-[60px] w-[46px] shrink-0 overflow-hidden rounded-xs bg-sand ring-4 ring-surface outline outline-[5px] outline-line-soft">
+        <div className="flex size-[60px] w-[46px] shrink-0 items-center justify-center overflow-hidden rounded-xs bg-sand ring-4 ring-surface outline outline-[5px] outline-line-soft">
+          {placeholder && (
+            <ImageOff data-testid="icone-sem-foto" className="size-5 text-danger-ink" aria-hidden="true" />
+          )}
           {imagem && (
             <img
               src={urlArquivoImagem(imagem._id, 'thumb')}
@@ -81,7 +111,7 @@ export function PainelFoto({
         </div>
         <div className="flex min-w-0 flex-col gap-0.5 pl-1">
           <span className="truncate text-display-sm text-[18px] text-ink">
-            {imagem?.nomeOriginal ?? 'Imagem indisponível'}
+            {placeholder ? 'Sem foto' : (imagem?.nomeOriginal ?? 'Imagem indisponível')}
           </span>
           <span className="text-xs text-ink-3">{orientacaoDaImagem}</span>
         </div>
@@ -92,29 +122,28 @@ export function PainelFoto({
           <span className="text-label">Tamanho</span>
           <SeletorTamanho
             valor={foto.tamanho.sugeridoId ?? VALOR_PERSONALIZADO}
-            texto={formatarTamanho(foto.tamanho)}
+            texto={formatarTamanhoComUnidade(foto.tamanho)}
             onEscolherSugerido={(id) =>
-              onTrocarTamanho(tamanhoSugerido(id, orientacao === 'paisagem' ? 'paisagem' : 'retrato'))
+              // A-10: escolher um sugerido mantém a orientação; vindo de um quadrado, usa a natural da imagem.
+              onTrocarTamanho(
+                tamanhoSugerido(
+                  id,
+                  orientacao === 'quadrado' ? (imagem?.orientacaoNatural ?? 'retrato') : orientacao,
+                ),
+              )
             }
             onPersonalizado={onPersonalizado}
           />
         </div>
         <div className="flex flex-col gap-1.5">
           <span className="text-label">Orientação</span>
-          <ToggleGroup
-            type="single"
-            aria-label="Orientação"
-            className="w-[152px]"
-            value={quadrado ? '' : orientacao}
-            onValueChange={(valor) => valor && onTrocarOrientacao(valor as 'retrato' | 'paisagem')}
-          >
-            <ToggleGroupItem value="retrato" disabled={quadrado}>
-              Retrato
-            </ToggleGroupItem>
-            <ToggleGroupItem value="paisagem" disabled={quadrado}>
-              Paisagem
-            </ToggleGroupItem>
-          </ToggleGroup>
+          {quadrado ? (
+            <ComDica texto="Quadrado: sem orientação">
+              {seletorDeOrientacao(orientacao, onTrocarOrientacao)}
+            </ComDica>
+          ) : (
+            seletorDeOrientacao(orientacao, onTrocarOrientacao)
+          )}
         </div>
       </div>
 
@@ -182,10 +211,17 @@ export function PainelFoto({
 
       <div className="flex flex-col gap-1.5">
         <span className="text-label">Enquadramento</span>
-        <Button variant="outline" className="justify-start" onClick={onAjustarRecorte}>
-          <Crop aria-hidden="true" />
-          Ajustar recorte
-        </Button>
+        {placeholder ? (
+          <BotaoInativo variant="outline" className="justify-start" motivo="Sem imagem para enquadrar.">
+            <Crop aria-hidden="true" />
+            Ajustar recorte
+          </BotaoInativo>
+        ) : (
+          <Button variant="outline" className="justify-start" onClick={onAjustarRecorte}>
+            <Crop aria-hidden="true" />
+            Ajustar recorte
+          </Button>
+        )}
       </div>
 
       <div className="mt-auto flex gap-2">
@@ -193,9 +229,11 @@ export function PainelFoto({
           <Copy aria-hidden="true" />
           Duplicar
         </Button>
-        <Button variant="outline" className="flex-1 text-danger-ink" onClick={onRemover}>
-          Remover
-        </Button>
+        <ComDica texto="Tira a foto desta variante. A imagem continua na biblioteca.">
+          <Button variant="outline" className="flex-1 text-danger-ink" onClick={onRemover}>
+            Remover
+          </Button>
+        </ComDica>
       </div>
     </div>
   );

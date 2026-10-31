@@ -25,7 +25,7 @@ export function CampoCmEditavel({
   const [erro, setErro] = useState<string | undefined>();
 
   // O texto acompanha o valor quando ele muda por fora (desfazer, arrastar a foto, trocar de seleção).
-  const [valorVisto, setValorVisto] = useState(valor);
+  const [valorVisto, setValorVisto] = useState<number | null>(valor);
   if (valorVisto !== valor) {
     setValorVisto(valor);
     setTexto(formatarCm(valor));
@@ -48,6 +48,8 @@ export function CampoCmEditavel({
       return;
     }
     setErro(undefined);
+    // O valor aplicado pode ser outro (snap, limite): na próxima renderização o campo mostra o valor da foto.
+    setValorVisto(null);
     setTexto(formatarCm(arredondarCm(lido)));
   };
 

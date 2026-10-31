@@ -7,11 +7,14 @@ export function LayoutModo({
   palco,
   painel,
   fundo,
+  rodape,
 }: {
   barra: ReactNode;
   palco: ReactNode;
   painel: ReactNode;
   fundo: 'escuro' | 'claro';
+  // Barra de status do modo (o recorte mostra as teclas — §3.10).
+  rodape?: ReactNode;
 }) {
   return (
     <div className="flex h-dvh min-w-[1280px] flex-col">
@@ -24,6 +27,7 @@ export function LayoutModo({
           {painel}
         </aside>
       </div>
+      {rodape}
     </div>
   );
 }
