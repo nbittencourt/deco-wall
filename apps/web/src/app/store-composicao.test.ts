@@ -134,7 +134,7 @@ describe('biblioteca', () => {
   });
 });
 
-describe('adicionarFoto (RF-30, RN-03, RN-04, RN-13, M2-04)', () => {
+describe('adicionarFoto (RF-30, RN-03, RN-04, RN-13, A-04)', () => {
   it('10×15 na orientação natural, centralizada na área útil e encaixada no grid', async () => {
     const { estado, fotos } = await aberto();
     const id = estado().adicionarFoto(hex(2)); // paisagem → 15 × 10
@@ -243,7 +243,7 @@ describe('seleção e movimento (RF-34, RN-16)', () => {
   });
 });
 
-describe('tamanho, orientação e borda (RF-31, RF-32, RF-41, RN-05, M2-05)', () => {
+describe('tamanho, orientação e borda (RF-31, RF-32, RF-41, RN-05, M2-09, M2-10)', () => {
   it('trocarTamanho e trocarOrientacao mantêm o canto superior esquerdo e recentralizam o recorte', async () => {
     const { estado, fotos } = await aberto();
     const id = estado().adicionarFoto(hex(1))!;
@@ -280,7 +280,7 @@ describe('tamanho, orientação e borda (RF-31, RF-32, RF-41, RN-05, M2-05)', ()
   });
 });
 
-describe('duplicar, remover e ordem (RF-35, B-06, B-07)', () => {
+describe('duplicar, remover e ordem (RF-35, A-24, A-25)', () => {
   it('duplicarFoto copia 5 cm adiante, no topo, e seleciona a cópia', async () => {
     const { estado, fotos } = await aberto();
     const id = estado().adicionarFoto(hex(1))!;

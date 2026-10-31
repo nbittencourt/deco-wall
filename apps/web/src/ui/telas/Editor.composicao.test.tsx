@@ -264,7 +264,7 @@ describe('biblioteca (RF-22, RF-27, RF-28)', () => {
 });
 
 describe('adicionar, selecionar e remover (RF-30, RF-35)', () => {
-  it('"Adicionar" só vale com uma foto escolhida na biblioteca (M2-04)', async () => {
+  it('"Adicionar" só vale com uma foto escolhida na biblioteca (A-05)', async () => {
     await montar();
     expect(adicionar().getAttribute('aria-disabled')).toBe('true');
     fireEvent.click(miniatura('retrato.jpg'));

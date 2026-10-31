@@ -169,7 +169,7 @@ export interface EstadoEditor {
   adotarImagem(imagem: ImagemDto): void;
   selecionarImagemDaBiblioteca(id: string | null): void;
 
-  // ---- M2: fotos na parede (RF-30 a RF-35, RF-41, M2-04) ----
+  // ---- M2: fotos na parede (RF-30 a RF-35, RF-41, A-04) ----
   // Devolve o id da foto criada, ou null se não deu (sem escala ou imagem fora da biblioteca).
   adicionarFoto(imagemId: string, centroCm?: Pt): string | null;
   adicionarFotoSelecionada(): string | null;

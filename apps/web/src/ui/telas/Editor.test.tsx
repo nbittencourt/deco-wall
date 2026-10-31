@@ -319,7 +319,7 @@ describe('parede com escala', () => {
     await waitFor(() => expect(screen.queryByText('Ajuste onde as fotos podem ficar.')).toBeNull());
   });
 
-  it('controles do M3 em diante continuam visíveis e inativos (B-13)', async () => {
+  it('controles do M3 em diante continuam visíveis e inativos (§2)', async () => {
     await montar({ parede: PAREDE_LINEAR, areaUtil: AREA_LINEAR });
     for (const nome of ['Exportar', 'Comparar', 'Templates']) {
       expect(screen.getByRole('button', { name: nome }).getAttribute('aria-disabled'), nome).toBe('true');

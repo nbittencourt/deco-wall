@@ -4,7 +4,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '../componentes/ui/tooltip';
 import { PainelComposicao, type PropsPainelComposicao } from './PainelComposicao';
 
-// Painel direito "Composição" (spec M1 §3.7, A-08, A-13 a A-15; spec M2 §3.6, B-05, B-14; protótipo 11).
+// Painel direito "Composição" (spec M1 §3.7, A-08, A-13 a A-15; spec M2 §3.8, A-14; protótipo 11).
 
 beforeAll(() => {
   globalThis.ResizeObserver ??= class {

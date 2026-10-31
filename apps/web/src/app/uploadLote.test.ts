@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ErroApi, type ImagemDto } from '../infra/dto';
 import { criarLoteUpload } from './uploadLote';
 
-// Fila de upload (docs/specs/M2-biblioteca-e-composicao.md §3.2; DV-10, M2-07, B-10, B-11):
+// Fila de upload (docs/specs/M2-biblioteca-e-composicao.md §3.2; DV-10, A-17, A-18):
 // 3 em paralelo, progresso por arquivo, falha sem parar o lote, cancelar restantes, tentar de novo.
 
 const arquivo = (nome: string, tipo = 'image/jpeg', bytes = 1000) =>
@@ -91,7 +91,7 @@ describe('fila', () => {
     expect(enviar).not.toHaveBeenCalled();
   });
 
-  it('nada é enviado antes de iniciar (M2-07); o perfil pode mudar até lá', () => {
+  it('nada é enviado antes de iniciar (A-17); o perfil pode mudar até lá', () => {
     const { enviar, pendentes } = enviadorFalso();
     const lote = criarLoteUpload({ enviar, perfil: 'leve', limiteMb: 50 });
     lote.adicionar([arquivo('a.jpg')]);
@@ -188,7 +188,7 @@ describe('envio (DV-10)', () => {
     expect(lote.estado().total).toBe(2);
   });
 
-  it('falha de um arquivo não interrompe o lote e mostra o motivo (B-11)', async () => {
+  it('falha de um arquivo não interrompe o lote e mostra o motivo (A-18)', async () => {
     const { enviar, pendentes } = enviadorFalso();
     const lote = criarLoteUpload({ enviar, perfil: 'leve', limiteMb: 50 });
     lote.adicionar([arquivo('a.jpg'), arquivo('b.jpg'), arquivo('c.jpg'), arquivo('d.jpg')]);
@@ -243,7 +243,7 @@ describe('envio (DV-10)', () => {
 });
 
 describe('cancelar restantes e tentar de novo', () => {
-  it('cancelarRestantes aborta o que está em envio, esvazia a fila e preserva o que terminou (B-11)', async () => {
+  it('cancelarRestantes aborta o que está em envio, esvazia a fila e preserva o que terminou (A-18)', async () => {
     const { enviar, pendentes } = enviadorFalso();
     const lote = criarLoteUpload({ enviar, perfil: 'leve', limiteMb: 50 });
     lote.adicionar(['1', '2', '3', '4', '5'].map((n) => arquivo(`${n}.jpg`)));

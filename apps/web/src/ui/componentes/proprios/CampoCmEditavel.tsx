@@ -2,7 +2,7 @@ import { arredondarCm, formatarCm, lerCm } from '@deco-wall/domain';
 import { useState, type KeyboardEvent } from 'react';
 import { CampoCm } from './CampoCm';
 
-// Campo em cm que aplica ao sair do campo ou em Enter (B-04, padrão do CamposAreaUtil): cada aplicação é um
+// Campo em cm que aplica ao sair do campo ou em Enter (A-09, padrão do CamposAreaUtil): cada aplicação é um
 // passo do desfazer. `onConfirmar` devolve a mensagem de erro (valor fora da faixa) ou null quando aplicou.
 export function CampoCmEditavel({
   rotulo,

@@ -5,7 +5,7 @@ import type { ImagemDto } from '../../infra/dto';
 import { TooltipProvider } from '../componentes/ui/tooltip';
 import { PainelFoto, type PropsPainelFoto } from './PainelFoto';
 
-// Painel da foto selecionada (spec M2 §3.4; RF-60, RN-02, RN-05, RN-28, RN-36; protótipo 03).
+// Painel da foto selecionada (spec M2 §3.4; RF-60, RN-02, RN-05, RN-28; protótipo 03).
 
 beforeAll(() => {
   globalThis.ResizeObserver ??= class {
@@ -125,7 +125,7 @@ describe('orientação (RN-05, RN-28)', () => {
   });
 });
 
-describe('campos (B-04)', () => {
+describe('campos (A-09)', () => {
   it('borda aplica em Enter', () => {
     const props = montar();
     fireEvent.change(campo('Largura da borda'), { target: { value: '3,5' } });

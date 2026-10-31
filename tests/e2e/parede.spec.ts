@@ -405,7 +405,7 @@ test.describe('trocar a parede (fluxo E2E 4, M1-05, RF-07)', () => {
     request,
   }) => {
     const p = await criarProjetoComEscalaLinear(request, nomeUnico('Com fotos'));
-    // M2-06: a foto precisa de uma imagem da biblioteca.
+    // §5: a imagem da foto precisa existir na biblioteca.
     const imagem = await enviarImagem(request, p.id);
     const atual = (await lerProjeto(request, p.id)).variantes[0]!;
     const salvar = await request.put(`/api/projetos/${p.id}/variantes/${p.varianteId}`, {
