@@ -2,7 +2,7 @@
 
 App web local para simular a decoração de uma parede com fotos: carrega uma foto da parede, calibra a escala em cm, envia fotos para uma biblioteca e posiciona as fotos com grid, snap e medidas. Tudo roda na sua máquina (navegador, servidor Node e MongoDB local).
 
-Requisitos em `docs/PRD.md`; arquitetura em `docs/ARCHITECTURE.md`; especificações dos marcos em `docs/specs/` (M0, M1 e M2 implementados).
+Requisitos em `docs/PRD.md`; arquitetura em `docs/ARCHITECTURE.md`; especificações dos marcos em `docs/specs/` (M0 e M1 aceitos; M2 implementado e ajustado à spec v0.4, aguardando o aceite).
 
 ## Pré-requisitos
 
@@ -30,7 +30,7 @@ Variáveis (`.env`, não versionado):
 | `API_PORT` | `3001` | Porta da API (escuta só em `127.0.0.1`) |
 | `WEB_PORT` | `5173` | Porta do Vite em desenvolvimento |
 | `AUTOSAVE_MINUTOS` | `5` | Intervalo do salvamento automático |
-| `UPLOAD_MAX_MB` | `50` | Tamanho máximo por arquivo no upload |
+| `UPLOAD_MAX_MB` | `50` | Tamanho máximo por arquivo no upload (a web lê o valor em `GET /api/config`) |
 
 Se a pasta de fotos não existir ou o MongoDB estiver fora do ar, a API não sobe e informa o motivo.
 

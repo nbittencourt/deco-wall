@@ -1,7 +1,9 @@
 /// <reference lib="dom" />
-import { mkdtemp, writeFile } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
+import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { promisify } from 'node:util';
 import { expect, test, type Page } from '@playwright/test';
 import sharp from 'sharp';
 import { cantosPadrao } from '../../packages/domain/src/index';
@@ -12,9 +14,11 @@ import {
   criarProjetoComEscalaLinear,
   enviarImagem,
   esperarPalco,
+  fotoDaApi,
   idsDasFotos,
   lerProjeto,
   nomeUnico,
+  salvarVarianteApi,
 } from './ajudantes';
 
 // Desempenho da retificação (spec M1 §4.2, §7, aceites 9 e 12; ARCHITECTURE §8 e ADR-16). O tempo é lido do
@@ -179,5 +183,95 @@ test.describe('arrastar com 40 fotos (RNF-03)', () => {
       `[arrasto 40 fotos] ${quadros.length} quadros · média ${medio.toFixed(1)} ms (${(1000 / medio).toFixed(0)} fps) · p95 ${p95.toFixed(1)} ms`,
     );
     expect(medio).toBeLessThanOrEqual(TETO_QUADRO_MEDIO_MS);
+  });
+});
+
+// Upload em lote de 50 fotos no perfil Leve (spec M2 §7): até 1 s por foto, do clique à última concluída.
+// O tempo total entra no MEMORY.md.
+const META_UPLOAD_MS_POR_FOTO = 1000;
+
+test.describe('upload de 50 fotos (spec M2 §7)', () => {
+  test('perfil Leve, até 1 s por foto', async ({ page, request }) => {
+    test.setTimeout(180_000);
+    const p = await criarProjetoComEscalaLinear(request, nomeUnico('Desempenho upload'));
+    // Fotos de câmera: 4000 × 3000 (12 MP), que o servidor reduz a 1024 px (as fixtures do repositório são pequenas).
+    const grande = await readFile(await fotoSintetica(4000, 3000));
+    const arquivos = Array.from({ length: 50 }, (_, i) => ({
+      name: `${String(i).padStart(2, '0')}-camera.jpg`,
+      mimeType: 'image/jpeg',
+      buffer: grande,
+    }));
+
+    await page.goto(`/projetos/${p.id}`);
+    await page.getByRole('button', { name: 'Carregar fotos' }).click();
+    const dialogo = page.getByRole('dialog', { name: 'Carregar fotos' });
+    const inicio = Date.now();
+    await dialogo.getByTestId('entrada-arquivos').setInputFiles(arquivos);
+    await expect(dialogo.getByText('50 de 50 enviadas')).toBeVisible({ timeout: 120_000 });
+    const total = Date.now() - inicio;
+    console.log(
+      `[upload 50 fotos Leve, 12 MP] ${total} ms no total · ${(total / 50).toFixed(0)} ms por foto`,
+    );
+    expect(total / 50).toBeLessThanOrEqual(META_UPLOAD_MS_POR_FOTO);
+  });
+});
+
+// Memória com 40 fotos no perfil Leve (ARCHITECTURE §8; spec M2 §7): menos de 300 MB acima do navegador vazio.
+// Mede a soma da memória (conjunto de trabalho) dos processos do Chromium no Windows, antes e depois de abrir
+// as 40 fotos, que inclui as imagens decodificadas; com o perfil Alto o orçamento não se aplica.
+const ORCAMENTO_MEMORIA_MB = 300;
+
+async function memoriaDoNavegadorMb(): Promise<number | null> {
+  if (process.platform !== 'win32') return null;
+  const comando =
+    "(Get-Process | Where-Object { $_.ProcessName -match 'chrome|headless_shell' } | Measure-Object WorkingSet64 -Sum).Sum";
+  const { stdout } = await promisify(execFile)('powershell', ['-NoProfile', '-Command', comando]);
+  const bytes = Number(stdout.trim());
+  return Number.isFinite(bytes) ? bytes / (1024 * 1024) : null;
+}
+
+test.describe('memória com 40 fotos (spec M2 §7)', () => {
+  test('perfil Leve, menos de 300 MB acima do navegador vazio', async ({ page, request }) => {
+    test.setTimeout(120_000);
+    const p = await criarProjetoComEscalaLinear(request, nomeUnico('Desempenho memória'));
+    const grande = await readFile(await fotoSintetica(4000, 3000));
+    const imagens = [];
+    for (let i = 0; i < 40; i += 1) {
+      const res = await request.post('/api/imagens', {
+        multipart: {
+          perfil: 'leve',
+          projetoId: p.id,
+          arquivo: { name: `camera-${i}.jpg`, mimeType: 'image/jpeg', buffer: grande },
+        },
+      });
+      imagens.push((await res.json()) as { _id: string });
+    }
+    const fotos = imagens.map((imagem, i) =>
+      fotoDaApi(i + 1, imagem._id, {
+        xCm: 10 + (i % 8) * 30,
+        yCm: 10 + Math.floor(i / 8) * 40,
+        borda: { larguraCm: 1, cor: '#FFFFFF' },
+      }),
+    );
+    expect((await salvarVarianteApi(request, p, fotos)).status()).toBe(200);
+
+    await page.goto('about:blank');
+    const antes = await memoriaDoNavegadorMb();
+    await page.goto(`/projetos/${p.id}`);
+    await esperarPalco(page);
+    expect((await idsDasFotos(page)).length).toBe(40);
+    await page.waitForTimeout(4000); // as 40 imagens carregam e decodificam
+
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Performance.enable');
+    const { metrics } = await cdp.send('Performance.getMetrics');
+    const heapMb = (metrics.find((m) => m.name === 'JSHeapUsedSize')?.value ?? 0) / (1024 * 1024);
+    const depois = await memoriaDoNavegadorMb();
+    const delta = antes !== null && depois !== null ? depois - antes : null;
+    console.log(
+      `[memória 40 fotos Leve] heap JS ${heapMb.toFixed(0)} MB · navegador ${antes?.toFixed(0)} → ${depois?.toFixed(0)} MB (acréscimo ${delta?.toFixed(0)} MB)`,
+    );
+    expect(heapMb).toBeLessThan(ORCAMENTO_MEMORIA_MB);
+    if (delta !== null) expect(delta).toBeLessThan(ORCAMENTO_MEMORIA_MB);
   });
 });
