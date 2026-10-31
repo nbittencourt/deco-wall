@@ -120,6 +120,8 @@ export function criarClienteHttp(
       });
     },
 
+    obterConfig: () => pedir<{ uploadMaxMb: number }>('/api/config'),
+
     listarImagens: () => pedir<ImagemDto[]>('/api/imagens'),
 
     enviarImagem: ({ arquivo, perfil, projetoId }, opcoes) => {

@@ -1,5 +1,5 @@
 import { Crop } from 'lucide-react';
-import { useEditor, useStoreEditor } from '../../../../app/StoreContext';
+import { useEditor, useStoreEditor, useVistaDaVariante } from '../../../../app/StoreContext';
 import { Palco } from '../../../canvas/Palco';
 import { PainelRecorte } from '../../../paineis/PainelRecorte';
 import { cenaDaParede, cenaDoRecorte } from '../cenas';
@@ -11,7 +11,7 @@ import { useAtalhosDoModo } from './atalhos';
 export function ModoRecorte() {
   const store = useStoreEditor();
   const projeto = useEditor((s) => s.documento.projeto)!;
-  const variante = useEditor((s) => s.documento.variante)!;
+  const variante = useVistaDaVariante();
   const imagens = useEditor((s) => s.biblioteca.imagens);
   const rascunho = useEditor((s) => s.ui.recorte);
 

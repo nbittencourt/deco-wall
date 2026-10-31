@@ -26,4 +26,3 @@ export * from './composicao/alertas';
 export * from './composicao/caixa';
 export * from './composicao/ordem';
 export * from './biblioteca/biblioteca';
-export * from './historico';

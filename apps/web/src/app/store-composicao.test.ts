@@ -97,7 +97,7 @@ async function aberto(opcoes: { parede?: ProjetoDto['parede']; variante?: Partia
   await store.getState().abrirProjeto(ID_PROJETO);
   await store.getState().carregarBiblioteca();
   const estado = () => store.getState();
-  const fotos = () => estado().documento.variante!.fotos;
+  const fotos = () => estado().conteudo!.fotos;
   return { api, store, estado, fotos };
 }
 
@@ -218,9 +218,12 @@ describe('seleção e movimento (RF-34, RN-16)', () => {
     expect(estado().ui.selecaoId).toBe(id);
   });
 
-  it('moverFoto grava a posição a 0,1 cm', async () => {
+  it('moverFoto grava a posição a 0,1 cm sem snap e encaixa no grid com snap (M2-12)', async () => {
     const { estado, fotos } = await aberto();
     const id = estado().adicionarFoto(hex(1))!;
+    estado().moverFoto(id, 40.04, 25.06);
+    expect([fotos()[0]!.xCm, fotos()[0]!.yCm]).toEqual([40, 25]);
+    estado().alterarGrid({ snap: false });
     estado().moverFoto(id, 40.04, 25.06);
     expect([fotos()[0]!.xCm, fotos()[0]!.yCm]).toEqual([40, 25.1]);
   });
@@ -273,7 +276,7 @@ describe('tamanho, orientação e borda (RF-31, RF-32, RF-41, RN-05, M2-05)', ()
     estado().adicionarFoto(hex(1));
     estado().alterarBordaPadrao({ larguraCm: 3 });
     expect(fotos()[0]!.borda.larguraCm).toBe(0);
-    expect(estado().documento.variante!.bordaPadrao.larguraCm).toBe(3);
+    expect(estado().conteudo!.bordaPadrao.larguraCm).toBe(3);
   });
 });
 
@@ -344,12 +347,12 @@ describe('desfazer e refazer (RF-70, RN-18, M2-02, M2-03)', () => {
   it('mover para o mesmo lugar não cria passo', async () => {
     const { estado } = await aberto();
     const id = estado().adicionarFoto(hex(1))!;
-    const { xCm, yCm } = estado().documento.variante!.fotos[0]!;
+    const { xCm, yCm } = estado().conteudo!.fotos[0]!;
     estado().desfazer(); // adicionar
     estado().refazer();
     estado().moverFoto(id, xCm, yCm);
     estado().desfazer();
-    expect(estado().documento.variante!.fotos).toHaveLength(0); // o único passo era o de adicionar
+    expect(estado().conteudo!.fotos).toHaveLength(0); // o único passo era o de adicionar
   });
 
   it('desfazer também marca "Alterações não salvas" e não mexe em projeto, revisão nem status', async () => {
@@ -396,9 +399,9 @@ describe('desfazer e refazer (RF-70, RN-18, M2-02, M2-03)', () => {
     estado().definirAreaUtil({ xCm: 10, yCm: 10, larguraCm: 100, alturaCm: 100 });
     estado().alterarBordaPadrao({ larguraCm: 2 });
     estado().desfazer();
-    expect(estado().documento.variante!.bordaPadrao.larguraCm).toBe(0);
+    expect(estado().conteudo!.bordaPadrao.larguraCm).toBe(0);
     estado().desfazer();
-    expect(estado().documento.variante!.areaUtil).toEqual(AREA_TOTAL);
+    expect(estado().conteudo!.areaUtil).toEqual(AREA_TOTAL);
   });
 
   it('desfazer remove da seleção a foto que deixou de existir', async () => {
@@ -427,6 +430,7 @@ describe('desfazer e refazer (RF-70, RN-18, M2-02, M2-03)', () => {
   it('o histórico guarda no máximo 100 passos', async () => {
     const { estado } = await aberto();
     const id = estado().adicionarFoto(hex(1))!;
+    estado().alterarGrid({ snap: false });
     for (let i = 1; i <= 110; i += 1) estado().moverFoto(id, i, i);
     let passos = 0;
     while (estado().podeDesfazer()) {
@@ -510,7 +514,7 @@ describe('modo de recorte (RN-14, RN-28, DESIGN §7.0)', () => {
     estado().abrirRecorte(id);
     estado().concluirRecorte();
     estado().desfazer();
-    expect(estado().documento.variante!.fotos).toHaveLength(0);
+    expect(estado().conteudo!.fotos).toHaveLength(0);
   });
 });
 

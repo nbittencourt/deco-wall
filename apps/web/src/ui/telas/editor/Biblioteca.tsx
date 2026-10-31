@@ -38,7 +38,7 @@ export function Biblioteca({
 }) {
   const store = useStoreEditor();
   const projeto = useEditor((s) => s.documento.projeto)!;
-  const fotos = useEditor((s) => s.documento.variante?.fotos);
+  const fotos = useEditor((s) => s.conteudo?.fotos);
   const imagens = useEditor((s) => s.biblioteca.imagens);
   const erro = useEditor((s) => s.biblioteca.erro);
   const escolhida = useEditor((s) => s.ui.bibliotecaSelecaoId);

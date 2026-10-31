@@ -329,7 +329,8 @@ deco-wall/
         ui/
           canvas/
             theme.ts        # cores/medidas do canvas Konva — DESIGN §2.2
-            Palco.tsx       # único módulo que usa o Konva: camadas, zoom/pan, alças, lupa
+            Palco.tsx       # palco Konva: camadas, zoom/pan, alças, lupa (com FotosKonva.tsx, os únicos módulos que usam o Konva)
+            FotosKonva.tsx  # Konva das fotos (M2): nós das fotos, recorte, pills de alerta, seleção e bounding box
             cena.ts         # cenas em dados (sem Konva): parede, área útil, perspectiva, calibração
             useImagem.ts
           paineis/          # Composição, Perspectiva, Calibração, Área útil, Foto, Recorte, BarraModo, CamposAreaUtil

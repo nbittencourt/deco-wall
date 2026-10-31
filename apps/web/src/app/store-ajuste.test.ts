@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { BORDA_PADRAO, GRID_PADRAO } from '@deco-wall/domain';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ErroApi, type ClienteApi, type ImagemDto, type ProjetoDto, type VarianteDto } from '../infra/dto';
@@ -380,7 +381,7 @@ describe('zundo isola a parte desfazível da variante (M2-13, ADR-03, §4.7)', (
   });
 
   it('o limite é de 100 passos por variante', async () => {
-    const { store, estado } = await aberto({ variante: { fotos: [fotoDe(1)] } });
+    const { store, estado } = await aberto({ snap: false, variante: { fotos: [fotoDe(1)] } });
     for (let i = 1; i <= 105; i += 1) store.getState().moverFoto(hex(501), 50 + i, 50);
     let passos = 0;
     while (estado().podeDesfazer()) {
@@ -391,7 +392,7 @@ describe('zundo isola a parte desfazível da variante (M2-13, ADR-03, §4.7)', (
   });
 
   it('o zundo está instalado com versão exata no apps/web (M2-13, T16)', () => {
-    const pacote = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')) as {
+    const pacote = JSON.parse(readFileSync(join(process.cwd(), 'apps/web/package.json'), 'utf8')) as {
       dependencies: Record<string, string>;
     };
     expect(pacote.dependencies.zundo).toMatch(/^\d+\.\d+\.\d+$/);

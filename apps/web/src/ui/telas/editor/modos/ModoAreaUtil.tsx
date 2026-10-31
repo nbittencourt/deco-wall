@@ -1,6 +1,6 @@
 import type { AreaUtil } from '@deco-wall/domain';
 import { useState } from 'react';
-import { useEditor, useStoreEditor } from '../../../../app/StoreContext';
+import { useEditor, useStoreEditor, useVistaDaVariante } from '../../../../app/StoreContext';
 import { Palco } from '../../../canvas/Palco';
 import { BarraModo } from '../../../paineis/BarraModo';
 import { PainelAreaUtil } from '../../../paineis/PainelAreaUtil';
@@ -19,7 +19,7 @@ const SUBTITULO = {
 export function ModoAreaUtil() {
   const store = useStoreEditor();
   const projeto = useEditor((s) => s.documento.projeto)!;
-  const variante = useEditor((s) => s.documento.variante)!;
+  const variante = useVistaDaVariante();
   const contexto = useEditor((s) => s.ui.contextoAreaUtil);
   const imagens = useEditor((s) => s.biblioteca.imagens);
   const { interior, metodo } = dadosDaParede(projeto);

@@ -87,6 +87,8 @@ export interface ClienteApi {
     dados: { arquivo: File; perfil: Perfil; projetoId: string },
     opcoes?: OpcoesEnvio,
   ): Promise<ImagemDto>;
+  // A-28: limite real de upload do servidor (UPLOAD_MAX_MB).
+  obterConfig(): Promise<{ uploadMaxMb: number }>;
   salvarVariante(
     projetoId: string,
     varianteId: string,

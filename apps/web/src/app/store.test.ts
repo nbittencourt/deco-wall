@@ -137,7 +137,7 @@ describe('alterações da variante (M1-01)', () => {
     });
     store.getState().definirAreaUtil({ xCm: -10, yCm: 0, larguraCm: 999, alturaCm: 100 });
     const { documento } = store.getState();
-    expect(documento.variante?.areaUtil).toEqual({ xCm: 0, yCm: 0, larguraCm: 300, alturaCm: 100 });
+    expect(store.getState().conteudo?.areaUtil).toEqual({ xCm: 0, yCm: 0, larguraCm: 300, alturaCm: 100 });
     expect(documento.sujo).toBe(true);
   });
 
@@ -147,7 +147,7 @@ describe('alterações da variante (M1-01)', () => {
       variantes: [variante({ areaUtil: { xCm: 10, yCm: 10, larguraCm: 50, alturaCm: 50 } })],
     });
     store.getState().usarParedeInteira();
-    expect(store.getState().documento.variante?.areaUtil).toEqual({
+    expect(store.getState().conteudo?.areaUtil).toEqual({
       xCm: 0,
       yCm: 0,
       larguraCm: 300,
@@ -163,7 +163,7 @@ describe('alterações da variante (M1-01)', () => {
     store.getState().definirModo('area-util');
     store.getState().confirmarAreaUtil({ xCm: 5, yCm: 5, larguraCm: 100, alturaCm: 100 });
     expect(store.getState().ui.modo).toBe('editor');
-    expect(store.getState().documento.variante?.areaUtil).toEqual({
+    expect(store.getState().conteudo?.areaUtil).toEqual({
       xCm: 5,
       yCm: 5,
       larguraCm: 100,
@@ -180,7 +180,7 @@ describe('alterações da variante (M1-01)', () => {
     });
     store.getState().definirModo('area-util');
     store.getState().definirModo('editor');
-    expect(store.getState().documento.variante?.areaUtil).toEqual(area);
+    expect(store.getState().conteudo?.areaUtil).toEqual(area);
     expect(store.getState().documento.sujo).toBe(false);
   });
 });
@@ -340,7 +340,7 @@ describe('alterações da parede (SV-09, M1-04): gravam ao confirmar e entregam 
 
     expect(api.aplicarCalibracao).toHaveBeenCalledWith(ID_PROJETO, { revisaoBase: 2, linear });
     const { documento, ui } = store.getState();
-    expect(documento.variante?.areaUtil).toEqual(area);
+    expect(store.getState().conteudo?.areaUtil).toEqual(area);
     expect(documento.variante?.revisao).toBe(2);
     expect(documento.revisaoBase).toBe(2);
     expect(documento.sujo).toBe(false);
@@ -379,7 +379,7 @@ describe('alterações da parede (SV-09, M1-04): gravam ao confirmar e entregam 
     store.getState().definirModo('calibracao');
     await store.getState().aplicarCalibracao(PAREDE_LINEAR.escala.linear!);
     expect(store.getState().ui.modo).toBe('editor');
-    expect(store.getState().documento.variante?.areaUtil).toEqual(area);
+    expect(store.getState().conteudo?.areaUtil).toEqual(area);
     expect(store.getState().documento.projeto?.revisao).toBe(4);
   });
 

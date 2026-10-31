@@ -9,7 +9,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAvisoAoSair } from '../../app/avisoAoSair';
 import { navegarPadrao } from '../../app/navegacao';
-import { ProvedorStore, useEditor, useStoreEditor } from '../../app/StoreContext';
+import { ProvedorStore, useEditor, useStoreEditor, useVistaDaVariante } from '../../app/StoreContext';
 import { criarStoreEditor } from '../../app/store';
 import { clienteHttp } from '../../infra/clienteApi';
 import type { ClienteApi } from '../../infra/dto';
@@ -46,6 +46,7 @@ export function Editor({ projetoId, api = clienteHttp, navegar = navegarPadrao }
   useEffect(() => {
     void store.getState().abrirProjeto(projetoId);
     void store.getState().carregarBiblioteca();
+    void store.getState().carregarConfig();
   }, [store, projetoId]);
 
   return (
@@ -115,7 +116,9 @@ const DIRECOES: Record<string, DirecaoSeta> = {
 function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: string) => void }) {
   const store = useStoreEditor();
   const projeto = useEditor((s) => s.documento.projeto)!;
-  const variante = useEditor((s) => s.documento.variante)!;
+  const variante = useVistaDaVariante();
+  const nomeVariante = useEditor((s) => s.documento.variante!.nome);
+  const bordaPadrao = useEditor((s) => s.conteudo!.bordaPadrao);
   const imagens = useEditor((s) => s.biblioteca.imagens);
   const sujo = useEditor((s) => s.documento.sujo);
   const salvamento = useEditor((s) => s.documento.salvamento);
@@ -261,7 +264,7 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
       <HeaderEditor
         nome={projeto.nome}
         onRenomear={(nome) => store.getState().renomearProjeto(nome)}
-        nomeVariante={variante.nome}
+        nomeVariante={nomeVariante}
         temParede={parede !== null}
         metodo={dados.metodo}
         pxPorCm={dados.pxPorCm}
@@ -404,7 +407,7 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
               paredeInteira={dados.interior}
               grid={variante.grid}
               resumo={resumo}
-              bordaPadrao={variante.bordaPadrao}
+              bordaPadrao={bordaPadrao}
               onAlterarBordaPadrao={(parcial) => store.getState().alterarBordaPadrao(parcial)}
               onRecalibrar={() =>
                 store.getState().definirModo(dados.metodo === 'perspectiva' ? 'perspectiva' : 'calibracao')

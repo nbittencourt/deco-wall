@@ -1,6 +1,6 @@
-import { escalaPxPorCm, paredeInteira, type AreaUtil } from '@deco-wall/domain';
+import { escalaPxPorCm, paredeInteira, type AreaUtil, type FotoNaParede, type Grid } from '@deco-wall/domain';
 import { urlArquivoImagem, urlArquivoParede } from '../../../infra/clienteApi';
-import type { ImagemDto, ProjetoDto, VarianteDto } from '../../../infra/dto';
+import type { ImagemDto, ProjetoDto } from '../../../infra/dto';
 import type { CenaAreaUtil, CenaParede, CenaRecorte, FotoCena, RecorteCena } from '../../canvas/cena';
 
 // Monta as cenas do Palco a partir do projeto e da variante (spec M1 §3.9, spec M2 §3.3). Sem Konva: roda nos
@@ -24,7 +24,17 @@ export function dadosDaParede(projeto: ProjetoDto): DadosParede {
 }
 
 // As fotos da variante com a imagem resolvida na biblioteca (arquivo `render`, B-09).
-export function fotosDaCena(variante: VarianteDto, imagens: readonly ImagemDto[]): FotoCena[] {
+// O que a cena precisa da variante aberta: o grid (da variante) e o conteúdo desfazível (fotos e área útil).
+export interface VistaDaVariante {
+  grid: Grid;
+  fotos: FotoNaParede[];
+  areaUtil: AreaUtil | null;
+}
+
+export function fotosDaCena(
+  variante: Pick<VistaDaVariante, 'fotos'>,
+  imagens: readonly ImagemDto[],
+): FotoCena[] {
   const porId = new Map(imagens.map((i) => [i._id, i]));
   return variante.fotos.map((foto) => {
     const imagem = foto.imagemId ? porId.get(foto.imagemId) : undefined;
@@ -59,7 +69,7 @@ export interface InteracaoDaCena {
 // a foto em px.
 export function cenaDaParede(
   projeto: ProjetoDto,
-  variante: VarianteDto,
+  variante: VistaDaVariante,
   imagens: readonly ImagemDto[] = [],
   interacao: InteracaoDaCena = {},
 ): CenaParede {
