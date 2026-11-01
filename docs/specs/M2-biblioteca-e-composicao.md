@@ -5,7 +5,7 @@
 | Versão | 0.4 (registro da implementação, lacunas e tarefas de ajuste — §9, §12, §13) |
 | Data | 2026-10-25 |
 | Base | `docs/PRD.md` v0.12 · `docs/ARCHITECTURE.md` v0.8 · `docs/DESIGN.md` v0.4 + protótipos 03, 03a, 03b, 07, 11, 16 · `docs/specs/M0-setup.md` v0.6 · `docs/specs/M1-parede-e-escala.md` v0.3 (implementada e aceita) |
-| Status | **Concluída** (25/10, Nicholas) — decisões e premissas revisadas (24/10) e conflitos com a implementação decididos (§12.1). A implementação de 25/10 seguiu outra spec (§12) e está em ajuste a esta pelas tarefas T14 a T23 (§9, §13); aceite do M2 na T13. |
+| Status | **Concluída** (25/10, Nicholas) e **M2 aceito** (31/10, Nicholas) — decisões e premissas revisadas (24/10) e conflitos com a implementação decididos (§12.1). A implementação de 25/10 seguiu outra spec (§12) e está em ajuste a esta pelas tarefas T14 a T23 (§9, §13); aceite do M2 na T13. |
 
 ## 0. Pré-requisitos
 
