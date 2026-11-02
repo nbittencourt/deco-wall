@@ -14,7 +14,7 @@ import {
   type VarianteJson,
 } from '../../../../tests/fixtures/api';
 import { paraMongo } from '../../../../tests/fixtures/banco-teste';
-import { areaUtil, foto, id as idFixture, rascunho } from '../../../../tests/fixtures/dominio';
+import { foto, id as idFixture, rascunho } from '../../../../tests/fixtures/dominio';
 
 // CRUD de variantes, criação a partir de template e campos novos de projeto (M3-04, M3-02, M3-05, M3-06, RN-23;
 // docs/specs/M3-variantes-templates-e-salvamento.md §5).
@@ -148,7 +148,9 @@ describe('POST /api/projetos/:pid/variantes — cópia (M3-04)', () => {
     expect(v.fotos.map((f) => f._id)).not.toContain(idFixture(11));
     expect(v.fotos.map((f) => f._id)).not.toContain(idFixture(12));
     expect(new Set(v.fotos.map((f) => f._id)).size).toBe(2);
-    expect(v.fotos.map(({ _id, ...resto }) => resto)).toEqual(fotos.map(({ _id, ...resto }) => resto));
+    expect(v.fotos.map((f) => ({ ...f, _id: undefined }))).toEqual(
+      fotos.map((f) => ({ ...f, _id: undefined })),
+    );
   });
 
   it('associa o projeto às imagens usadas (M2-05)', async () => {
