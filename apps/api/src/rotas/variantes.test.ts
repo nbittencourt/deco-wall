@@ -62,7 +62,11 @@ describe('PUT /api/projetos/:pid/variantes/:id — sucesso', () => {
     const { projeto, base } = await novo();
     const res = await salvarVarianteApi(t.app, projeto._id, base._id, corpo(base));
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toEqual({ revisao: base.revisao + 1, salvaEm: expect.any(String) });
+    expect(res.json()).toEqual({
+      revisao: base.revisao + 1,
+      salvaEm: expect.any(String),
+      imagensExcluidas: [],
+    });
 
     const salva = await t.db.collection('variantes').findOne({ _id: new ObjectId(base._id) });
     expect(salva).toMatchObject({

@@ -4,7 +4,8 @@ import type { MongoClient } from 'mongodb';
 import { verificarPastaFotos } from '../armazenamento/pasta';
 
 // GET /api/saude (docs/specs/M0-setup.md §5.3): cada componente responde ok ou erro.
-// A API responde 200 mesmo com erro em algum componente: a web lê o corpo para o indicador de status.
+// M4-14: 200 com tudo ok; 503 quando mongo ou pasta está em erro. O corpo é o mesmo nos dois casos (a web lê
+// o corpo também no 503 para o indicador de status).
 
 export interface DependenciasSaude {
   pastaFotos: string;
@@ -14,9 +15,9 @@ export interface DependenciasSaude {
 export async function registrarSaude(app: FastifyInstance, deps: DependenciasSaude): Promise<void> {
   const versao = await lerVersao();
 
-  app.get('/api/saude', async () => {
+  app.get('/api/saude', async (_request, reply) => {
     const [mongo, pasta] = await Promise.all([verificarMongo(deps.mongo), verificarPasta(deps.pastaFotos)]);
-    return { api: 'ok', mongo, pasta, versao };
+    return reply.code(mongo === 'ok' && pasta === 'ok' ? 200 : 503).send({ api: 'ok', mongo, pasta, versao });
   });
 }
 

@@ -396,17 +396,15 @@ describe('POST /api/imagens/:id/restaurar (RF-29, RF-30a, M4-07)', () => {
 
   it('410 com o prazo vencido', async () => {
     const c = await montar();
-    await t.db
-      .collection('imagens')
-      .updateOne(
-        { _id: new ObjectId(c.praia._id) },
-        {
-          $set: {
-            excluidaEm: new Date('2026-09-01T12:00:00-03:00'),
-            purgaEm: new Date('2026-10-01T12:00:00-03:00'),
-          },
+    await t.db.collection('imagens').updateOne(
+      { _id: new ObjectId(c.praia._id) },
+      {
+        $set: {
+          excluidaEm: new Date('2026-09-01T12:00:00-03:00'),
+          purgaEm: new Date('2026-10-01T12:00:00-03:00'),
         },
-      );
+      },
+    );
     const res = await t.app.inject({ method: 'POST', url: `/api/imagens/${c.praia._id}/restaurar` });
     expect(res.statusCode).toBe(410);
     expect((res.json() as { erro: string }).erro).toBe(

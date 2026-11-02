@@ -8,6 +8,7 @@ import { ErroConfiguracao, lerConfig, type Config } from './config';
 import { executarMigracoes } from './migracoes/executar';
 import { conectarMongo } from './repositorios/mongo';
 import { criarApp } from './app';
+import { iniciarPurga } from './servicos/purga';
 import { repararInconsistencias } from './servicos/reparo';
 import type { MongoClient } from 'mongodb';
 
@@ -67,12 +68,21 @@ async function iniciar(config: Config): Promise<void> {
   if (reparo.variantesCriadas + reparo.variantesApagadas + reparo.rascunhosApagados > 0) {
     app.log.warn(reparo, 'Inconsistências corrigidas na inicialização');
   }
+  // A-10: a purga das imagens excluídas roda depois do reparo, ao iniciar e a cada 24 h.
+  const purga = await iniciarPurga({
+    db: mongo.db(),
+    pastaFotos: config.pastaFotos,
+    uploadMaxMb: config.uploadMaxMb,
+    agora: () => new Date(),
+    log: app.log,
+  });
   const servindoWeb = await registrarWeb(app);
   if (!servindoWeb) {
     app.log.warn('apps/web/dist não encontrado: rode "npm run build" para servir a interface.');
   }
 
   const desligar = async () => {
+    purga.parar();
     await app.close();
     await mongo.close();
     process.exit(0);

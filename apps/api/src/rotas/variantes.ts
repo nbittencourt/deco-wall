@@ -37,8 +37,8 @@ export async function registrarVariantes(app: FastifyInstance, ctx: ContextoApi)
 
   app.post<{ Params: { projetoId: string } }>(base, async (request, reply) => {
     const corpo = lerCorpo(CorpoCriarVarianteSchema, request.body, 'Dados da variante inválidos.');
-    const variante = await criarVariante(ctx, request.params.projetoId, corpo);
-    return reply.code(201).send({ variante });
+    const { variante, imagensExcluidas } = await criarVariante(ctx, request.params.projetoId, corpo);
+    return reply.code(201).send({ variante, imagensExcluidas });
   });
 
   app.get<{ Params: ParamsVariante }>(`${base}/:id`, async (request) =>
@@ -47,13 +47,13 @@ export async function registrarVariantes(app: FastifyInstance, ctx: ContextoApi)
 
   app.put<{ Params: ParamsVariante }>(`${base}/:id`, async (request) => {
     const corpo = lerCorpo(CorpoSalvarVarianteSchema, request.body, 'Dados da variante inválidos.');
-    const { revisao, salvaEm } = await salvarVariante(
+    const { revisao, salvaEm, imagensExcluidas } = await salvarVariante(
       ctx,
       request.params.projetoId,
       request.params.id,
       corpo,
     );
-    return { revisao, salvaEm };
+    return { revisao, salvaEm, imagensExcluidas };
   });
 
   app.patch<{ Params: ParamsVariante }>(`${base}/:id`, async (request) => {

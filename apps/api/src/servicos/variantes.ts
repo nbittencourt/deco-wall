@@ -1,5 +1,6 @@
 import {
   aplicarTemplate,
+  converterEmPlaceholder,
   AreaUtilSchema,
   BORDA_MAX_CM,
   BordaSchema,
@@ -92,14 +93,18 @@ function imagensUsadas(fotos: CorpoSalvarVariante['fotos']): ObjectId[] {
   return [...ids].map((id) => new ObjectId(id));
 }
 
-// §5: todo `imagemId` não nulo precisa existir em `imagens`; senão, 422 com a lista. A imagem excluída conta
-// como existente (a exclusão e o placeholder automático são do M4), e o placeholder (`imagemId` nulo) é aceito.
-async function conferirImagens(ctx: ContextoApi, fotos: CorpoSalvarVariante['fotos']): Promise<void> {
+// §5: todo `imagemId` não nulo precisa existir em `imagens`; senão, 422 com a lista. M4-06, A-11: a foto de uma
+// imagem excluída (em outra aba, por exemplo) vira placeholder em vez de recusar o salvamento; o placeholder
+// (`imagemId` nulo) é aceito. Devolve as fotos já tratadas e os ids das imagens excluídas.
+async function tratarImagens(
+  ctx: ContextoApi,
+  fotos: CorpoSalvarVariante['fotos'],
+): Promise<{ fotos: CorpoSalvarVariante['fotos']; imagensExcluidas: string[] }> {
   const ids = imagensUsadas(fotos);
-  if (ids.length === 0) return;
+  if (ids.length === 0) return { fotos, imagensExcluidas: [] };
   const existentes = await ctx.db
     .collection('imagens')
-    .find({ _id: { $in: ids } }, { projection: { _id: 1 } })
+    .find({ _id: { $in: ids } }, { projection: { _id: 1, excluidaEm: 1 } })
     .toArray();
   const achadas = new Set(existentes.map((d) => d._id.toHexString()));
   const imagensInexistentes = ids.map((id) => id.toHexString()).filter((id) => !achadas.has(id));
@@ -107,6 +112,16 @@ async function conferirImagens(ctx: ContextoApi, fotos: CorpoSalvarVariante['fot
     const erro = 'Há fotos que usam imagens inexistentes.';
     throw new ErroHttp(422, erro, { erro, detalhes: { imagensInexistentes } });
   }
+  const excluidas = new Set(
+    existentes.filter((d) => d.excluidaEm != null).map((d) => (d._id as ObjectId).toHexString()),
+  );
+  if (excluidas.size === 0) return { fotos, imagensExcluidas: [] };
+  return {
+    fotos: fotos.map((f) =>
+      f.imagemId && excluidas.has(f.imagemId) ? converterEmPlaceholder(f, f.imagemId) : f,
+    ),
+    imagensExcluidas: ids.map((id) => id.toHexString()).filter((id) => excluidas.has(id)),
+  };
 }
 
 // DM-05, M2-05: "fotos do projeto" = carregadas no projeto ou usadas em qualquer variante dele. Falha aqui não
@@ -152,13 +167,13 @@ export async function salvarVariante(
   projetoId: string,
   varianteId: string,
   corpo: CorpoSalvarVariante,
-): Promise<{ revisao: number; salvaEm: Date }> {
+): Promise<{ revisao: number; salvaEm: Date; imagensExcluidas: string[] }> {
   const { idProjeto, idVariante } = await carregarVariante(ctx, projetoId, varianteId);
   const { projeto } = await carregarProjeto(ctx, projetoId);
 
   // A-11: fotos em cm precisam de uma parede com escala.
   if (corpo.fotos.length > 0 && semEscala(projeto)) throw new ErroHttp(422, MENSAGEM_SEM_ESCALA);
-  await conferirImagens(ctx, corpo.fotos);
+  const { fotos, imagensExcluidas } = await tratarImagens(ctx, corpo.fotos);
 
   const variantes = ctx.db.collection('variantes');
   const salvaEm = ctx.agora();
@@ -170,7 +185,7 @@ export async function salvarVariante(
         grid: corpo.grid,
         bordaPadrao: corpo.bordaPadrao,
         areaUtil: corpo.areaUtil,
-        fotos: paraMongo(corpo.fotos),
+        fotos: paraMongo(fotos),
         salvaEm,
         salvaPorSessao: corpo.sessaoId,
       },
@@ -189,7 +204,7 @@ export async function salvarVariante(
     });
   }
 
-  await registrarProjetoNasImagens(ctx, idProjeto, corpo.fotos);
+  await registrarProjetoNasImagens(ctx, idProjeto, fotos);
 
   // SV-02, A-10: o hard save apaga o rascunho da própria sessão e os obsoletos (não mais novos que a nova versão).
   await ctx.db.collection('rascunhos').deleteMany({
@@ -199,7 +214,7 @@ export async function salvarVariante(
   await ctx.db
     .collection('projetos')
     .updateOne({ _id: idProjeto }, { $set: { atualizadoEm: salvaEm, ultimaVarianteId: idVariante } });
-  return { revisao: corpo.revisaoBase + 1, salvaEm };
+  return { revisao: corpo.revisaoBase + 1, salvaEm, imagensExcluidas };
 }
 
 // ---- CRUD (M3-04) ----
@@ -212,7 +227,7 @@ export async function criarVariante(
   ctx: ContextoApi,
   projetoId: string,
   corpo: CorpoCriarVariante,
-): Promise<Variante> {
+): Promise<{ variante: Variante; imagensExcluidas: string[] }> {
   const { _id: idProjeto, projeto } = await carregarProjeto(ctx, projetoId);
   const { origem } = corpo;
   const novoId = () => new ObjectId().toHexString();
@@ -220,6 +235,7 @@ export async function criarVariante(
   let fotos: Variante['fotos'] = [];
   let bordaPadrao = corpo.bordaPadrao;
   let templateOrigem: string | null = null;
+  let imagensExcluidas: string[] = [];
   if (origem.tipo === 'template') {
     const template = templatePorId(origem.templateId);
     if (!template) throw naoEncontrado('Template não encontrado.');
@@ -230,9 +246,10 @@ export async function criarVariante(
     templateOrigem = template.id;
   } else if (origem.tipo === 'copia') {
     if (origem.fotos.length > 0 && semEscala(projeto)) throw new ErroHttp(422, MENSAGEM_SEM_ESCALA);
-    await conferirImagens(ctx, origem.fotos);
+    const tratadas = await tratarImagens(ctx, origem.fotos);
+    imagensExcluidas = tratadas.imagensExcluidas;
     fotos = copiarParaNovaVariante(
-      { grid: corpo.grid, bordaPadrao, areaUtil: corpo.areaUtil, fotos: origem.fotos },
+      { grid: corpo.grid, bordaPadrao, areaUtil: corpo.areaUtil, fotos: tratadas.fotos },
       novoId,
     ).fotos;
   }
@@ -268,7 +285,7 @@ export async function criarVariante(
       { _id: idProjeto },
       { $set: { atualizadoEm: agora, ultimaVarianteId: new ObjectId(variante._id) } },
     );
-  return variante;
+  return { variante, imagensExcluidas };
 }
 
 // M3-04: renomear não gera revisão.
