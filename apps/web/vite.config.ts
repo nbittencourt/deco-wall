@@ -32,6 +32,8 @@ export default defineConfig(({ mode }) => {
           // M4-15, A-24: o pacote de entrada só leva o essencial da tela Projetos; o Konva e o bson ficam em
           // chunks próprios, baixados ao abrir o editor (as rotas do editor, da comparação e de /dev/ui são lazy).
           codeSplitting: {
+            // Sem isto o grupo do Konva arrasta o React (dependência dele) e a entrada passa a baixar o Konva.
+            includeDependenciesRecursively: false,
             groups: [
               { name: 'konva', test: /node_modules[/\\](konva|react-konva)[/\\]/ },
               { name: 'bson', test: /node_modules[/\\]bson[/\\]/ },
