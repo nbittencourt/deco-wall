@@ -520,7 +520,9 @@ test.describe('template e comparação (spec M3 A-29)', () => {
 // menos de 3 s, sem tarefa longa (> 100 ms) na thread principal; prévia em menos de 500 ms; diálogo de imagem com as
 // associações em menos de 300 ms. Os tempos entram no MEMORY.md.
 test.describe('exportação e diálogo de imagem com 40 fotos (A-20)', () => {
-  test('exportar 40 fotos no perfil Leve', async ({ page, request }) => {
+  // Parede de 1200 × 900 px (a fixture frontal.jpg): mede a prévia, as tarefas longas e o diálogo de imagem. Os
+  // números de 3072 px (Leve) e 6144 px (Alto) da A-20 saem do teste seguinte.
+  test('exportar 40 fotos numa parede de 1200 × 900 px', async ({ page, request }) => {
     test.setTimeout(120_000);
     const p = await criarProjetoComEscalaLinear(request, nomeUnico('Desempenho exportar'));
     const imagem = await enviarImagem(request, p.id, 'retrato.jpg');
@@ -573,7 +575,7 @@ test.describe('exportação e diálogo de imagem com 40 fotos (A-20)', () => {
       tarefasLongas: (window as unknown as { __tarefasLongas: number[] }).__tarefasLongas,
     }));
     console.log(
-      `[exportação 40 fotos, Leve] arquivo ${Math.round(medidas.exportacao)} ms · prévia ${previaMs} ms (do clique, com o diálogo) · tarefas longas: ${JSON.stringify(medidas.tarefasLongas.map(Math.round))}`,
+      `[exportação 40 fotos, parede 1200×900] arquivo ${Math.round(medidas.exportacao)} ms · prévia ${previaMs} ms (do clique, com o diálogo) · tarefas longas: ${JSON.stringify(medidas.tarefasLongas.map(Math.round))}`,
     );
     expect(medidas.exportacao).toBeLessThan(3000);
     // A tarefa longa do próprio abrir do diálogo (React) não conta como geração: o limite é de 100 ms.
@@ -594,4 +596,110 @@ test.describe('exportação e diálogo de imagem com 40 fotos (A-20)', () => {
     console.log(`[diálogo de imagem, 40 usos] ${associacoesMs} ms`);
     expect(associacoesMs).toBeLessThan(300);
   });
+});
+
+// A-20: exportar a variante com 40 fotos numa parede do perfil Leve (3072 px) em menos de 3 s e do perfil Alto
+// (6144 px) em menos de 8 s. A parede sintética de 4000 × 3000 px sobe no perfil Leve (o servidor a reduz a 3072 px).
+async function paredeComPerfil(
+  request: Parameters<typeof criarProjeto>[0],
+  perfil: 'leve' | 'alto',
+  largura: number,
+  altura: number,
+) {
+  const p = await criarProjeto(request, nomeUnico(`Desempenho exportar ${perfil}`));
+  const parede = await request.put(`/api/projetos/${p.id}/parede`, {
+    multipart: {
+      perfil,
+      revisaoBase: String(p.revisao),
+      arquivo: {
+        name: `parede-${perfil}.jpg`,
+        mimeType: 'image/jpeg',
+        buffer: await readFile(await fotoSintetica(largura, altura)),
+      },
+    },
+    timeout: 120_000,
+  });
+  const revisao = ((await parede.json()) as { projeto: { revisao: number } }).projeto.revisao;
+  await request.put(`/api/projetos/${p.id}/parede/escala`, {
+    data: {
+      revisaoBase: revisao,
+      metodo: 'linear',
+      linear: { p1: { x: 100, y: 100 }, p2: { x: 700, y: 100 }, comprimentoCm: 150 },
+    },
+  });
+  const imagem = await enviarImagem(request, p.id, 'retrato.jpg');
+  const atual = (await lerProjeto(request, p.id)).variantes[0]!;
+  const fotos = Array.from({ length: 40 }, (_, i) => ({
+    _id: (i + 1).toString(16).padStart(24, '0'),
+    imagemId: imagem._id,
+    imagemAnteriorId: null,
+    tamanho: { sugeridoId: '10x15', larguraCm: 10, alturaCm: 15 },
+    xCm: 10 + (i % 8) * 30,
+    yCm: 10 + Math.floor(i / 8) * 40,
+    recorte: { offsetX: 0, offsetY: 0 },
+    borda: { larguraCm: 1, cor: '#FFFFFF' },
+  }));
+  const salvo = await request.put(`/api/projetos/${p.id}/variantes/${p.varianteId}`, {
+    data: {
+      sessaoId: 'e2e',
+      revisaoBase: atual.revisao,
+      grid: { visivel: true, snap: true, passoCm: 5, principalACada: 5, cor: '#1F1B16', opacidade: 0.08 },
+      bordaPadrao: { larguraCm: 0, cor: '#FFFFFF' },
+      areaUtil: atual.areaUtil,
+      fotos,
+    },
+  });
+  expect(salvo.status()).toBe(200);
+  return p;
+}
+
+test.describe('exportar 40 fotos nas paredes dos perfis Leve e Alto (A-20)', () => {
+  for (const caso of [
+    {
+      perfil: 'leve' as const,
+      largura: 4000,
+      altura: 3000,
+      lado: 3072,
+      formatos: ['png', 'jpg'] as const,
+      teto: 3000,
+    },
+    {
+      perfil: 'alto' as const,
+      largura: 6144,
+      altura: 4608,
+      lado: 6144,
+      formatos: ['jpg', 'png'] as const,
+      teto: 8000,
+    },
+  ]) {
+    test(`perfil ${caso.perfil} (${caso.lado} px): ${caso.formatos[0]!.toUpperCase()} em menos de ${caso.teto / 1000} s`, async ({
+      page,
+      request,
+    }) => {
+      test.setTimeout(300_000);
+      const p = await paredeComPerfil(request, caso.perfil, caso.largura, caso.altura);
+      await page.goto(`/projetos/${p.id}`);
+      await esperarPalco(page);
+      await page.waitForTimeout(1500);
+      const tempos: Record<string, number> = {};
+      for (const formato of caso.formatos) {
+        await page.getByRole('button', { name: 'Exportar', exact: true }).click();
+        const dialogo = page.getByRole('dialog', { name: 'Exportar imagem' });
+        await expect(dialogo.getByText(`${caso.lado} × `)).toBeVisible();
+        await dialogo.getByRole('radio', { name: formato.toUpperCase() }).click();
+        const [download] = await Promise.all([
+          page.waitForEvent('download', { timeout: 240_000 }),
+          dialogo.getByRole('button', { name: /^(Baixar|Aceitar e baixar)/ }).click(),
+        ]);
+        expect((await sharp(await readFile(await download.path())).metadata()).width).toBe(caso.lado);
+        tempos[formato] = await page.evaluate(
+          () => performance.getEntriesByName('deco:exportacao').at(-1)?.duration ?? -1,
+        );
+      }
+      console.log(
+        `[exportar 40 fotos, parede ${caso.lado} px, perfil ${caso.perfil}] ${caso.formatos.map((f) => `${f.toUpperCase()} ${Math.round(tempos[f]!)} ms`).join(' · ')}`,
+      );
+      expect(tempos[caso.formatos[0]!]!).toBeLessThan(caso.teto);
+    });
+  }
 });
