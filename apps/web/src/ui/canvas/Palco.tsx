@@ -397,6 +397,8 @@ export function Palco({ cena, onEstado, ref, viewport, onViewport }: PropsPalco)
     <div
       ref={caixa}
       data-testid="palco"
+      // Contrato de teste da comparação (M3): a vista compartilhada aplicada a este palco.
+      data-viewport={viewport ? JSON.stringify(viewport) : undefined}
       className={`relative size-full overflow-hidden ${espaco ? 'cursor-grab' : ''}`}
     >
       {vp && tela.largura > 0 && tela.altura > 0 && (

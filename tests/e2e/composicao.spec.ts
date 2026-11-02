@@ -530,7 +530,7 @@ test.describe('salvar e reabrir (PRD aceite 7)', () => {
     expect(Math.abs(r!.altura - 33 * esc)).toBeLessThanOrEqual(1);
   });
 
-  test('o servidor só recusa imagem inexistente (422 com a lista); sem escala também salva (M2-14, §5)', async ({
+  test('o servidor recusa imagem inexistente (422 com a lista) e fotos sem escala (422, A-11 do M3)', async ({
     request,
   }) => {
     const sem = await (
@@ -544,15 +544,26 @@ test.describe('salvar e reabrir (PRD aceite 7)', () => {
     };
     const inexistente = '0'.repeat(23) + '2';
     const url = `/api/projetos/${sem.projeto._id}/variantes/${sem.variantes[0]._id}`;
-    const recusada = await request.put(url, {
-      data: { ...base, revisaoBase: 1, fotos: [fotoDaApi(1, inexistente)] },
+    // A-11 (M3): sem escala, fotos em cm não têm onde ficar. O 422 vem antes de conferir as imagens.
+    const semEscala = await request.put(url, {
+      data: { ...base, revisaoBase: 1, fotos: [fotoDaApi(1, null)] },
+    });
+    expect(semEscala.status()).toBe(422);
+    expect(((await semEscala.json()) as { erro: string }).erro).toBe('A parede está sem escala.');
+
+    // Com escala, o servidor só recusa imagem inexistente, com a lista; o placeholder é aceito.
+    const comEscala = await criarProjetoComEscalaLinear(request, nomeUnico('Com escala'));
+    const urlEscala = `/api/projetos/${comEscala.id}/variantes/${comEscala.varianteId}`;
+    const { areaUtil, revisao } = (await lerProjeto(request, comEscala.id)).variantes[0]!;
+    const recusada = await request.put(urlEscala, {
+      data: { ...base, areaUtil, revisaoBase: revisao, fotos: [fotoDaApi(1, inexistente)] },
     });
     expect(recusada.status()).toBe(422);
     expect(((await recusada.json()) as { detalhes: unknown }).detalhes).toEqual({
       imagensInexistentes: [inexistente],
     });
-    const placeholder = await request.put(url, {
-      data: { ...base, revisaoBase: 1, fotos: [fotoDaApi(1, null)] },
+    const placeholder = await request.put(urlEscala, {
+      data: { ...base, areaUtil, revisaoBase: revisao, fotos: [fotoDaApi(1, null)] },
     });
     expect(placeholder.status()).toBe(200);
   });

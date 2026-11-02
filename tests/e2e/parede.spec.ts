@@ -350,7 +350,7 @@ test.describe('salvamento (aceite 10, SV-08)', () => {
     expect(await tentarSair()).toBe(false);
   });
 
-  test('duas abas: a segunda a salvar recebe o aviso de conflito (409) e recarrega', async ({
+  test('duas abas: a segunda a salvar recebe o diálogo de conflito (409) e usa a versão salva (M3-09)', async ({
     context,
     request,
   }) => {
@@ -370,12 +370,14 @@ test.describe('salvamento (aceite 10, SV-08)', () => {
     // A aba A ainda acredita na revisão antiga.
     await abaA.getByRole('region', { name: 'Grid' }).getByRole('radio', { name: '10' }).click();
     await abaA.getByRole('button', { name: 'Salvar' }).click();
-    const aviso = abaA.getByRole('alert');
-    await expect(aviso).toContainText('Esta variante foi salva em outra aba às');
+    const dialogo = abaA.getByRole('dialog');
+    await expect(dialogo.getByText('Esta variante foi salva em outra aba')).toBeVisible();
     await expect(abaA.getByText('Conflito', { exact: true })).toBeVisible();
 
-    await aviso.getByRole('button', { name: 'Recarregar' }).click();
-    await expect(abaA.getByRole('alert')).toHaveCount(0);
+    // Só a palavra digitada libera a saída (A-14).
+    await dialogo.getByRole('textbox', { name: 'Para confirmar, digite a palavra da opção' }).fill('salva');
+    await dialogo.getByRole('button', { name: 'Usar a salva' }).click();
+    await expect(abaA.getByRole('dialog')).toHaveCount(0);
     await expect(abaA.getByRole('switch', { name: 'Mostrar grid' })).toHaveAttribute('aria-checked', 'false');
   });
 });

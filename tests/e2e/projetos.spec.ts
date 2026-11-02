@@ -14,7 +14,7 @@ test.describe('projetos', () => {
     await expect(page.getByRole('heading', { name: 'Comece pela parede' })).toBeVisible();
     await expect(page.getByText('Arraste a foto da parede aqui · JPG, PNG ou WEBP')).toBeVisible();
     // Nasceu com a variante "Base".
-    await expect(page.getByRole('combobox', { name: 'Variante' })).toContainText('Base');
+    await expect(page.getByRole('button', { name: 'Variante: Base' })).toBeVisible();
   });
 
   test('renomeia pelo nome no header (Enter grava) e o nome persiste', async ({ page, request }) => {
