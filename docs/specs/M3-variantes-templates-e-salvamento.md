@@ -4,17 +4,17 @@
 |---|---|
 | Versão | 0.2 |
 | Data | 2026-11-02 |
-| Base | `docs/PRD.md` v0.13 · `docs/ARCHITECTURE.md` v0.8 · `docs/DESIGN.md` v0.4 + protótipos 06, 09, 14, 15, 15b (e 03, 03a, 11, 13, 17 no que tocam o M3) · `docs/specs/M0-setup.md` v0.6 · `docs/specs/M1-parede-e-escala.md` v0.3 (aceita) · `docs/specs/M2-biblioteca-e-composicao.md` v0.3 (pronta, ainda não implementada) · `docs/specs/templates.md` v0.2 |
-| Status | **Revisada pelo Nicholas (02/11)** — decisões M3-01 a M3-10 e premissas A-01 a A-31 aprovadas. Escrita só com a documentação (regra do `CLAUDE.md`), em paralelo ao M2. Falta o aceite do M2 (PR-M3-01) e aplicar a §11 aos outros documentos (PR-M3-04); implementação só depois (MS-01). |
+| Base | `docs/PRD.md` v0.13 · `docs/ARCHITECTURE.md` v0.8 · `docs/DESIGN.md` v0.4 + protótipos 06, 09, 14, 15, 15b (e 03, 03a, 11, 13, 17 no que tocam o M3) · `docs/specs/M0-setup.md` v0.6 · `docs/specs/M1-parede-e-escala.md` v0.3 (aceita) · `docs/specs/M2-biblioteca-e-composicao.md` v0.4 (implementada e aceita) · `docs/specs/templates.md` v0.2 |
+| Status | **Pronta para implementação** (02/11) — decisões M3-01 a M3-10 e premissas A-01 a A-31 aprovadas pelo Nicholas; M2 aceito (31/10); §11 aplicada aos outros documentos (PR-M3-04). Escrita só com a documentação (regra do `CLAUDE.md`), em paralelo ao M2. |
 
 ## 0. Pré-requisitos
 
 | # | Item | Bloqueia | Situação |
 |---|---|---|---|
-| PR-M3-01 | **Aceite do M2** (§8 da spec M2). O M3 usa o store por variante, o histórico zundo, os placeholders e a camada de fotos do M2. | T1 | ⏳ M2 com spec pronta, ainda não implementado |
+| PR-M3-01 | **Aceite do M2** (§8 da spec M2). O M3 usa o store por variante, o histórico zundo, os placeholders e a camada de fotos do M2. | T1 | ✅ M2 aceito pelo Nicholas em 31/10 (implementação em `claude/m2-implementation-8f6bef`, mesclada nesta branch) |
 | PR-M3-02 | Lacunas e contradições da §0.1 decididas pelo Nicholas (M3-01 a M3-10). | T1 | ✅ 02/11 (M3-01 a M3-10) |
 | PR-M3-03 | Revisão das premissas da §0.2 pelo Nicholas. | T1 | ✅ 02/11 |
-| PR-M3-04 | Alterações da §11 aplicadas ao PRD, à DESIGN, à ARCHITECTURE e às specs M0, M1 e M2, depois da revisão, com este branch atualizado com a `main`. | T1 | ⏳ |
+| PR-M3-04 | Alterações da §11 aplicadas ao PRD, à DESIGN, à ARCHITECTURE e às specs M0, M1 e M2, depois da revisão, com este branch atualizado com a `main`. | T1 | ✅ 02/11 (PRD v0.14, DESIGN v0.5, ARCHITECTURE v0.9, M0/M1/M2) |
 
 ### 0.1 Lacunas e contradições (com proposta)
 
@@ -350,7 +350,7 @@ Dependências novas: nenhuma prevista. Qualquer uma para e pede aprovação.
 
 ## 11. Alterações a fazer em outros documentos (após a revisão, PR-M3-04)
 
-Nenhuma foi aplicada ainda.
+**Aplicadas em 02/11** (PRD v0.14, DESIGN v0.5, ARCHITECTURE v0.9 e specs M0, M1 e M2); a tabela abaixo fica como registro do que mudou.
 
 | Documento | Alteração prevista |
 |---|---|

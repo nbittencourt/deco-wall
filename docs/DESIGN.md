@@ -2,8 +2,8 @@
 
 | Campo | Valor |
 |---|---|
-| Versão | 0.4 (decisões da spec M2: toolbar, barra de status, alertas, "Remover") |
-| Data | 2026-10-24 |
+| Versão | 0.5 (decisões da spec M3: seletor de variante, comparação, modo Template, conflito) |
+| Data | 2026-11-02 |
 | Status | Identidade e protótipos de alta fidelidade aprovados para implementação |
 | Protótipos | `docs/design/` (ver §10) |
 
@@ -169,7 +169,8 @@ Somente tema claro na v1. Foco visível: `ring` 2 px `accent` com offset 2 px em
 | Toggle | `Switch` | 40×24, ligado = `accent`. |
 | Radio card | `RadioGroup` | Borda `line`; selecionado = borda 2 px `accent` + `accent-wash` (destrutivo: `danger` + `danger-wash`). |
 | Seletor de cor da borda | `Popover` | Botão com amostra 16 px + nome (ou hex, se livre). Popover com cores prontas: Branco `#FFFFFF` · Off-white `#F5F1E8` · Preto `#1A1A1A` · Cinza `#8C8C8C` · Madeira clara `#C8A27A` · Madeira escura `#5C3A21`; item “Outra cor…” abre `<input type="color">` nativo (DV-08). |
-| Badge “sem foto” | `Badge` | Pill `danger-tint`, texto `danger-ink` 12 px. |
+| Badge “sem foto” | `Badge` | Pill `danger-tint`, texto `danger-ink` 12 px “N sem foto”; no seletor de variante (por variante e na ativa) e no card do projeto, só com N > 0 (M3-02). |
+| Seletor de variante | `DropdownMenu` | Gatilho: nome da variante ativa (Newsreader), chevron, selo “N sem foto” e ponto âmbar quando a ativa tem alterações não salvas. Lista: nome, “N fotos”, selo, check na ativa e menu ⋯ (Renomear · Duplicar · Excluir — este inativo na última variante, tooltip “Todo projeto precisa de ao menos uma variante.”). Rodapé: “Nova variante em branco…”, “Duplicar “<ativa>”…” e “Novo a partir de template…”. Inativo em qualquer modo (spec M3, A-01). |
 | Chip de escala | — | `sand`, raio 6, mono 12 px “4,0 px/cm”. |
 | Status de salvamento | — | Ponto 7 px + texto 13 px `ink-2`: verde “Salvo às hh:mm” (só “Salvo” ao abrir), âmbar “Alterações não salvas” e “Salvando…”, verde “Rascunho salvo às hh:mm”, `danger` “Conflito” (SV-08). |
 | Tooltip | `Tooltip` | Fundo `ink`, texto branco 12 px, raio 6, seta 5 px. Obrigatório em botões só com ícone e em controles inativos (§7.1). Botão só de ícone e inativo mostra o nome do botão acima de “Disponível em uma próxima versão”. |
@@ -178,6 +179,7 @@ Somente tema claro na v1. Foco visível: `ring` 2 px `accent` com offset 2 px em
 | Card de projeto | — | Miniatura = só a foto da parede (DV-07); sem parede: ícone + “Sem foto da parede”. Menu ⋯: Renomear, Excluir (texto `danger-ink`). |
 | Barra de progresso | — | 6 px, trilho `sand`, preenchimento `ink-2` (não é ação). |
 | Caixa de aviso | `Alert` | `warning-tint`/`warning-ink` + ícone triângulo. Alerta: `danger-tint`/`danger-ink-strong` + ícone círculo. |
+| Campo de confirmação por palavra | `Input` | Acima do rodapé do diálogo de conflito: “Para confirmar, digite a palavra da opção”; cada botão de saída só ativa quando a palavra dele (minha · salva · nova) está digitada (spec M3, A-14). |
 | Diálogo | `Dialog` | 640 px, raio 16, título Newsreader 22–24, rodapé `surface-muted` com ações à direita (fantasma → secundário → primário). |
 | Thumbnail | — | Raio 6, altura 92; contador de uso “1×” em pill `ink` 85% no canto (RF-23 — P1, entra na marco M5; ausente até lá); selecionada = anel 2 px `accent`. |
 | Ícones | — | Traço 1,6–1,8 px, 16–18 px, `currentColor`. `lucide-react` (ADR-15). Nunca emoji. |
@@ -194,7 +196,7 @@ Somente tema claro na v1. Foco visível: `ring` 2 px `accent` com offset 2 px em
 - **Painel sem seleção (protótipo 11):** Composição (Fotos, Área total e, só quando > 0, Sobreposições, Sem foto e **Fora da área**) · Escala · **Área útil desta variante** (L, A, X, Y + “Ajustar”) · Borda padrão · Grid (“Linha forte a cada” inativo). Cada seção abre com título Newsreader 18 px `ink` e divisória `line-faint` acima (padding 18 px); labels de campo seguem em `label`.
 - **Modos (perspectiva, calibração, área útil, posicionamento de template):** header escuro `ink` + área `stage-dark` + painel direito de 320–360 px.
 - **Prévia frontal (perspectiva):** sob demanda — botão secundário “Gerar prévia” no bloco “Prévia frontal”; estados: vazio (texto de instrução), gerando (indicador), pronta, **desatualizada** (prévia esmaecida + aviso “Os cantos mudaram” + botão reativado). Não há atualização ao vivo (DV-06).
-- **Comparação:** dois painéis lado a lado, cada um com seletor de variante e dimensões; selo “Somente visualização”; zoom/pan **sempre sincronizados** e botão “Parede inteira” (enquadra a parede nos dois). A alternância “Zoom sincronizado / Independente” do protótipo 06 **não** será implementada (DV-01).
+- **Comparação:** dois painéis lado a lado, cada um com seletor de variante (ponto âmbar se não salva), “N fotos” e a Área total em mono; selo “Somente visualização”; zoom/pan **sempre sincronizados** e botão “Parede inteira” (enquadra a parede nos dois). A alternância “Zoom sincronizado / Independente” do protótipo 06 **não** será implementada (DV-01). Visualização **limpa** por padrão (parede, fotos, placeholders), sem seleção, com três chaves no cabeçalho — **Grid**, **Área útil** e **Alertas** — desligadas ao abrir e valendo para os dois lados; o protótipo 06 desenha o grid sempre ligado (M3-10, A-16, A-17, A-26).
 
 ### 7.0 Modo de recorte (RN-14, DV-09)
 
@@ -225,6 +227,7 @@ Somente tema claro na v1. Foco visível: `ring` 2 px `accent` com offset 2 px em
 
 - **Galeria** (protótipo 14): diálogo de 960 px “Escolher template” com a área útil da variante no subtítulo; grade de 4 colunas com os 12 cards; rodapé com “Borda das fotos” (cm, padrão = borda padrão da variante), cor da borda, texto “Será criada a variante “<nome>”.”, “Cancelar” e “Posicionar na parede”.
 - **Posicionamento** (protótipos 15 e 15b): barra “Posicionar template · <nome>” com “Cancelar” e “Confirmar posição”; vagas como em §2.2, conjunto centralizado na área útil e arrastável com snap; se maior que a área útil, caixa de alerta no topo e contorno `danger`, sem bloquear a confirmação; dica “Arraste para posicionar · Enter confirma · Esc cancela”.
+- **Painel direito do modo** (A-22, o protótipo 15 não o desenha): *Modelo* (nome, “N vagas”, total), *Borda das fotos* (somente leitura), *Posição do conjunto* (X e Y em `CampoCm`) e **Centralizar na área útil**; avisos “O template é maior que a área útil…” e “N vagas ficaram maiores que o espaço do modelo; as vizinhas foram afastadas.”. Palco só com parede, grid, área útil e conjunto; Desfazer, Refazer e Salvar inativos.
 - **Geometria:** a fonte é `docs/specs/templates.md` (TPL-07, TPL-08). Os esboços e as vagas dos protótipos são **ilustrativos** e não seguem a geometria aprovada.
 
 ## 8. Textos e formatos (pt-BR)
@@ -235,7 +238,9 @@ Somente tema claro na v1. Foco visível: `ring` 2 px `accent` com offset 2 px em
 - Ações de imagem: “Remover deste projeto” × “Excluir da biblioteca” (RN-24).
 - Foto na parede: “Remover” (painel da foto) tira a foto da variante, sem confirmação, com o tooltip “Tira a foto desta variante. A imagem continua na biblioteca.”; não confundir com “Remover deste projeto”, que é da imagem.
 - Atalhos: Ctrl+Z desfaz; Ctrl+Y e Ctrl+Shift+Z refazem (tooltips “Desfazer (Ctrl+Z)” e “Refazer (Ctrl+Y)”).
-- Conflito (SV-05): “Usar a salva” · “Salvar a minha como nova variante” · “Manter a minha”.
+- Conflito (SV-05): título “Esta variante foi salva em outra aba”; “Usar a salva” · “Salvar a minha como nova variante” · “Manter a minha”, cada um liberado só depois de digitar a palavra (“salva”, “nova”, “minha”). Conflito achado no rascunho: `Alert` “Esta variante foi salva em outra aba às hh:mm.” com “Resolver…”.
+- Recuperação: “Recuperar alterações não salvas de hh:mm?” com Recuperar · Descartar; com base antiga, “Estas alterações foram feitas sobre a revisão R; a versão salva já está na revisão N.” e “Salvar como nova variante”.
+- Variante: “Salvar as alterações de “<nome>”?” com Cancelar · Descartar alterações · Salvar e continuar; excluir: “A variante “X” e as fotos posicionadas nela serão apagadas. As imagens da biblioteca continuam disponíveis.”.
 - Tom: frases curtas, instrução direta, sem jargão técnico (“escala”, não “homografia”).
 
 ## 9. Acessibilidade
@@ -261,7 +266,7 @@ Arquivos em `docs/design/`, no formato `.dc.html` do canvas de Design do Claude 
 | 04 | `Perspectiva.dc.html` | Correção de perspectiva (prévia no estado vazio) | RF-05, RF-06, RF-14, RN-07/09/10 |
 | 04a | `PreviaEstados.dc.html` | Os 4 estados da prévia frontal | DV-06 |
 | 05 | `Calibracao.dc.html` | Calibração linear | RF-10, RF-12, RN-08 |
-| 06 | `Comparacao.dc.html` | Comparar variantes (zoom sempre sincronizado) | RF-92, DV-01 |
+| 06 | `Comparacao.dc.html` | Comparar variantes (zoom sempre sincronizado; o grid desenhado é ilustrativo: vale a visualização limpa com chaves, M3-10) | RF-92, DV-01 |
 | 07 | `Upload.dc.html` | Upload em lote | RF-20/21/25, RN-20/21 |
 | 08 | `ExcluirImagem.dc.html` | Remover × excluir imagem | RF-29, RN-24 |
 | 09 | `Conflito.dc.html` | Conflito de versão | RF-73, SV-04–06 |
@@ -270,7 +275,7 @@ Arquivos em `docs/design/`, no formato `.dc.html` do canvas de Design do Claude 
 | 12 | `BibliotecaExcluidas.dc.html` | Biblioteca filtrada em Excluídas + associação de placeholder | RF-28/29, RF-30a |
 | 13 | `AreaUtil.dc.html` | Confirmação da área útil após a perspectiva | RF-94, RN-33, AU-01 |
 | 14 | `Templates.dc.html` | Galeria de templates (interativa) | RF-93, RN-30, TPL-04 |
-| 15 | `TemplatePosicionar.dc.html` | Posicionar template na área útil | RN-32, TPL-06 |
+| 15 | `TemplatePosicionar.dc.html` | Posicionar template na área útil (sem painel direito e com palco claro: ilustrativo; vale a §7) | RN-32, TPL-06 |
 | 15b | `TemplatePosicionarAviso.dc.html` | Mesmo modo com template maior que a área útil (importa a 15 com `aviso`) | RN-32 |
 | 16 | `Recorte.dc.html` | Modo de recorte com tamanho personalizado | RN-14, RN-28, DV-09 |
 

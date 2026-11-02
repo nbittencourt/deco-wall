@@ -43,7 +43,7 @@ Valores e comportamentos que os documentos não fixavam. Todas foram revisadas; 
 | A-01 | Rotas da web: `/` = Projetos, `/projetos/<id>` = Editor. Saem `/editor` (casca do M0) e `/dev/spike-konva` (MEMORY: removível após o M1). `/dev/ui` fica. |
 | A-02 | **(alterada)** "Novo projeto" cria na hora o projeto "Projeto sem nome" e abre o editor no estado vazio. O nome muda pelo menu ⋯ da lista ou clicando no nome no header do editor (edição inline: Enter grava, Esc cancela). Regras do nome: 1–100 caracteres, sem espaços nas pontas; nome repetido é permitido. |
 | A-03 | Lista sem projetos: estado vazio "Nenhum projeto ainda" + botão primário "Novo projeto". |
-| A-04 | Meta do card: "1 variante · editado hoje, 14:35", "editado ontem, 09:10" ou "editado em 12/10" (com ano, "12/10/2025", se for de outro ano); sem parede: "1 variante · parede não definida". O indicador de placeholders entra no M4. |
+| A-04 | Meta do card: "1 variante · editado hoje, 14:35", "editado ontem, 09:10" ou "editado em 12/10" (com ano, "12/10/2025", se for de outro ano); sem parede: "1 variante · parede não definida". O indicador de placeholders (selo "N sem foto") entra no **M3** (spec M3, M3-02 e A-24), que também troca "1 variante" pelo número real de variantes. |
 | A-05 | Renomear (lista ou header) não usa revisão (vale a última gravação) e atualiza `atualizadoEm`. |
 | A-06 | Zoom: 100% = 1 px do bitmap da parede por px de tela (CSS). Limites: de 10% (ou metade do "Ajustar à tela", o que for menor) até 800%. A roda dá zoom no ponto do cursor (fator 1,1 por passo). Pan: arrastar o fundo ou a parede, espaço + arrastar ou botão do meio. Abre sempre em "Ajustar à tela"; o viewport não é persistido. |
 | A-07 | Grid: linhas a partir da origem 0,0, desenhadas só dentro da parede inteira (RN-34). Se o passo na tela ficar abaixo de 4 px, o grid não é desenhado nesse zoom e o toggle Grid do header mostra o indicador e o tooltip "Grid oculto neste zoom, aproxime para ver". |
@@ -160,7 +160,7 @@ Mudanças de grid (painel ou toggle do header) alteram a variante.
 - `sessaoId` gerado por aba ao abrir o projeto (`crypto.randomUUID()`); `revisaoBase` = revisão carregada ou gravada por último.
 - Alterações da variante no M1: `grid` e `areaUtil`. Mudam o status para "Alterações não salvas" (ponto âmbar).
 - **Salvar** e `Ctrl+S` (inclusive dentro de campo): `PUT /api/projetos/:pid/variantes/:id` com `{ sessaoId, revisaoBase, grid, bordaPadrao, areaUtil, fotos }`. Sucesso: "Salvo hh:mm" e `revisaoBase` atualizada. Também atualiza `projetos.atualizadoEm` e `ultimaVarianteId`.
-- **409** (outra aba salvou antes): status "Conflito" e `Alert` "Esta variante foi salva em outra aba às hh:mm. Recarregue para ver a versão salva." com o botão "Recarregar" (descarta as alterações locais). As três opções da SV-05 entram no M3.
+- **409** (outra aba salvou antes): status "Conflito" e `Alert` "Esta variante foi salva em outra aba às hh:mm. Recarregue para ver a versão salva." com o botão "Recarregar" (descarta as alterações locais). As três opções da SV-05 entram no M3: para a **variante**, o 409 passa a abrir o diálogo de conflito (spec M3, §3.5); o `Alert` "Recarregue…" vale só para a **parede**. No M3, Salvar/`Ctrl+S` grava a variante **ativa** e deixá-la suja pede antes Salvar e continuar · Descartar · Cancelar (A-12); trocar a parede apaga os rascunhos do projeto (A-10).
 - Alterações na parede (§3.3–3.5) gravam ao confirmar, no projeto, com checagem de `projetos.revisao` (SV-09). Em 409, o mesmo `Alert` com "Este projeto foi alterado em outra aba.".
 - `beforeunload` com alterações não salvas (SV-08). Salvar em andamento desabilita o botão e mostra "Salvando…".
 
@@ -307,7 +307,7 @@ Dependências novas, já previstas nas ADRs: `zustand` e `immer` (ADR-03), `bson
 - Status de salvamento: "Salvo às hh:mm" depois de salvar ("Salvo" ao abrir) e "Salvando…" durante a gravação.
 - O palco troca a prévia da perspectiva por geração sob demanda no Worker, a partir da foto reduzida (≤ 1600 px).
 - Controles inativos por estado usam `BotaoInativo` (tooltip com o motivo); `BotaoEmBreve` continua sendo o caso "próxima versão".
-- Variante: o seletor mostra só a "Base" e o selo "1 sem foto" saiu do header (sem placeholders até o M4).
+- Variante: o seletor mostra só a "Base" e o selo "1 sem foto" saiu do header. **Revisto no M3** (M3-02): o seletor de variante e o selo "N sem foto" voltam, porque os templates criam placeholders já no M3.
 - ESLint e Prettier ignoram `.claude/` (worktrees de outras sessões do Claude contaminavam o `tsconfigRootDir`).
 - Fora do desfazer (M1-04), sem rascunho/recuperação (M3), sem snap com efeito (M2): como na spec.
 

@@ -160,7 +160,7 @@ Obs.: **não** usar índice TTL do Mongo para a purga — ele apaga o documento 
 | `_id` | ObjectId | sim | |
 | `projetoId` | ObjectId | sim | |
 | `nome` | string (1–60) | sim | Primeira = "Base" |
-| `ordem` | int | sim | |
+| `ordem` | int | sim | Maior existente + 1 ao criar (a variante nova vai para o fim); sem reordenação na v1 (spec M3, A-04) |
 | `criadaEm` | Date | sim | |
 | `revisao` | int | sim | +1 a cada *hard save* |
 | `salvaEm` | Date | sim | Último *hard save* |
@@ -191,6 +191,8 @@ A API devolve, na listagem de variantes, `qtdPlaceholders` (calculado por agrega
 
 Índices: `{ varianteId: 1, sessaoId: 1 }` único · `{ projetoId: 1 }`.
 
+`DELETE` do rascunho é **por sessão** (`?sessaoId=`) e idempotente; o *hard save* e a exclusão da variante apagam os rascunhos conforme SV-02 e DM-12; **trocar a parede apaga os rascunhos do projeto** (spec M3, A-10).
+
 ### 4.7 Coleção `migracoes`
 
 `_id` (string, ex.: `0001-inicial`) · `aplicadaEm` (Date). Migração `0001-inicial` cria coleções e índices; idempotente.
@@ -217,12 +219,12 @@ Regras:
 | # | Regra |
 |---|---|
 | SV-01 | *Soft save* a cada **X minutos** (`AUTOSAVE_MINUTOS` no `.env`, padrão **5**), só se houver alteração desde o último salvamento. Grava em `rascunhos`; **nunca** altera a versão oficial. |
-| SV-02 | *Hard save* por botão e `Ctrl+S`. Grava a versão oficial (`revisao + 1`) e apaga o rascunho da própria sessão. |
+| SV-02 | *Hard save* por botão e `Ctrl+S`. Grava a versão oficial (`revisao + 1`) e apaga o rascunho da própria sessão **e os rascunhos obsoletos da variante** (`salvoEm` anterior à nova `salvaEm`, de qualquer sessão — spec M3, A-10). |
 | SV-03 | **Hard tem prioridade sobre soft**: ao abrir uma variante, carrega-se sempre a versão oficial; rascunhos só são oferecidos como recuperação. |
-| SV-04 | **Detecção de versão desconexa** antes de qualquer gravação: se `revisao` oficial ≠ `revisaoBase` da sessão, existe versão gravada por outra sessão (ex.: sessão gravou A1→A2, mas já existe B2) → condição de corrida → perguntar. |
+| SV-04 | **Detecção de versão desconexa** antes de qualquer gravação: se `revisao` oficial ≠ `revisaoBase` da sessão, existe versão gravada por outra sessão (ex.: sessão gravou A1→A2, mas já existe B2) → condição de corrida → perguntar. A conferência vale **também para o rascunho**: o servidor responde 409 **sem gravar** quando `revisao` ≠ `revisaoBase` (spec M3, M3-07). |
 | SV-05 | Diálogo de conflito mostra as duas versões (quem/quando) e oferece: **Manter a minha** (sobrescreve, nova revisão), **Usar a salva** (descarta a local e recarrega) ou **Salvar a minha como nova variante** (nome sugerido: "<nome> (cópia hh:mm)"). |
-| SV-06 | Em conflito durante *soft save*, o salvamento automático fica suspenso até o usuário decidir. |
-| SV-07 | Ao abrir uma variante com rascunho mais novo que a versão oficial: perguntar "Recuperar alterações não salvas de hh:mm?". Se o rascunho for baseado em revisão antiga, avisar. |
+| SV-06 | Em conflito durante *soft save*, o salvamento automático fica suspenso para aquela variante até o usuário decidir; o conflito do rascunho aparece como `Alert` com “Resolver…”, sem abrir diálogo sozinho (spec M3, M3-07). |
+| SV-07 | Ao abrir uma variante com rascunho mais novo que a versão oficial: perguntar "Recuperar alterações não salvas de hh:mm?". Se o rascunho for baseado em revisão antiga (`revisaoBase` < `revisao` oficial — o que só acontece quando o **servidor** muda a revisão sem salvar a variante, como na primeira escala e na troca de parede), avisar e oferecer também “Salvar como nova variante” (spec M3, M3-08). |
 | SV-08 | Indicador de estado: *salvo* / *alterações não salvas* / *rascunho salvo hh:mm* / *conflito*. Aviso do browser ao fechar com alterações sem *hard save*. |
 | SV-09 | Alterações na parede (upload, calibração, perspectiva) são gravadas ao confirmar a ação, no projeto, com a mesma checagem por `projetos.revisao`. A área útil é da variante e segue o salvamento da variante. |
 | SV-10 | Desfazer/refazer (por variante) não é afetado por salvamentos. |

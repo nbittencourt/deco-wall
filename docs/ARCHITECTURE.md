@@ -2,9 +2,9 @@
 
 | Campo | Valor |
 |---|---|
-| Versão | 0.8 |
-| Data | 2026-10-24 |
-| Base | `docs/PRD.md` v0.12 |
+| Versão | 0.9 |
+| Data | 2026-11-02 |
+| Base | `docs/PRD.md` v0.14 |
 | Status | Decisões fechadas; modelo de dados em `docs/specs/M0-setup.md` §4 |
 
 > **Objetivo deste arquivo:** registrar a arquitetura e cada decisão técnica (ADR) com critérios, alternativas avaliadas e consequências. Toda escolha de biblioteca ou componente nova entra aqui antes de entrar no código.
@@ -213,14 +213,17 @@ Componentes copiados para o projeto (Radix). Cor da borda: cores prontas em `Pop
 | `AUTOSAVE_MINUTOS` | `5` | Intervalo do *soft save* |
 | `UPLOAD_MAX_MB` | `50` | Tamanho máximo por arquivo no upload |
 
+- A web lê `uploadMaxMb` e `autosaveMinutos` (a partir de `AUTOSAVE_MINUTOS`) em `GET /api/config` (spec M2 A-28 e spec M3 M3-07).
+
 - Validação do `.env` na inicialização (Zod): pasta existe e é gravável, Mongo acessível — senão, erro claro e o servidor não sobe.
 - API escuta só em `127.0.0.1`.
 
 ### ADR-12 — Variantes e comparação · **Decidido**
 
 - Projeto tem uma Parede (foto, perspectiva, escala) e N Variantes (fotos posicionadas, grid, borda padrão). Mínimo 1 variante.
-- Ações: criar (vazia ou duplicando), renomear, excluir, alternar.
-- **Comparação lado a lado**: 2 viewports com **zoom e pan sincronizados**, podendo enquadrar um recorte da parede. **Modo comparação é somente visualização**: nenhuma edição em nenhuma das duas variantes; sair da comparação volta à edição da variante ativa.
+- Ações: criar (vazia, duplicando ou a partir de template), renomear, excluir, alternar. Valem na hora (chamada à API), não pelo Salvar; a variante nova nasce salva; a última não se exclui (spec M3, M3-04).
+- **Estado em memória**: só a variante **ativa** tem estado de trabalho (conteúdo, pilha de desfazer, sujo, revisão base, conflito); as variantes salvas deixam conteúdo e pilha num cache por `varianteId` ao trocar. Deixar a ativa suja pede antes Salvar e continuar · Descartar · Cancelar (spec M3, M3-03 e A-05).
+- **Comparação lado a lado**: 2 viewports com **zoom e pan sincronizados**, podendo enquadrar um recorte da parede. **Modo comparação é somente visualização**: nenhuma edição em nenhuma das duas variantes; sair da comparação volta à edição da variante ativa. Mostra o estado em memória e usa **viewport controlado** (um só `{ centroCm, zoom }` aplicado aos dois palcos de leitura; spec M3, M3-10 e A-17).
 - **Desfazer por variante** (ADR-03).
 
 ### ADR-13 — Servidor local: Node + Fastify · **Decidido**
@@ -237,10 +240,12 @@ Rotas iniciais (detalhar com o modelo de dados):
 |---|---|
 | `/api/imagens` | upload (lote, com perfil), listar, obter metadados, excluir |
 | `/api/imagens/:id/arquivo` | render / thumb (cache imutável — RN-21) |
-| `/api/config` | valores do `.env` que a web precisa (`uploadMaxMb`) — spec M2, A-28 |
+| `/api/config` | valores do `.env` que a web precisa (`uploadMaxMb`, `autosaveMinutos`) — spec M2, A-28; spec M3, M3-07 |
 | `/api/projetos` | listar, criar, obter, renomear, excluir |
 | `/api/projetos/:id/parede` | upload da parede, salvar calibração/perspectiva, upload do bitmap retificado |
-| `/api/projetos/:id/variantes` | criar, duplicar, renomear, excluir, salvar (autosave) |
+| `/api/projetos/:id/variantes` | criar (vazia, cópia ou template), obter, renomear (`PATCH`), excluir, salvar (*hard save* com `revisao`) — spec M3 §5 |
+| `/api/projetos/:id/variantes/:vid/rascunho` | rascunho (*soft save*) por sessão: `PUT` com conferência de revisão (409 sem gravar), `GET`, `DELETE` por sessão — spec M3 §5 |
+| `PATCH /api/projetos/:id` | `nome` e `ultimaVarianteId` (este não altera `atualizadoEm`) |
 
 ### ADR-14 — Fontes empacotadas com `@fontsource` · **Decidido**
 
@@ -320,6 +325,7 @@ deco-wall/
           StoreContext.tsx  avisoAoSair.ts  navegacao.ts
           uploadLote.ts     # M2: fila de upload (3 em paralelo, cancelar, tentar de novo), sem React
           arquivosSoltos.ts # M2: arquivos e pastas soltos com o mouse
+          autosave.ts       # M3: temporizador do salvamento automático (rascunho), sem React
         infra/              # cliente HTTP e Worker
           dto.ts            # formatos da API, porta `ClienteApi` e `ErroApi`
           clienteApi.ts     # implementação com fetch (upload com progresso por XMLHttpRequest)
@@ -333,13 +339,14 @@ deco-wall/
             FotosKonva.tsx  # Konva das fotos (M2): nós das fotos, recorte, pills de alerta, seleção e bounding box
             cena.ts         # cenas em dados (sem Konva): parede, área útil, perspectiva, calibração
             useImagem.ts
-          paineis/          # Composição, Perspectiva, Calibração, Área útil, Foto, Recorte, BarraModo, CamposAreaUtil
+          paineis/          # Composição, Perspectiva, Calibração, Área útil, Foto, Recorte, Template (M3), BarraModo, CamposAreaUtil
           telas/            # Projetos, Editor, Comparação, /dev/ui
-            editor/         # HeaderEditor, Biblioteca, DialogoUpload, ToolbarCanvas, EstadoVazio, cenas.ts
-              modos/        # ModoPerspectiva, ModoCalibracao, ModoAreaUtil, ModoRecorte, LayoutModo
+            editor/         # HeaderEditor, Biblioteca, DialogoUpload, ToolbarCanvas, EstadoVazio, cenas.ts; M3: SeletorVariante, DialogosVariante, DialogoDecisao, DialogoTemplates, DialogoConflito, DialogoRecuperar
+              modos/        # ModoPerspectiva, ModoCalibracao, ModoAreaUtil, ModoRecorte, ModoTemplate (M3), LayoutModo
+            comparacao/     # M3: tela Comparação (`/projetos/<id>/comparar`)
           componentes/
             ui/             # componentes shadcn/ui (gerados)
-            proprios/       # StatusSalvamento, ChipEscala, Miniatura, CampoCm, SeletorTamanho, NomeProjeto, DialogosProjeto…
+            proprios/       # StatusSalvamento, ChipEscala, Miniatura, CampoCm, SeletorTamanho, NomeProjeto, DialogosProjeto…; M3: EsbocoVariante
         lib/                # utilitários de UI (cn, etc.)
   api/
     src/
@@ -362,6 +369,8 @@ deco-wall/
         biblioteca/         # M2: orientação natural e filtros da biblioteca
         templates/
           catalogo.ts       # catálogo de templates (constante; fonte: docs/specs/templates.md)
+          aplicacao.ts      # M3: tamanho da vaga, aplicação do template, conjunto (posição, centralizar, limite)
+        variantes/          # M3: nomes, cópia, conteúdo igual, estado de salvamento, rascunho, esboço, preencher vaga
   tests/
     e2e/                    # Playwright: smoke, rede, projetos, parede e escala, salvamento, desempenho, biblioteca, composição (ajudantes.ts)
     fixtures/
@@ -389,6 +398,12 @@ Arquivos de dados fora do repositório: `PASTA_FOTOS` (definida no `.env`; estru
 
 **Comparar:** escolher 2 variantes → viewports lado a lado com viewport compartilhado.
 
+**Salvamento (soft/hard):** o temporizador (`autosaveMinutos`) grava `PUT …/rascunho` só se a variante ativa mudou; o servidor confere `revisaoBase` e responde 409 sem gravar. O *hard save* (`PUT` da variante, Salvar/Ctrl+S) tem prioridade, confere a revisão, apaga os rascunhos obsoletos e dá nova `revisao`.
+
+**Recuperação:** ao ativar a variante pela primeira vez na sessão, se o resumo do projeto trouxer um rascunho mais novo que a versão oficial, a web oferece Recuperar · Descartar; com base antiga, também Salvar como nova variante.
+
+**Conflito:** 409 do *hard save* abre o diálogo (Manter a minha · Usar a salva · Salvar a minha como nova variante, cada uma confirmada digitando a palavra); 409 do rascunho vira `Alert` com Resolver… e suspende o rascunho.
+
 ## 8. Orçamentos de desempenho
 
 | Métrica | Alvo |
@@ -398,6 +413,9 @@ Arquivos de dados fora do repositório: `PASTA_FOTOS` (definida no `.env`; estru
 | Upload em lote de 50 fotos (perfil Leve) | progresso por arquivo; ≤ 1 s por foto |
 | Salvamento (soft/hard) | resposta da API < 100 ms |
 | Memória com 40 fotos (Leve) | < 300 MB no browser |
+| Aplicar template e abrir o posicionamento (M3) | < 200 ms |
+| Arrastar o conjunto do template (12 vagas) (M3) | ≥ 50 fps |
+| Pan/zoom na comparação, 2 × 40 fotos (M3) | ≥ 50 fps; memória < 400 MB (Leve, imagens compartilhadas entre os palcos) |
 
 ## 9. Riscos técnicos
 

@@ -2,8 +2,8 @@
 
 | Campo | Valor |
 |---|---|
-| Versão | 0.13 (ideia futura RF-74: sincronizar abas) |
-| Data | 2026-10-24 |
+| Versão | 0.14 (alterações do M3: associação básica a placeholder, "N sem foto", variantes, template, rascunho e comparação) |
+| Data | 2026-11-02 |
 | Autor | Nicholas Bittencourt |
 | Status | Requisitos e regras fechados — arquitetura em `docs/ARCHITECTURE.md` |
 
@@ -88,7 +88,7 @@ Prioridade: **P0** = obrigatório na v1 · **P1** = desejável na v1. Demais ite
 | RF-27 | Biblioteca única: toda foto carregada fica disponível em todos os projetos. | P0 | D |
 | RF-28 | Filtros da biblioteca: Todas · Neste projeto (carregadas no projeto ou usadas em qualquer variante) · Nesta variante · Excluídas. "Neste projeto" e "Nesta variante" refletem o estado salvo. "Excluídas" entra com o ciclo de vida das imagens (M4). | P0 | D |
 | RF-29 | Ao excluir/remover uma imagem: perguntar se é remoção do projeto ou exclusão; mostrar associações; exclusão reversível por 30 dias (restaurar), depois definitiva. | P0 | D |
-| RF-30a | Foto excluída vira *placeholder* nas variantes (mantém formato, posição, borda); restaurar não repõe automaticamente; placeholder aceita outra foto e recomenda a anterior se restaurada; variantes com placeholder são sinalizadas. | P0 | D |
+| RF-30a | Foto excluída vira *placeholder* nas variantes (mantém formato, posição, borda); restaurar não repõe automaticamente; placeholder aceita outra foto e recomenda a anterior se restaurada; variantes com placeholder são sinalizadas. A **associação básica** (arrastar uma foto da biblioteca sobre a vaga ou "Preencher com a foto selecionada") vale já no M3 (necessária às vagas de template); a recomendação da imagem anterior, a exclusão que gera placeholders e a restauração ficam no M4. | P0 | D |
 
 ### 5.4 Fotos na parede
 
@@ -125,7 +125,7 @@ Prioridade: **P0** = obrigatório na v1 · **P1** = desejável na v1. Demais ite
 | RF-70 | Desfazer/refazer por variante, pelos botões do header e por Ctrl+Z (desfazer) e Ctrl+Y / Ctrl+Shift+Z (refazer). | P0 | D |
 | RF-71 | Salvamento automático (rascunho) a cada X minutos, separado do salvamento manual. | P0 | D |
 | RF-72 | Salvamento manual (*hard save*) por botão e Ctrl+S; versão oficial da variante. | P0 | D |
-| RF-73 | Detecção de versão desconexa antes de salvar, com escolha: manter a minha, usar a salva ou salvar a minha como nova variante. | P0 | D |
+| RF-73 | Detecção de versão desconexa antes de salvar (no *hard save* e no rascunho; o rascunho em conflito não é gravado), com escolha: manter a minha, usar a salva ou salvar a minha como nova variante; cada saída é confirmada digitando a palavra da opção. | P0 | D |
 
 ### 5.8 Exportação
 
@@ -137,11 +137,11 @@ Prioridade: **P0** = obrigatório na v1 · **P1** = desejável na v1. Demais ite
 
 | ID | Requisito | Prior. | Origem |
 |---|---|---|---|
-| RF-90 | Listar, criar, abrir, renomear e excluir projetos. Lista em cards com miniatura **da foto da parede** (sem as fotos posicionadas; "Sem foto da parede" quando não houver), resumo (nº de variantes, última edição), aviso de placeholders e menu ⋯ com **Renomear** e **Excluir**. | P0 | D |
-| RF-91 | Variantes de composição por projeto: criar (vazia ou duplicando), renomear, excluir, alternar. Parede compartilhada entre variantes. | P0 | D |
+| RF-90 | Listar, criar, abrir, renomear e excluir projetos. Lista em cards com miniatura **da foto da parede** (sem as fotos posicionadas; "Sem foto da parede" quando não houver), resumo (nº de variantes, última edição), selo "N sem foto" (soma das vagas das variantes **salvas**, no M3) e menu ⋯ com **Renomear** e **Excluir**. | P0 | D |
+| RF-91 | Variantes de composição por projeto: criar (vazia ou duplicando), renomear, excluir, alternar. Parede compartilhada entre variantes. Criar, duplicar, renomear e excluir valem na hora (sem esperar o Salvar); duplicar copia o estado em tela; a variante nova nasce salva; a última variante não se exclui. Deixar a variante ativa com alterações não salvas pede antes **Salvar e continuar · Descartar · Cancelar**. | P0 | D |
 | RF-93 | **Templates de layout**: galeria de 12 modelos pré-definidos (catálogo e geometria em `docs/specs/templates.md`) para criar uma variante nova com vagas (*placeholders*) posicionadas. | P0 | U |
 | RF-94 | **Área útil por variante**: retângulo da parede onde as fotos devem ficar; definida após a escala e editável a qualquer momento. | P0 | U |
-| RF-92 | Comparação lado a lado de 2 variantes, com zoom e pan sempre sincronizados, permitindo focar um recorte da parede, e atalho "Parede inteira". Somente visualização (sem edição). | P0 | D |
+| RF-92 | Comparação lado a lado de 2 variantes, com zoom e pan sempre sincronizados, permitindo focar um recorte da parede, e atalho "Parede inteira". Somente visualização (sem edição). Mostra o estado em memória (a variante ativa com marcador "não salva"), abre com a ativa e a seguinte, em visualização limpa (chaves Grid, Área útil e Alertas desligadas por padrão, valendo para os dois lados). | P0 | D |
 
 ## 6. Regras de negócio
 
@@ -168,19 +168,19 @@ Prioridade: **P0** = obrigatório na v1 · **P1** = desejável na v1. Demais ite
 | RN-19 | Exportação: opção de incluir ou não o grid; nunca inclui handles de seleção nem destaques de alerta. Exceção: placeholders saem como retângulo vermelho hachurado semitransparente. | Decidido |
 | RN-20 | Arquivos não suportados na pasta são ignorados, com aviso da quantidade ignorada. | Decidido |
 | RN-28 | Tamanho personalizado: escolhido em "Personalizado…", editado no modo de recorte (largura × altura); 5 a 150 cm por lado, passo 0,1 cm; mudar o tamanho recentraliza o recorte (*cover*); orientação troca largura e altura; tamanhos quadrados não têm orientação; personalizado igual a um sugerido é tratado como o sugerido. | Decidido |
-| RN-29 | Aplicar template: sempre cria **variante nova** com o nome do modelo; cada espaço do modelo é uma célula com seu tamanho real (polegadas → cm, 1 mm); em cada célula entra o **maior tamanho sugerido** (RN-01) que caiba com a borda, centralizado; a sobra vira espaçamento; se nenhum couber, usa 10×15 e a célula cresce, com aviso. | Decidido |
+| RN-29 | Aplicar template: sempre cria **variante nova** com o nome do modelo; cada espaço do modelo é uma célula com seu tamanho real (polegadas → cm, 1 mm); em cada célula entra o sugerido de **maior área impressa** (RN-01), na orientação da célula (quadrada = retrato), cujo tamanho externo (impresso + 2 × borda) caiba na célula (folga de 0,05 cm), centralizado; a sobra vira espaçamento; se nenhum couber, usa 10×15 na orientação da célula e a vaga cresce em torno do centro, afastando as vizinhas, com aviso. | Decidido |
 | RN-30 | Ao aplicar template, uma **borda única** para todas as vagas, escolhida no diálogo (padrão = borda padrão da variante ativa). Depois, cada foto pode ter a borda alterada normalmente. | Decidido |
 | RN-31 | Vagas do template são *placeholders* (mesmo estado da RF-30a: vermelho hachurado, contam como "sem foto"). | Decidido |
-| RN-32 | Posição do template: prévia centralizada na área útil; o usuário pode arrastar o conjunto (com snap) e confirma (clique/Enter; Esc cancela). Modelo maior que a área útil gera aviso antes de confirmar. | Decidido |
+| RN-32 | Posição do template: prévia centralizada na área útil; o usuário pode arrastar o conjunto (com snap) e confirma (clique/Enter; Esc cancela). Modelo maior que a área útil gera aviso antes de confirmar. O snap age só no canto superior esquerdo do conjunto, e o limite de 1 cm dentro da parede inteira (RN-12) vale para a caixa do conjunto. | Decidido |
 | RN-33 | Área útil: após aplicar perspectiva/calibração, padrão = parede inteira (região com pixels da foto — ARCHITECTURE ADR-04), gravada já na primeira escala, com confirmação e redimensionamento pelo usuário (cancelar mantém a parede inteira); posição e tamanho livres a 0,1 cm, sem snap, mínimo 5 cm por lado, dentro da parede inteira; editável pelo botão "Área útil" (alteração da variante: entra no desfazer e no salvamento). Contorno tracejado e exterior esmaecido; nada disso sai na exportação. | Decidido |
 | RN-34 | Foto fora da área útil recebe o mesmo destaque de RN-12 e conta como alerta; não bloqueia o movimento. Grid continua na parede inteira. | Decidido |
-| RN-35 | Variante nova (vazia, duplicada ou de template) copia a área útil da variante ativa; a "Base" nasce com a parede inteira. Refazer perspectiva preserva as áreas em cm (aviso se ficarem fora da parede). | Decidido |
+| RN-35 | Variante nova (vazia, duplicada ou de template) copia da variante ativa a área útil, o grid e a borda padrão (na de template, a borda padrão é a escolhida no diálogo); a "Base" nasce com a parede inteira. Refazer perspectiva preserva as áreas em cm (aviso se ficarem fora da parede). | Decidido |
 | RN-21 | Os arquivos originais do usuário nunca são alterados nem guardados pelo app; só a versão processada é armazenada. O perfil é definido no upload e é definitivo — outro peso exige novo upload. | Decidido |
 | RN-22 | Biblioteca global, sem autenticação: imagens carregadas em qualquer projeto ficam disponíveis em todos. | Decidido |
 | RN-23 | Todo projeto tem ao menos 1 variante. Novo projeto nasce com a variante vazia **"Base"**. | Decidido |
 | RN-25 | Upload não verifica duplicatas: a mesma foto pode ser carregada mais de uma vez (inclusive em perfis diferentes). | Decidido |
 | RN-24 | Imagem: "remover do projeto" (sai das variantes do projeto, fica na biblioteca) ou "excluir" (*soft delete* 30 dias, consultável e restaurável; depois remoção definitiva). Detalhes em `docs/specs/M0-setup.md` §4.10. | Decidido |
-| RN-26 | Salvamento manual tem prioridade sobre o automático; conflito entre sessões exige escolha do usuário. Detalhes em `docs/specs/M0-setup.md` §4.9. | Decidido |
+| RN-26 | Salvamento manual tem prioridade sobre o automático; conflito entre sessões exige escolha do usuário, detectado também ao gravar o rascunho (que, em conflito, não é gravado). Detalhes em `docs/specs/M0-setup.md` §4.9. | Decidido |
 | RN-27 | Medidas em cm arredondadas a 1 mm. | Decidido |
 
 ## 7. Requisitos não funcionais
@@ -230,7 +230,7 @@ Cada marco tem especificação própria em `docs/specs/`, escrita após o aceite
 | M0 — Setup | Monorepo, configuração, MongoDB (modelo, validadores, seed), fundação de design, cascas estáticas, testes | 00, 17, cascas 01/03 |
 | M1 — Parede e escala | Projetos (CRUD), upload e troca da parede, perspectiva + prévia, calibração, área útil, grid, canvas com zoom/pan, salvamento manual (*hard save*) | 01, 02, 04, 04a, 05, 11, 13 |
 | M2 — Biblioteca e composição | Upload em lote, biblioteca e filtros, adicionar/mover, tamanhos + personalizado, recorte, borda e cor, snap, medidas, sobreposição e "fora da área", desfazer | 03, 03a, 03b, 07, 16 |
-| M3 — Variantes, templates e salvamento | Variantes, galeria e posicionamento de templates, *soft save* (rascunho e recuperação), diálogo de conflito, comparação | 06, 09, 14, 15, 15b |
+| M3 — Variantes, templates e salvamento | Variantes, galeria e posicionamento de templates, preenchimento básico das vagas, selo "N sem foto", *soft save* (rascunho e recuperação), diálogo de conflito, comparação | 06, 09, 14, 15, 15b |
 | M4 — Ciclo de vida e exportação | Remover/excluir/restaurar, placeholders, purga, exportação | 08, 10, 12 |
 | M5 — v1 desejável | P1: RF-23 (contador de uso), RF-52 (linha forte do grid) | — |
 
