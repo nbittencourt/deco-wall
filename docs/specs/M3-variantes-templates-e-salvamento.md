@@ -5,7 +5,7 @@
 | Versão | 0.2 |
 | Data | 2026-11-02 |
 | Base | `docs/PRD.md` v0.13 · `docs/ARCHITECTURE.md` v0.8 · `docs/DESIGN.md` v0.4 + protótipos 06, 09, 14, 15, 15b (e 03, 03a, 11, 13, 17 no que tocam o M3) · `docs/specs/M0-setup.md` v0.6 · `docs/specs/M1-parede-e-escala.md` v0.3 (aceita) · `docs/specs/M2-biblioteca-e-composicao.md` v0.4 (implementada e aceita) · `docs/specs/templates.md` v0.2 |
-| Status | **Implementada** (02/11), aguardando o aceite do Nicholas (T14) — decisões M3-01 a M3-10 e premissas A-01 a A-31 aprovadas; M2 aceito (31/10); §11 aplicada aos outros documentos (PR-M3-04). Escrita só com a documentação (regra do `CLAUDE.md`), em paralelo ao M2; registro da implementação na §12. |
+| Status | **Aceita pelo Nicholas** (02/11; implementada em 02/11) — decisões M3-01 a M3-10 e premissas A-01 a A-31 aprovadas; M2 aceito (31/10); §11 aplicada aos outros documentos (PR-M3-04). Escrita só com a documentação (regra do `CLAUDE.md`), em paralelo ao M2; registro da implementação na §12. |
 
 ## 0. Pré-requisitos
 
