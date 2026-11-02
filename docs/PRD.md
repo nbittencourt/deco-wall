@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Versão | 0.12 (decisões da spec M2) |
+| Versão | 0.13 (ideia futura RF-74: sincronizar abas) |
 | Data | 2026-10-24 |
 | Autor | Nicholas Bittencourt |
 | Status | Requisitos e regras fechados — arquitetura em `docs/ARCHITECTURE.md` |
@@ -243,6 +243,7 @@ Cada marco tem especificação própria em `docs/specs/`, escrita após o aceite
 | RF-33c | Busca na biblioteca por nome, combinada com o filtro ativo. (Campo visível e inativo na v1.) |
 | RF-11 | Calibração pela largura total da parede. |
 | RF-15 | Suporte a HEIC (fotos de iPhone). Fora da v1: o usuário converte para JPG antes do envio (17/10). |
+| RF-74 | Botão para **forçar a sincronização entre abas**: recarrega do servidor a lista de variantes e as versões salvas (e avisa se a aba tem alterações não salvas), em vez de a aba ficar com dados antigos até um 409. (Na v1 não há sincronização entre abas — spec M3, A-05 e A-28.) |
 | RF-36 | Seleção múltipla e mover em grupo (o conjunto do template só é movido em grupo antes de confirmar — RN-32). |
 | RF-37 | Trocar a imagem de uma foto mantendo formato e posição. |
 | RF-38 | Moldura (espessura, cor) e passe-partout. |
