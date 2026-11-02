@@ -31,6 +31,7 @@ import {
   PERFIS,
   PRAZO_PURGA_DIAS,
   PREVIA_LARGURA_PX,
+  QUALIDADE_WEBP_RETIFICADA,
   SEGMENTO_MIN_PX,
   TAMANHO_PADRAO_ID,
   TAMANHOS_SUGERIDOS,
@@ -254,5 +255,9 @@ describe('M4 (docs/specs/M4-ciclo-de-vida-e-exportacao.md §4.1)', () => {
     expect(FAIXA_HACHURA_CM).toBe(0.5);
     expect(FAIXA_HACHURA_MIN_PX).toBe(3);
     expect(LIMITE_PNG_MP).toBe(16);
+  });
+
+  it('ADR-16 (b): a retificada sai em WebP com qualidade 0,8 em todos os perfis', () => {
+    expect(QUALIDADE_WEBP_RETIFICADA).toBe(0.8);
   });
 });
