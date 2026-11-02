@@ -250,3 +250,79 @@ describe('criarClienteHttp — variantes e rascunhos (M3, §5)', () => {
     expect((erro as ErroApi).corpo).toEqual(corpo);
   });
 });
+
+describe('criarClienteHttp — ciclo de vida das imagens (M4, §5)', () => {
+  it('listarImagensExcluidas faz GET /api/imagens?situacao=excluidas', async () => {
+    const lista = [{ _id: 'i1', diasRestantes: 3 }];
+    const fetcher = fetcherCom(resposta(lista));
+    const api = criarClienteHttp(fetcher);
+    await expect(api.listarImagensExcluidas()).resolves.toEqual(lista);
+    expect(fetcher.mock.calls[0]![0]).toBe('/api/imagens?situacao=excluidas');
+  });
+
+  it('associacoesDaImagem faz GET /api/imagens/:id/associacoes', async () => {
+    const corpo = { imagem: { _id: 'i1' }, usos: [], projetos: [] };
+    const fetcher = fetcherCom(resposta(corpo));
+    const api = criarClienteHttp(fetcher);
+    await expect(api.associacoesDaImagem('i1')).resolves.toEqual(corpo);
+    expect(fetcher.mock.calls[0]![0]).toBe('/api/imagens/i1/associacoes');
+  });
+
+  it('excluirImagem faz DELETE /api/imagens/:id e devolve as variantes afetadas', async () => {
+    const corpo = {
+      imagem: { _id: 'i1' },
+      afetadas: [{ varianteId: 'v1', revisao: 3, fotos: 2 }],
+      fotosConvertidas: 2,
+    };
+    const fetcher = fetcherCom(resposta(corpo));
+    const api = criarClienteHttp(fetcher);
+    await expect(api.excluirImagem('i1')).resolves.toEqual(corpo);
+    const [url, init] = fetcher.mock.calls[0]!;
+    expect(url).toBe('/api/imagens/i1');
+    expect(init?.method).toBe('DELETE');
+  });
+
+  it('restaurarImagem faz POST /restaurar e devolve a imagem de dentro de { imagem }', async () => {
+    const fetcher = fetcherCom(resposta({ imagem: { _id: 'i1', excluidaEm: null } }));
+    const api = criarClienteHttp(fetcher);
+    await expect(api.restaurarImagem('i1')).resolves.toEqual({ _id: 'i1', excluidaEm: null });
+    const [url, init] = fetcher.mock.calls[0]!;
+    expect(url).toBe('/api/imagens/i1/restaurar');
+    expect(init?.method).toBe('POST');
+  });
+
+  it('o 410 do prazo vencido vira ErroApi com a mensagem da API', async () => {
+    const fetcher = fetcherCom(
+      resposta({ erro: 'Esta imagem passou do prazo de 30 dias e será removida.' }, 410),
+    );
+    const api = criarClienteHttp(fetcher);
+    await expect(api.restaurarImagem('i1')).rejects.toMatchObject({
+      status: 410,
+      message: 'Esta imagem passou do prazo de 30 dias e será removida.',
+    });
+  });
+
+  it('removerImagemDoProjeto faz DELETE /api/projetos/:pid/imagens/:id', async () => {
+    const corpo = { afetadas: [], fotosRemovidas: 0 };
+    const fetcher = fetcherCom(resposta(corpo));
+    const api = criarClienteHttp(fetcher);
+    await expect(api.removerImagemDoProjeto('p1', 'i1')).resolves.toEqual(corpo);
+    const [url, init] = fetcher.mock.calls[0]!;
+    expect(url).toBe('/api/projetos/p1/imagens/i1');
+    expect(init?.method).toBe('DELETE');
+  });
+
+  it('salvarVariante repassa imagensExcluidas da resposta (A-11)', async () => {
+    const fetcher = fetcherCom(resposta({ revisao: 2, salvaEm: 'x', imagensExcluidas: ['i9'] }));
+    const api = criarClienteHttp(fetcher);
+    const r = await api.salvarVariante('p1', 'v1', {
+      sessaoId: 's',
+      revisaoBase: 1,
+      grid: {} as never,
+      bordaPadrao: {} as never,
+      areaUtil: null,
+      fotos: [],
+    });
+    expect(r.imagensExcluidas).toEqual(['i9']);
+  });
+});

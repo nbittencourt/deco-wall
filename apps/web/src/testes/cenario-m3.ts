@@ -12,6 +12,8 @@ import {
   type ClienteApi,
   type CorpoCriarVariante,
   type ImagemDto,
+  type ImagemExcluidaDto,
+  type VarianteAfetadaDto,
   type ProjetoDto,
   type ResumoRascunhoDto,
   type VarianteDto,
@@ -121,6 +123,10 @@ export interface OpcoesCenario {
   // Rascunhos já gravados no servidor falso (a chave é `<varianteId>:<sessaoId>`).
   rascunhosGuardados?: Record<string, RascunhoGuardado>;
   autosaveMinutos?: number;
+  // M4: imagens já excluídas no servidor falso (aparecem na lista "Excluídas").
+  excluidas?: ImagemExcluidaDto[];
+  // M4, A-11: ao salvar, o servidor falso converte as fotos dessas imagens e devolve `imagensExcluidas`.
+  excluirAoSalvar?: string[];
 }
 
 export interface RascunhoGuardado {
@@ -152,6 +158,27 @@ export function criarCenario(opcoes: OpcoesCenario = {}) {
   const rascunhos = new Map<string, RascunhoGuardado>(Object.entries(opcoes.rascunhosGuardados ?? {}));
   const dadosProjeto = projeto(opcoes.projeto);
   const lista = () => [...servidor.values()].sort((a, b) => a.ordem - b.ordem);
+  // M4: a biblioteca do servidor falso (ativas e excluídas) e as operações do ciclo de vida.
+  const imagensAtivas = new Map<string, ImagemDto>(
+    [RETRATO, PAISAGEM].map((i) => [i._id, structuredClone(i)]),
+  );
+  const imagensExcluidas = new Map<string, ImagemExcluidaDto>(
+    (opcoes.excluidas ?? []).map((i) => [i._id, structuredClone(i)]),
+  );
+  const contar = (v: VarianteDto, imagemId: string) => v.fotos.filter((f) => f.imagemId === imagemId).length;
+  const converterNoServidor = (imagemId: string): VarianteAfetadaDto[] => {
+    const afetadas: VarianteAfetadaDto[] = [];
+    for (const v of servidor.values()) {
+      const n = contar(v, imagemId);
+      if (n === 0) continue;
+      v.fotos = v.fotos.map((f) =>
+        f.imagemId === imagemId ? { ...f, imagemId: null, imagemAnteriorId: imagemId } : f,
+      );
+      v.revisao += 1;
+      afetadas.push({ projetoId: v.projetoId, varianteId: v._id, revisao: v.revisao, fotos: n });
+    }
+    return afetadas;
+  };
 
   const conflito = (v: VarianteDto) =>
     new ErroApi(409, {
@@ -174,7 +201,73 @@ export function criarCenario(opcoes: OpcoesCenario = {}) {
     enviarParede: vi.fn(),
     aplicarCalibracao: vi.fn(),
     aplicarPerspectiva: vi.fn(),
-    listarImagens: vi.fn(async () => [RETRATO, PAISAGEM]),
+    listarImagens: vi.fn(async () => structuredClone([...imagensAtivas.values()])),
+    listarImagensExcluidas: vi.fn(async () => structuredClone([...imagensExcluidas.values()])),
+    associacoesDaImagem: vi.fn(async (id: string) => {
+      const imagem = imagensAtivas.get(id) ?? imagensExcluidas.get(id);
+      if (!imagem) throw new ErroApi(404, { erro: 'Imagem não encontrada.' });
+      return {
+        imagem: {
+          _id: id,
+          nomeOriginal: imagem.nomeOriginal,
+          thumbUrl: `/api/imagens/${id}/arquivo?tipo=thumb`,
+        },
+        usos: lista()
+          .filter((v) => contar(v, id) > 0)
+          .map((v) => ({
+            projetoId: ID_PROJETO,
+            projetoNome: dadosProjeto.nome,
+            varianteId: v._id,
+            varianteNome: v.nome,
+            vezes: contar(v, id),
+          })),
+        projetos: imagem.projetos.map((p) => ({ projetoId: p, projetoNome: dadosProjeto.nome })),
+      };
+    }),
+    excluirImagem: vi.fn(async (id: string) => {
+      const imagem = imagensAtivas.get(id);
+      if (!imagem) throw new ErroApi(404, { erro: 'Imagem não encontrada.' });
+      imagensAtivas.delete(id);
+      imagensExcluidas.set(id, {
+        ...imagem,
+        excluidaEm: SALVA_EM_2,
+        purgaEm: '2026-12-02T13:30:00.000Z',
+        diasRestantes: 30,
+      });
+      const afetadas = converterNoServidor(id);
+      return {
+        imagem: { _id: id, excluidaEm: SALVA_EM_2, purgaEm: '2026-12-02T13:30:00.000Z' },
+        afetadas,
+        fotosConvertidas: afetadas.reduce((soma, a) => soma + a.fotos, 0),
+      };
+    }),
+    restaurarImagem: vi.fn(async (id: string) => {
+      const excluida = imagensExcluidas.get(id);
+      if (!excluida) throw new ErroApi(404, { erro: 'Imagem não encontrada.' });
+      if (excluida.diasRestantes <= 0) {
+        throw new ErroApi(410, { erro: 'Esta imagem passou do prazo de 30 dias e será removida.' });
+      }
+      imagensExcluidas.delete(id);
+      const { diasRestantes: _dias, ...imagem } = excluida;
+      void _dias;
+      const restaurada: ImagemDto = { ...imagem, excluidaEm: null, purgaEm: null };
+      imagensAtivas.set(id, restaurada);
+      return structuredClone(restaurada);
+    }),
+    removerImagemDoProjeto: vi.fn(async (_pid: string, imagemId: string) => {
+      if (!imagensAtivas.has(imagemId) && !imagensExcluidas.has(imagemId)) {
+        throw new ErroApi(404, { erro: 'Imagem não encontrada.' });
+      }
+      const afetadas: Omit<VarianteAfetadaDto, 'projetoId'>[] = [];
+      for (const v of servidor.values()) {
+        const n = contar(v, imagemId);
+        if (n === 0) continue;
+        v.fotos = v.fotos.filter((f) => f.imagemId !== imagemId);
+        v.revisao += 1;
+        afetadas.push({ varianteId: v._id, revisao: v.revisao, fotos: n });
+      }
+      return { afetadas, fotosRemovidas: afetadas.reduce((soma, a) => soma + a.fotos, 0) };
+    }),
     enviarImagem: vi.fn(),
     obterConfig: vi.fn(async () => ({ uploadMaxMb: 50, autosaveMinutos: opcoes.autosaveMinutos ?? 5 })),
     definirUltimaVariante: vi.fn(async (_pid: string, varianteId: string) => {
@@ -198,17 +291,32 @@ export function criarCenario(opcoes: OpcoesCenario = {}) {
         const v = servidor.get(varianteId);
         if (!v) throw new ErroApi(404, { erro: 'Variante não encontrada.' });
         if (v.revisao !== corpo.revisaoBase) throw conflito(v);
+        const excluidasAgora = opcoes.excluirAoSalvar ?? [];
         Object.assign(v, {
           grid: corpo.grid,
           bordaPadrao: corpo.bordaPadrao,
           areaUtil: corpo.areaUtil,
-          fotos: corpo.fotos,
+          fotos: corpo.fotos.map((f) =>
+            f.imagemId && excluidasAgora.includes(f.imagemId)
+              ? { ...f, imagemId: null, imagemAnteriorId: f.imagemId }
+              : f,
+          ),
           revisao: v.revisao + 1,
           salvaEm: SALVA_EM_2,
           salvaPorSessao: corpo.sessaoId,
         });
         rascunhos.delete(`${varianteId}:${corpo.sessaoId}`);
-        return { revisao: v.revisao, salvaEm: SALVA_EM_2 };
+        return {
+          revisao: v.revisao,
+          salvaEm: SALVA_EM_2,
+          imagensExcluidas: [
+            ...new Set(
+              corpo.fotos.flatMap((f) =>
+                f.imagemId && excluidasAgora.includes(f.imagemId) ? [f.imagemId] : [],
+              ),
+            ),
+          ],
+        };
       },
     ),
     criarVariante: vi.fn(async (_pid: string, corpo: CorpoCriarVariante) => {
