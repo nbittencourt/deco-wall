@@ -306,8 +306,44 @@ async function amostrarQuadros(page: Page, mexer: () => Promise<void>) {
   return { quadros: quadros.length, medio, p95: ordenados[Math.floor(ordenados.length * 0.95)]! };
 }
 
+const META_RASCUNHO_MS = 100;
+
 test.describe('template e comparação (spec M3 A-29)', () => {
-  test('aplicar o template e abrir o posicionamento levam menos de 200 ms; arrastar o conjunto (12 vagas)', async ({
+  test('salvar o rascunho de uma variante com 40 fotos leva menos de 100 ms (mediana de 7)', async ({
+    request,
+  }) => {
+    const p = await criarProjetoComEscalaLinear(request, nomeUnico('Desempenho rascunho'));
+    const { revisao, areaUtil } = (await lerProjeto(request, p.id)).variantes[0]!;
+    const fotos = Array.from({ length: 40 }, (_, i) =>
+      fotoDaApi(i + 1, null, { xCm: 10 + (i % 8) * 30, yCm: 10 + Math.floor(i / 8) * 40 }),
+    );
+    const corpo = {
+      sessaoId: 'e2e-desempenho',
+      revisaoBase: revisao,
+      conteudo: {
+        grid: { visivel: true, snap: true, passoCm: 5, principalACada: 5, cor: '#1F1B16', opacidade: 0.08 },
+        bordaPadrao: { larguraCm: 0, cor: '#FFFFFF' },
+        areaUtil,
+        fotos,
+      },
+    };
+    const tempos: number[] = [];
+    for (let i = 0; i < 7; i += 1) {
+      const inicio = performance.now();
+      const res = await request.put(`/api/projetos/${p.id}/variantes/${p.varianteId}/rascunho`, {
+        data: corpo,
+      });
+      tempos.push(performance.now() - inicio);
+      expect(res.status()).toBe(200);
+    }
+    const mediana = [...tempos].sort((a, b) => a - b)[3]!;
+    console.log(
+      `[rascunho, 40 fotos] mediana ${mediana.toFixed(0)} ms (${tempos.map((t) => t.toFixed(0)).join(', ')})`,
+    );
+    expect(mediana).toBeLessThan(META_RASCUNHO_MS);
+  });
+
+  test('abrir o posicionamento do template leva menos de 200 ms; arrastar o conjunto (10 vagas, o máximo do catálogo)', async ({
     page,
     request,
   }) => {
@@ -324,7 +360,7 @@ test.describe('template e comparação (spec M3 A-29)', () => {
     await expect(page.getByText('Posicionar template · Base nivelada')).toBeVisible();
     const abrir = Date.now() - inicio;
     console.log(`[template Base nivelada] abrir o posicionamento: ${abrir} ms`);
-    expect(abrir).toBeLessThanOrEqual(META_APLICAR_TEMPLATE_MS * 5);
+    expect(abrir).toBeLessThanOrEqual(META_APLICAR_TEMPLATE_MS);
 
     const x0 = await lerCampo(page, 'X');
     const y0 = await lerCampo(page, 'Y');

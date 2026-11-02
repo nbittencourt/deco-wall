@@ -138,12 +138,16 @@ function Galeria({
           const maior = areaUtil !== null && maiorQueAreaUtil(total, areaUtil);
           return (
             <RadioCard key={modelo.id} value={modelo.id} className="flex flex-col gap-2 rounded-xl p-3">
-              <EsbocoVariante
-                fotos={fotos}
-                caixaCm={conjunto}
-                rotulo={`Esboço de ${modelo.nome}`}
-                decorativo
-              />
+              {/* DESIGN §6: o esboço cabe numa caixa `paper` de 116 px, qualquer que seja a proporção do modelo. */}
+              <span className="flex h-[116px] items-center justify-center rounded-md bg-paper">
+                <EsbocoVariante
+                  fotos={fotos}
+                  caixaCm={conjunto}
+                  rotulo={`Esboço de ${modelo.nome}`}
+                  decorativo
+                  className="h-full w-auto max-w-full"
+                />
+              </span>
               <span className="font-serif text-[17px] text-ink">{modelo.nome}</span>
               <span className="flex items-center justify-between gap-2 text-xs text-ink-3">
                 <span className="font-mono">{formatarDimensao(total.larguraCm, total.alturaCm)}</span>

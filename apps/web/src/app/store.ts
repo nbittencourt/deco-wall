@@ -318,6 +318,8 @@ export interface EstadoEditor {
   abrirPosicionarTemplate(escolha: { templateId: string; borda: Borda }): void;
   // Devolve a posição efetiva (com snap e limite), para o nó arrastado acompanhá-la.
   moverConjunto(xCm: number, yCm: number): { xCm: number; yCm: number };
+  // A-21: setas movem o conjunto como movem uma foto (M2-01): 1 passo do grid, ou 1 cm sem snap; Shift, 5 vezes.
+  moverConjuntoPorSeta(direcao: DirecaoSeta, shift: boolean): void;
   centralizarConjunto(): void;
   cancelarTemplate(): void;
   confirmarTemplate(): Promise<void>;
@@ -1785,6 +1787,17 @@ export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): Sto
               estado.ui.template.fotos = resultado.fotos;
             });
             return posicao;
+          },
+
+          moverConjuntoPorSeta(direcao, shift) {
+            const atual = get().ui.template;
+            const grid = get().documento.variante?.grid;
+            if (!atual || !grid) return;
+            const p = moverPorTeclado(atual.conjunto, direcao, {
+              shift,
+              grid: { snap: grid.snap, passoCm: grid.passoCm },
+            });
+            get().moverConjunto(p.xCm, p.yCm);
           },
 
           centralizarConjunto() {

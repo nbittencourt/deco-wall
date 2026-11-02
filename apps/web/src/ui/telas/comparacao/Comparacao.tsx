@@ -155,7 +155,10 @@ export function Comparacao({ navegar }: { navegar: (caminho: string) => void }) 
         </Button>
         <span className="text-display-sm text-[18px] text-ink">Comparar variantes</span>
         <Badge variant="neutro">Somente visualização</Badge>
-        <span className="text-body-sm text-ink-3">Zoom e posição iguais nos dois lados</span>
+        {/* Abaixo de 1440 px a frase não cabe junto das chaves e do zoom. */}
+        <span className="hidden text-body-sm text-ink-3 min-[1440px]:inline">
+          Zoom e posição iguais nos dois lados
+        </span>
         <span className="flex-1" />
         {chave('Grid', 'grid')}
         {chave('Área útil', 'areaUtil')}

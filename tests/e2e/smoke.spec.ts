@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
 import { expect, test } from '@playwright/test';
-import { criarProjeto, criarProjetoComEscalaLinear, nomeUnico } from './ajudantes';
+import { criarProjeto, criarProjetoComEscalaLinear, lerProjeto, nomeUnico } from './ajudantes';
 
 const TEXTO_INATIVO = 'Disponível em uma próxima versão';
 
@@ -147,10 +147,27 @@ test.describe('rede (aceite 13 do M0 e do M1, RNF-01)', () => {
       }
     });
 
-    for (const caminho of ['/', `/projetos/${p.id}`, '/dev/ui']) {
+    // M3: a comparação e o modo Posicionar template também não saem de localhost.
+    const base = (await lerProjeto(request, p.id)).variantes[0]!;
+    await request.post(`/api/projetos/${p.id}/variantes`, {
+      data: {
+        sessaoId: 'e2e-rede',
+        nome: 'Variante 2',
+        grid: base.grid,
+        bordaPadrao: { larguraCm: 0, cor: '#FFFFFF' },
+        areaUtil: base.areaUtil,
+        origem: { tipo: 'vazia' },
+      },
+    });
+    for (const caminho of ['/', `/projetos/${p.id}`, `/projetos/${p.id}/comparar`, '/dev/ui']) {
       await page.goto(caminho);
       await page.waitForLoadState('networkidle');
     }
+    await page.goto(`/projetos/${p.id}`);
+    await page.getByRole('button', { name: 'Templates', exact: true }).click();
+    await page.getByRole('button', { name: 'Posicionar na parede' }).click();
+    await expect(page.getByText('Posicionar template · Pirâmide')).toBeVisible();
+    await page.waitForLoadState('networkidle');
 
     expect(externas).toEqual([]);
   });

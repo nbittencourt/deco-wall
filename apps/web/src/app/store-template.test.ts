@@ -167,6 +167,39 @@ describe('posicionar template (RN-32, TPL-06, M3-06, A-21, A-22)', () => {
     expect(estado().ui.template!.conjunto).toMatchObject({ xCm: 42.3, yCm: 33.2 });
   });
 
+  it('setas movem o conjunto 1 passo do grid, e Shift + seta 5 passos (A-21, M2-01)', async () => {
+    const { estado } = await abrirCenario();
+    estado().abrirPosicionarTemplate({ templateId: 'piramide', borda: BORDA });
+    estado().moverConjunto(40, 35);
+    estado().moverConjuntoPorSeta('direita', false);
+    expect(estado().ui.template!.conjunto).toMatchObject({ xCm: 45, yCm: 35 });
+    estado().moverConjuntoPorSeta('baixo', true);
+    expect(estado().ui.template!.conjunto).toMatchObject({ xCm: 45, yCm: 60 });
+    estado().moverConjuntoPorSeta('esquerda', true);
+    estado().moverConjuntoPorSeta('cima', false);
+    expect(estado().ui.template!.conjunto).toMatchObject({ xCm: 20, yCm: 55 });
+  });
+
+  it('sem snap, as setas andam 1 cm e Shift + seta 5 cm', async () => {
+    const { estado } = await abrirCenario({
+      variantes: [variante({ grid: { ...GRID_PADRAO, snap: false } })],
+    });
+    estado().abrirPosicionarTemplate({ templateId: 'piramide', borda: BORDA });
+    estado().moverConjunto(42.3, 30);
+    estado().moverConjuntoPorSeta('direita', false);
+    expect(estado().ui.template!.conjunto.xCm).toBe(43.3);
+    estado().moverConjuntoPorSeta('direita', true);
+    expect(estado().ui.template!.conjunto.xCm).toBe(48.3);
+  });
+
+  it('as setas respeitam o limite de 1 cm dentro da parede inteira (M2-11)', async () => {
+    const { estado } = await abrirCenario();
+    estado().abrirPosicionarTemplate({ templateId: 'piramide', borda: BORDA });
+    estado().moverConjunto(0, 224);
+    estado().moverConjuntoPorSeta('baixo', true);
+    expect(estado().ui.template!.conjunto.yCm).toBe(224);
+  });
+
   it('as vagas acompanham o conjunto', async () => {
     const { estado } = await abrirCenario({
       variantes: [variante({ grid: { ...GRID_PADRAO, snap: false } })],

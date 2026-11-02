@@ -279,6 +279,21 @@ describe('templates: galeria e posicionamento (RF-93, RN-32)', () => {
     );
   });
 
+  it('as setas movem o conjunto por passos do grid; Shift anda 5 passos (A-21)', async () => {
+    const { dialogo } = await abrirGaleria();
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Posicionar na parede' }));
+    await screen.findByText('Posicionar template · Pirâmide');
+    const valorX = () =>
+      Number((screen.getByRole('textbox', { name: 'X' }) as HTMLInputElement).value.replace(',', '.'));
+    const inicial = valorX();
+    fireEvent.keyDown(window, { key: 'ArrowRight' });
+    const depois = valorX();
+    expect(depois).toBeGreaterThan(inicial);
+    expect(depois % 5).toBeCloseTo(0, 5);
+    fireEvent.keyDown(window, { key: 'ArrowRight', shiftKey: true });
+    expect(valorX()).toBe(depois + 25);
+  });
+
   it('Confirmar posição cria a variante com o nome do modelo, avisa e mostra "6 sem foto"', async () => {
     const { api, dialogo } = await abrirGaleria();
     fireEvent.click(within(dialogo).getByRole('button', { name: 'Posicionar na parede' }));

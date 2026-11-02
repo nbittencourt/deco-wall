@@ -1,4 +1,11 @@
-import { formatarCm, formatarCmCurto, formatarDimensao, nomeDoTemplateUnico } from '@deco-wall/domain';
+import {
+  formatarCm,
+  formatarCmCurto,
+  formatarDimensao,
+  nomeDoTemplateUnico,
+  type DirecaoSeta,
+} from '@deco-wall/domain';
+import { useEffect } from 'react';
 import { useEditor, useStoreEditor, useVistaDaVariante } from '../../../../app/StoreContext';
 import { Palco } from '../../../canvas/Palco';
 import { Alert } from '../../../componentes/ui/alert';
@@ -7,6 +14,13 @@ import { PainelTemplate } from '../../../paineis/PainelTemplate';
 import { cenaDaParede, cenaDoTemplate, dadosDaParede } from '../cenas';
 import { LayoutModo } from './LayoutModo';
 import { useAtalhosDoModo } from './atalhos';
+
+const DIRECOES: Record<string, DirecaoSeta> = {
+  ArrowLeft: 'esquerda',
+  ArrowRight: 'direita',
+  ArrowUp: 'cima',
+  ArrowDown: 'baixo',
+};
 
 // Modo Posicionar template (RN-32, TPL-06; protótipos 15 e 15b; DESIGN §7, §7.3; spec M3 §3.7, A-20 a A-22): o conjunto
 // entra centralizado na área útil, arrasta com snap no canto, e Confirmar cria a variante nova.
@@ -25,6 +39,25 @@ export function ModoTemplate() {
     onConfirmar: confirmar,
     onCancelar: cancelar,
   });
+
+  // A-21: as setas movem o conjunto (Shift: 5 passos), exceto quando o foco está num campo.
+  useEffect(() => {
+    const aoTeclar = (evento: KeyboardEvent) => {
+      const direcao = DIRECOES[evento.key];
+      if (!direcao || evento.defaultPrevented || evento.ctrlKey || evento.metaKey) return;
+      const alvo = evento.target;
+      if (
+        alvo instanceof Element &&
+        alvo.closest('input, textarea, select, [contenteditable="true"], [role="combobox"]')
+      ) {
+        return;
+      }
+      evento.preventDefault();
+      store.getState().moverConjuntoPorSeta(direcao, evento.shiftKey);
+    };
+    window.addEventListener('keydown', aoTeclar);
+    return () => window.removeEventListener('keydown', aoTeclar);
+  }, [store]);
 
   if (!template) return null;
   const { interior } = dadosDaParede(projeto);

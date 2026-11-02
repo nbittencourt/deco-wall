@@ -341,13 +341,14 @@ deco-wall/
             useImagem.ts
           paineis/          # Composição, Perspectiva, Calibração, Área útil, Foto, Recorte, Template (M3), BarraModo, CamposAreaUtil
           telas/            # Projetos, Editor, Comparação, /dev/ui
-            editor/         # HeaderEditor, Biblioteca, DialogoUpload, ToolbarCanvas, EstadoVazio, cenas.ts; M3: SeletorVariante, DialogosVariante, DialogoDecisao, DialogoTemplates, DialogoConflito, DialogoRecuperar
+            editor/         # HeaderEditor, Biblioteca, DialogoUpload, ToolbarCanvas, EstadoVazio, cenas.ts; M3: SeletorVariante, DialogosVariante (nome, excluir, decisão), DialogoTemplates, DialogoConflito (e variante excluída), DialogoRecuperar, DialogosGlobais (monta os três diálogos de conflito e recuperação)
               modos/        # ModoPerspectiva, ModoCalibracao, ModoAreaUtil, ModoRecorte, ModoTemplate (M3), LayoutModo
             comparacao/     # M3: tela Comparação (`/projetos/<id>/comparar`)
           componentes/
             ui/             # componentes shadcn/ui (gerados)
             proprios/       # StatusSalvamento, ChipEscala, Miniatura, CampoCm, SeletorTamanho, NomeProjeto, DialogosProjeto…; M3: EsbocoVariante
         lib/                # utilitários de UI (cn, etc.)
+        testes/             # M3: `cenario-m3.ts`, servidor falso em memória (variantes, rascunhos, revisões) para os testes da store e das telas
   api/
     src/
       main.ts
@@ -374,6 +375,7 @@ deco-wall/
   tests/
     e2e/                    # Playwright: smoke, rede, projetos, parede e escala, salvamento, desempenho, biblioteca, composição (ajudantes.ts)
     fixtures/
+      templates-md.ts       # M3: lê `docs/specs/templates.md` para os testes conferirem o catálogo contra a fonte
       imagens/
       paredes/
       dominio.ts            # exemplos válidos do modelo (builders para testes)

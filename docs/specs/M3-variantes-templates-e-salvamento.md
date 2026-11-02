@@ -368,20 +368,21 @@ Implementada em `claude/m3-implementation-fb9960`, que **carrega o código do M2
 
 ### 12.1 Números
 
-Vitest 1.337 testes (domínio, API e web), Playwright 98/98, `typecheck`, `lint` e `format:check` verdes. Cobertura do domínio: 98,6% das instruções, 95,7% dos ramos e 99,4% das linhas. Desempenho no Chromium headless (Windows), meta da A-29 em parênteses:
+Vitest 1.341 testes (domínio, API e web), Playwright 99/99, `typecheck`, `lint` e `format:check` verdes. Cobertura do domínio: 98,6% das instruções, 95,7% dos ramos e 99,4% das linhas. Desempenho no Chromium headless (Windows), meta da A-29 em parênteses:
 
 | Medida | Resultado |
 |---|---|
-| Abrir o posicionamento do template (clique até o modo pintado) | 85–98 ms (< 200 ms) |
-| Arrastar o conjunto do template, 10 vagas | 60 fps, quadro médio 16,7 ms (≥ 50 fps) |
+| Abrir o posicionamento do template (clique até o modo pintado) | 84–98 ms (< 200 ms) |
+| Salvar o rascunho de uma variante com 40 fotos (`PUT …/rascunho`, mediana de 7) | 4 ms (< 100 ms) |
+| Arrastar o conjunto do template, 10 vagas (o máximo do catálogo; a A-29 fala em 12, que não existe) | 60 fps, quadro médio 16,7 ms (≥ 50 fps) |
 | Pan e zoom na comparação, 2 × 40 fotos de 12 MP no perfil Leve | 60 fps, quadro médio 16,7 ms (≥ 50 fps) |
-| Memória do navegador inteiro nessa comparação | +285 a +297 MB sobre o navegador vazio (< 400 MB); heap JS 20–23 MB |
+| Memória do navegador inteiro nessa comparação | +266 a +297 MB sobre o navegador vazio (< 400 MB); heap JS 20–23 MB |
 
 ### 12.2 Escolhas da implementação que a spec não fixava
 
 | # | Escolha | Por quê |
 |---|---|---|
-| I-01 | `GET /api/projetos/:id` e a criação de variante gravam `atualizadoEm` (§5, item 4); só o `PATCH` de `ultimaVarianteId` o preserva. A M3-04 fala em "sem alterar `atualizadoEm`" só para trocar de variante. | A §5 e a M3-04 se contradiziam na criação; vale a §5 (criar variante é uma edição real). |
+| I-01 | A criação de variante (`POST`) grava `atualizadoEm` (§5, item 4); só o `PATCH` de `ultimaVarianteId` o preserva. | **A confirmar com o Nicholas:** a M3-04 diz que `ultimaVarianteId` muda "ao trocar e ao criar (sem alterar `atualizadoEm`)" e a §5 manda atualizar `atualizadoEm` na criação. Segui a §5 (criar variante é uma edição real); a consequência é o projeto subir na lista de projetos ao criar uma variante. |
 | I-02 | O temporizador do rascunho passa por `agendador.periodico` (`apps/web/src/app/autosave.ts`). | Os testes capturam o intervalo e disparam os ticks sem relógio falso, que atrapalha a espera do Testing Library. Os E2E usam `page.clock`. |
 | I-03 | Em base antiga, a recuperação busca o conteúdo do rascunho antes da escolha (`ui.recuperacao.previa`) para o diálogo mostrar as duas versões (A-09). | O resumo do projeto só traz o número de fotos. |
 | I-04 | Duplicar pelo menu ⋯ de outra variante primeiro abre essa variante (com a decisão da A-12) e depois o diálogo de nome. | "Duplicar copia o estado em tela" (M3-04): só a ativa tem estado em tela. |
@@ -389,6 +390,9 @@ Vitest 1.337 testes (domínio, API e web), Playwright 98/98, `typecheck`, `lint`
 | I-06 | O PUT da variante responde 422 "A parede está sem escala." com fotos e sem escala (A-11), **revendo a M2-14** (que tirou os acréscimos do servidor). O E2E e o teste de API do M2 que esperavam 200 foram ajustados. | Decisão já aprovada nesta spec (A-11, §2). |
 | I-07 | As vagas do conjunto saem a 80% de opacidade nos nós da cena (cm); a hachura de placeholder, que o Palco desenha na camada em px de tela, mantém opacidade cheia. | Reaproveita a camada de placeholders do M2 sem duplicá-la. |
 | I-08 | A pill do total do conjunto é desenhada no palco (ícone ✥ e medida). | DESIGN §7.3 / A-21. |
+| I-09 | As setas movem o conjunto no modo Posicionar template (A-21), com a regra das fotos (1 passo do grid, ou 1 cm sem snap; Shift, 5 vezes) e o mesmo limite do arraste. | A-21. Veio da revisão do fim da sessão, depois do primeiro registro. |
+| I-10 | A comparação esconde a frase "Zoom e posição iguais nos dois lados" abaixo de 1440 px. | Em 1280 px ela empurrava "Parede inteira" para fora do header (visto nas capturas). |
+| I-11 | A caixa do esboço de cada card da galeria tem 116 px de altura fixa, com o esboço centralizado (DESIGN §6). | Sem ela os cards ficavam com alturas diferentes, conforme a proporção do modelo. |
 
 ### 12.3 Alterações em testes do M1 e do M2 que o M3 muda de propósito
 
