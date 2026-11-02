@@ -2,10 +2,10 @@
 
 | Campo | Valor |
 |---|---|
-| Versão | 0.1 (rascunho) |
+| Versão | 0.2 (revisada: lacunas M4-01 a M4-18 e premissas A-01 a A-28 aprovadas) |
 | Data | 2026-11-02 |
 | Base | `docs/PRD.md` v0.15 · `docs/ARCHITECTURE.md` v0.9 · `docs/DESIGN.md` v0.5 + protótipos 08, 10, 12 (e 03, 06, 11 no que tocam o M4) · `docs/specs/M0-setup.md` v0.6 (§4.10) · `docs/specs/M1-parede-e-escala.md` v0.3 · `docs/specs/M2-biblioteca-e-composicao.md` v0.4 · `docs/specs/M3-variantes-templates-e-salvamento.md` (aceita) · `MEMORY.md` (Questões em aberto) |
-| Status | **Rascunho para revisão do Nicholas** (02/11). Escrita só com a documentação (regra do `CLAUDE.md`). Implementação só depois da revisão das lacunas (§0.1) e das premissas (§0.2). |
+| Status | **Revisada pelo Nicholas** (02/11): lacunas (§0.1) e premissas (§0.2) aprovadas. Escrita só com a documentação (regra do `CLAUDE.md`). Faltam a aplicação da §11 aos outros documentos (PR-M4-05) e a conclusão da spec pelo Nicholas; a implementação só começa depois (gate). |
 
 ## 0. Pré-requisitos
 
@@ -13,13 +13,13 @@
 |---|---|---|---|
 | PR-M4-01 | **Aceite do M3** (§8 da spec M3). O M4 usa a store por variante, o histórico, os placeholders, a comparação e o diálogo de decisão da A-12. | spec e T1 | ✅ M3 aceito pelo Nicholas em 02/11 (já na `main`) |
 | PR-M4-02 | Escopo do marco: ciclo de vida das imagens, exportação, **pendências técnicas** (M4-01) e **RN-36** (M4-02). | spec | ✅ pedido pelo Nicholas em 02/11 |
-| PR-M4-03 | Lacunas da §0.1 decididas pelo Nicholas (M4-01 a M4-18). | T1 | ✅ 02/11 (limite de 16 MP da M4-18 a confirmar) |
-| PR-M4-04 | Premissas da §0.2 revisadas pelo Nicholas. | T1 | ⏳ a revisar |
+| PR-M4-03 | Lacunas da §0.1 decididas pelo Nicholas (M4-01 a M4-18). | T1 | ✅ 02/11 (inclui o limite de 16 MP da M4-18) |
+| PR-M4-04 | Premissas da §0.2 revisadas pelo Nicholas. | T1 | ✅ 02/11 (A-01 a A-28) |
 | PR-M4-05 | Alterações da §11 aplicadas aos outros documentos depois da revisão, com este branch atualizado com a `main`. | T1 | ⏳ (a RN-36 já está no PRD v0.15) |
 
 ### 0.1 Lacunas e contradições (com proposta)
 
-M4-01 a M4-17 (M4-13 = ADR-16, opção (b)) e o princípio da M4-18 são **decisões do Nicholas de 02/11** (M4-03 a M4-12 e M4-14 a M4-17 aprovadas como propostas). Só o limite de 16 MP da M4-18 segue como **proposta** a confirmar.
+M4-01 a M4-17 (M4-13 = ADR-16, opção (b)) e o princípio da M4-18 são **decisões do Nicholas de 02/11** (M4-03 a M4-12 e M4-14 a M4-17 aprovadas como propostas; o limite de 16 MP da M4-18 foi aprovado com a A-28).
 
 | # | Lacuna ou contradição | Proposta / decisão |
 |---|---|---|
@@ -40,7 +40,7 @@ M4-01 a M4-17 (M4-13 = ADR-16, opção (b)) e o princípio da M4-18 são **decis
 | M4-15 | **Chunk JS de ~1.016 kB.** Konva, react-konva, `bson`, `zod` e o Radix entram todos no pacote de entrada. | **Divisão por rota** com `React.lazy` + `Suspense` (Editor, Comparação, `/dev/ui`) e `manualChunks` para `konva`, `bson` e o vendor de React; **sem dependência nova**. Meta mensurável: nenhum chunk acima de 500 kB (o aviso do Vite some) e a tela Projetos **não baixa** o chunk do Konva (teste E2E de rede). |
 | M4-16 | **Títulos dos diálogos sem a serifa** (existe desde o M0). `DialogTitle` usa `cn('text-display-md text-ink')`, e o `tailwind-merge` descarta `text-display-md` por achar que conflita com `text-ink`. | Registrar as utilidades `text-display-*` (e `text-mono`) como tamanho de fonte no `extendTailwindMerge` de `apps/web/src/lib/utils.ts`, **auditar os outros usos de `cn()`** com essas classes e cobrir com teste de componente (classes presentes) e E2E (família computada "Newsreader" no título de um diálogo). |
 | M4-17 | **Quedas 0xC0000409** (worker do Vitest em `rascunhos.test.ts`, 02/11; `npm start` pelo painel de preview no primeiro `GET /api/imagens/:id/arquivo`, 25/10). Causa desconhecida; não reproduzidas. | **Investigação com limite de tempo** (T14): reproduzir com repetição controlada, ligar os relatórios de diagnóstico do Node nos dois cenários e registrar a causa. Aceite: **causa corrigida com teste de regressão, ou documentada como não reproduzida** com o número de execuções e o plano de observação. **Não bloqueia o aceite do M4.** Qualquer mitigação que esconda a falha (repetir teste, ignorar código de saída) só com decisão do Nicholas. |
-| M4-18 | **Formato padrão da exportação e aviso do PNG em imagens grandes.** Um PNG de 28 MP é lento de gerar e pesa muito; o JPG não tem transparência, é rápido e abre em qualquer computador (é o espírito da opção (d) da ADR-16, aplicado à exportação). | **Decisão (02/11):** nos **casos limite** (saída acima de **16 MP**, em geral o perfil Alto) o formato **padrão passa a ser JPG**. Se o usuário escolher **PNG**, o diálogo informa que o processamento pode demorar e **só gera depois do aceite** (botão "Aceitar e baixar PNG"). Abaixo do limite nada muda (padrão PNG, sem aviso). O arquivo baixado é sempre PNG ou JPG, **nunca WebP**: o WebP é só o formato interno de armazenamento (biblioteca e parede) e não chega ao computador do usuário. O limite de 16 MP é **proposta** a confirmar. |
+| M4-18 | **Formato padrão da exportação e aviso do PNG em imagens grandes.** Um PNG de 28 MP é lento de gerar e pesa muito; o JPG não tem transparência, é rápido e abre em qualquer computador (é o espírito da opção (d) da ADR-16, aplicado à exportação). | **Decisão (02/11):** nos **casos limite** (saída acima de **16 MP**, em geral o perfil Alto) o formato **padrão passa a ser JPG**. Se o usuário escolher **PNG**, o diálogo informa que o processamento pode demorar e **só gera depois do aceite** (botão "Aceitar e baixar PNG"). Abaixo do limite nada muda (padrão PNG, sem aviso). O arquivo baixado é sempre PNG ou JPG, **nunca WebP**: o WebP é só o formato interno de armazenamento (biblioteca e parede) e não chega ao computador do usuário. O limite de 16 MP foi aprovado com a A-28 (02/11). |
 
 Contradições menores, corrigidas sem decisão nova (DS-02: a documentação prevalece sobre o protótipo):
 - O protótipo 08 pré-seleciona "Excluir" e o protótipo 12 desenha o painel do placeholder na coluna esquerda: valem M4-03 e M4-08.
@@ -50,7 +50,7 @@ Contradições menores, corrigidas sem decisão nova (DS-02: a documentação pr
 
 ### 0.2 Premissas (a revisar pelo Nicholas)
 
-Formato **"Decidi <premissa> porque <causa> com o risco <o que pode dar errado>"**. **A-01 a A-21 aprovadas pelo Nicholas em 02/11**; as demais seguem em revisão.
+Formato **"Decidi <premissa> porque <causa> com o risco <o que pode dar errado>"**. **A-01 a A-28 aprovadas pelo Nicholas em 02/11** (inclui o limite de 16 MP da A-28).
 
 | # | Premissa |
 |---|---|
