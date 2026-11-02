@@ -28,10 +28,10 @@ describe('criarClienteHttp — JSON', () => {
     expect(fetcher.mock.calls[0]![0]).toBe('/api/projetos');
   });
 
-  it('obterConfig faz GET /api/config e devolve o limite de upload (A-28)', async () => {
-    const fetcher = fetcherCom(resposta({ uploadMaxMb: 12 }));
+  it('obterConfig faz GET /api/config e devolve o limite de upload e o intervalo do rascunho (A-28, M3-07)', async () => {
+    const fetcher = fetcherCom(resposta({ uploadMaxMb: 12, autosaveMinutos: 3 }));
     const api = criarClienteHttp(fetcher);
-    await expect(api.obterConfig()).resolves.toEqual({ uploadMaxMb: 12 });
+    await expect(api.obterConfig()).resolves.toEqual({ uploadMaxMb: 12, autosaveMinutos: 3 });
     expect(fetcher.mock.calls[0]![0]).toBe('/api/config');
   });
 
@@ -154,5 +154,99 @@ describe('ErroApi', () => {
     expect(erro).toBeInstanceOf(ErroApi);
     expect(erro.status).toBe(500);
     expect(erro.message).toContain('500');
+  });
+});
+
+describe('criarClienteHttp — variantes e rascunhos (M3, §5)', () => {
+  const base = '/api/projetos/p1/variantes';
+
+  it('obterVariante faz GET e devolve a variante', async () => {
+    const fetcher = fetcherCom(resposta({ _id: 'v1', nome: 'Base' }));
+    const api = criarClienteHttp(fetcher);
+    await expect(api.obterVariante('p1', 'v1')).resolves.toEqual({ _id: 'v1', nome: 'Base' });
+    expect(fetcher.mock.calls[0]![0]).toBe(`${base}/v1`);
+  });
+
+  it('criarVariante faz POST com o corpo e devolve a variante de dentro de { variante }', async () => {
+    const fetcher = fetcherCom(resposta({ variante: { _id: 'v2', nome: 'Pirâmide' } }, 201));
+    const api = criarClienteHttp(fetcher);
+    const corpo = {
+      sessaoId: 's1',
+      nome: 'Pirâmide',
+      grid: {},
+      bordaPadrao: {},
+      areaUtil: null,
+      origem: { tipo: 'vazia' as const },
+    };
+    await expect(api.criarVariante('p1', corpo as never)).resolves.toEqual({ _id: 'v2', nome: 'Pirâmide' });
+    const [url, init] = fetcher.mock.calls[0]!;
+    expect(url).toBe(base);
+    expect(init?.method).toBe('POST');
+    expect(JSON.parse(String(init?.body))).toEqual(corpo);
+  });
+
+  it('renomearVariante faz PATCH com o nome; excluirVariante faz DELETE', async () => {
+    const fetcher = fetcherCom(resposta({ _id: 'v1', nome: 'Nova' }), new Response(null, { status: 204 }));
+    const api = criarClienteHttp(fetcher);
+    await api.renomearVariante('p1', 'v1', 'Nova');
+    await expect(api.excluirVariante('p1', 'v1')).resolves.toBeUndefined();
+    expect(fetcher.mock.calls[0]![0]).toBe(`${base}/v1`);
+    expect(fetcher.mock.calls[0]![1]?.method).toBe('PATCH');
+    expect(JSON.parse(String(fetcher.mock.calls[0]![1]?.body))).toEqual({ nome: 'Nova' });
+    expect(fetcher.mock.calls[1]![1]?.method).toBe('DELETE');
+  });
+
+  it('salvarRascunho faz PUT em /rascunho', async () => {
+    const fetcher = fetcherCom(resposta({ salvoEm: '2026-11-02T13:00:00.000Z' }));
+    const api = criarClienteHttp(fetcher);
+    const corpo = { sessaoId: 's1', revisaoBase: 2, conteudo: {} };
+    await expect(api.salvarRascunho('p1', 'v1', corpo as never)).resolves.toEqual({
+      salvoEm: '2026-11-02T13:00:00.000Z',
+    });
+    const [url, init] = fetcher.mock.calls[0]!;
+    expect(url).toBe(`${base}/v1/rascunho`);
+    expect(init?.method).toBe('PUT');
+    expect(JSON.parse(String(init?.body))).toEqual(corpo);
+  });
+
+  it('obterRascunho faz GET, com ou sem sessaoId', async () => {
+    const fetcher = fetcherCom(resposta({ sessaoId: 'a' }), resposta({ sessaoId: 'b' }));
+    const api = criarClienteHttp(fetcher);
+    await api.obterRascunho('p1', 'v1', 'a b');
+    await api.obterRascunho('p1', 'v1');
+    expect(fetcher.mock.calls[0]![0]).toBe(`${base}/v1/rascunho?sessaoId=a%20b`);
+    expect(fetcher.mock.calls[1]![0]).toBe(`${base}/v1/rascunho`);
+  });
+
+  it('apagarRascunho faz DELETE com o sessaoId', async () => {
+    const fetcher = fetcherCom(new Response(null, { status: 204 }));
+    const api = criarClienteHttp(fetcher);
+    await expect(api.apagarRascunho('p1', 'v1', 's1')).resolves.toBeUndefined();
+    expect(fetcher.mock.calls[0]![0]).toBe(`${base}/v1/rascunho?sessaoId=s1`);
+    expect(fetcher.mock.calls[0]![1]?.method).toBe('DELETE');
+  });
+
+  it('definirUltimaVariante faz PATCH no projeto com ultimaVarianteId', async () => {
+    const fetcher = fetcherCom(resposta({ _id: 'p1', ultimaVarianteId: 'v2' }));
+    const api = criarClienteHttp(fetcher);
+    await api.definirUltimaVariante('p1', 'v2');
+    const [url, init] = fetcher.mock.calls[0]!;
+    expect(url).toBe('/api/projetos/p1');
+    expect(init?.method).toBe('PATCH');
+    expect(JSON.parse(String(init?.body))).toEqual({ ultimaVarianteId: 'v2' });
+  });
+
+  it('o 409 do rascunho vira ErroApi com o corpo da API', async () => {
+    const corpo = {
+      erro: 'Esta variante foi salva em outra aba.',
+      revisao: 3,
+      salvaEm: 'x',
+      salvaPorSessao: 'b',
+    };
+    const api = criarClienteHttp(fetcherCom(resposta(corpo, 409)));
+    const erro = await api.salvarRascunho('p1', 'v1', {} as never).catch((e: unknown) => e);
+    expect(erro).toBeInstanceOf(ErroApi);
+    expect((erro as ErroApi).status).toBe(409);
+    expect((erro as ErroApi).corpo).toEqual(corpo);
   });
 });
