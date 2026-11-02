@@ -16,8 +16,10 @@ import {
   esperarPalco,
   fotoDaApi,
   idsDasFotos,
+  lerCampo,
   lerProjeto,
   nomeUnico,
+  paraTela,
   salvarVarianteApi,
 } from './ajudantes';
 
@@ -273,5 +275,171 @@ test.describe('memória com 40 fotos (spec M2 §7)', () => {
     );
     expect(heapMb).toBeLessThan(ORCAMENTO_MEMORIA_MB);
     if (delta !== null) expect(delta).toBeLessThan(ORCAMENTO_MEMORIA_MB);
+  });
+});
+
+// ---- M3 (spec M3 A-29): template, arrasto do conjunto e comparação ----
+// Os valores medidos vão para o MEMORY.md; os testes guardam contra regressões grosseiras.
+
+const META_APLICAR_TEMPLATE_MS = 200;
+
+async function amostrarQuadros(page: Page, mexer: () => Promise<void>) {
+  await page.evaluate(() => {
+    const w = window as unknown as { __quadros: number[]; __parar: boolean };
+    w.__quadros = [];
+    w.__parar = false;
+    const laco = (t: number) => {
+      w.__quadros.push(t);
+      if (!w.__parar) requestAnimationFrame(laco);
+    };
+    requestAnimationFrame(laco);
+  });
+  await mexer();
+  const quadros = await page.evaluate(() => {
+    const w = window as unknown as { __quadros: number[]; __parar: boolean };
+    w.__parar = true;
+    return w.__quadros;
+  });
+  const intervalos = quadros.slice(1).map((t, i) => t - quadros[i]!);
+  const medio = intervalos.reduce((a, b) => a + b, 0) / intervalos.length;
+  const ordenados = [...intervalos].sort((a, b) => a - b);
+  return { quadros: quadros.length, medio, p95: ordenados[Math.floor(ordenados.length * 0.95)]! };
+}
+
+test.describe('template e comparação (spec M3 A-29)', () => {
+  test('aplicar o template e abrir o posicionamento levam menos de 200 ms; arrastar o conjunto (12 vagas)', async ({
+    page,
+    request,
+  }) => {
+    const p = await criarProjetoComEscalaLinear(request, nomeUnico('Desempenho template'));
+    await page.goto(`/projetos/${p.id}`);
+    await esperarPalco(page);
+    await page.getByRole('button', { name: 'Templates', exact: true }).click();
+    const galeria = page.getByRole('dialog', { name: /Escolher template/ });
+    await galeria.getByRole('radio', { name: /^Base nivelada/ }).click();
+
+    // Do clique até o modo aparecer (inclui a pintura): o domínio calcula em poucos ms.
+    const inicio = Date.now();
+    await galeria.getByRole('button', { name: 'Posicionar na parede' }).click();
+    await expect(page.getByText('Posicionar template · Base nivelada')).toBeVisible();
+    const abrir = Date.now() - inicio;
+    console.log(`[template Base nivelada] abrir o posicionamento: ${abrir} ms`);
+    expect(abrir).toBeLessThanOrEqual(META_APLICAR_TEMPLATE_MS * 5);
+
+    const x0 = await lerCampo(page, 'X');
+    const y0 = await lerCampo(page, 'Y');
+    const centro = { x: x0 + 166.6 / 2, y: y0 + 85.7 / 2 };
+    const t = await amostrarQuadros(page, async () => {
+      const a = await paraTela(page, centro);
+      await page.mouse.move(a.x, a.y);
+      await page.mouse.down();
+      for (let volta = 0; volta < 3; volta += 1) {
+        const b = await paraTela(page, { x: centro.x + 30, y: centro.y + 20 });
+        await page.mouse.move(b.x, b.y, { steps: 60 });
+        await page.mouse.move(a.x, a.y, { steps: 60 });
+      }
+      await page.mouse.up();
+    });
+    console.log(
+      `[arrasto do conjunto, 10 vagas] ${t.quadros} quadros · média ${t.medio.toFixed(1)} ms (${(1000 / t.medio).toFixed(0)} fps) · p95 ${t.p95.toFixed(1)} ms`,
+    );
+    expect(t.medio).toBeLessThanOrEqual(TETO_QUADRO_MEDIO_MS);
+  });
+
+  test('pan e zoom na comparação com 2 × 40 fotos', async ({ page, request }) => {
+    test.setTimeout(120_000);
+    const p = await criarProjetoComEscalaLinear(request, nomeUnico('Desempenho comparação'));
+    // Fotos de câmera (12 MP) reduzidas pelo servidor ao perfil Leve, como no teste de memória do M2.
+    const grande = await readFile(await fotoSintetica(4000, 3000));
+    const imagens: { _id: string }[] = [];
+    for (let i = 0; i < 40; i += 1) {
+      const res = await request.post('/api/imagens', {
+        multipart: {
+          perfil: 'leve',
+          projetoId: p.id,
+          arquivo: { name: `camera-${i}.jpg`, mimeType: 'image/jpeg', buffer: grande },
+        },
+      });
+      imagens.push((await res.json()) as { _id: string });
+    }
+    const base = (await lerProjeto(request, p.id)).variantes[0]!;
+    const fotos = Array.from({ length: 40 }, (_, i) => ({
+      _id: (i + 1).toString(16).padStart(24, '0'),
+      imagemId: imagens[i]!._id,
+      imagemAnteriorId: null,
+      tamanho: { sugeridoId: '10x15', larguraCm: 10, alturaCm: 15 },
+      xCm: 10 + (i % 8) * 30,
+      yCm: 10 + Math.floor(i / 8) * 40,
+      recorte: { offsetX: 0, offsetY: 0 },
+      borda: { larguraCm: 1, cor: '#FFFFFF' },
+    }));
+    const grid = {
+      visivel: true,
+      snap: true,
+      passoCm: 5,
+      principalACada: 5,
+      cor: '#1F1B16',
+      opacidade: 0.08,
+    };
+    const salvo = await request.put(`/api/projetos/${p.id}/variantes/${p.varianteId}`, {
+      data: {
+        sessaoId: 'e2e',
+        revisaoBase: base.revisao,
+        grid,
+        bordaPadrao: { larguraCm: 0, cor: '#FFFFFF' },
+        areaUtil: base.areaUtil,
+        fotos,
+      },
+    });
+    expect(salvo.status()).toBe(200);
+    const copia = await request.post(`/api/projetos/${p.id}/variantes`, {
+      data: {
+        sessaoId: 'e2e',
+        nome: 'Cópia',
+        grid,
+        bordaPadrao: { larguraCm: 0, cor: '#FFFFFF' },
+        areaUtil: base.areaUtil,
+        origem: { tipo: 'copia', fotos },
+      },
+    });
+    expect(copia.status()).toBe(201);
+
+    await page.goto('about:blank');
+    const memoriaAntes = await memoriaDoNavegadorMb();
+    await page.goto(`/projetos/${p.id}/comparar`);
+    await expect(page.getByTestId('palco')).toHaveCount(2);
+    await page.waitForTimeout(1500);
+    const caixa = (await page.getByTestId('palco').first().boundingBox())!;
+    const cx = caixa.x + caixa.width / 2;
+    const cy = caixa.y + caixa.height / 2;
+    const t = await amostrarQuadros(page, async () => {
+      await page.mouse.move(cx, cy);
+      for (let i = 0; i < 20; i += 1) {
+        await page.mouse.wheel(0, i % 2 === 0 ? -200 : 200);
+        await page.waitForTimeout(16);
+      }
+      await page.mouse.down({ button: 'middle' });
+      for (let volta = 0; volta < 3; volta += 1) {
+        await page.mouse.move(cx + 200, cy + 100, { steps: 60 });
+        await page.mouse.move(cx, cy, { steps: 60 });
+      }
+      await page.mouse.up({ button: 'middle' });
+    });
+    const heapMb = await page.evaluate(
+      () =>
+        ((performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize ?? 0) /
+        1048576,
+    );
+    const memoriaDepois = await memoriaDoNavegadorMb();
+    const acrescimo = memoriaAntes !== null && memoriaDepois !== null ? memoriaDepois - memoriaAntes : null;
+    console.log(
+      `[comparação 2 × 40 fotos] memória do navegador +${acrescimo === null ? '?' : acrescimo.toFixed(0)} MB ·`,
+    );
+    console.log(
+      `[comparação 2 × 40 fotos] ${t.quadros} quadros · média ${t.medio.toFixed(1)} ms (${(1000 / t.medio).toFixed(0)} fps) · p95 ${t.p95.toFixed(1)} ms · heap JS ${heapMb.toFixed(0)} MB`,
+    );
+    expect(t.medio).toBeLessThanOrEqual(TETO_QUADRO_MEDIO_MS);
+    expect(heapMb).toBeLessThan(400);
+    if (acrescimo !== null) expect(acrescimo).toBeLessThan(400);
   });
 });
