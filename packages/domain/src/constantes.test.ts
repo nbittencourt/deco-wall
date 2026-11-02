@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  AVISO_CRIACAO_MS,
+  FALHAS_ANTES_DO_AVISO,
+  NOME_VARIANTE_MAX,
   BORDA_PADRAO,
   AREA_UTIL_MIN_CM,
   CORES_GRID,
@@ -224,5 +227,11 @@ describe('constantes do M2 (docs/specs/M2-biblioteca-e-composicao.md §4.1)', ()
 
   it('upload com 3 envios em paralelo (DV-10)', () => {
     expect(UPLOAD_PARALELO).toBe(3);
+  });
+
+  it('M3: nome da variante até 60 caracteres, aviso do rascunho após 2 falhas, aviso de criação por 6 s', () => {
+    expect(NOME_VARIANTE_MAX).toBe(60);
+    expect(FALHAS_ANTES_DO_AVISO).toBe(2);
+    expect(AVISO_CRIACAO_MS).toBe(6000);
   });
 });

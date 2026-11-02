@@ -110,6 +110,7 @@ describe('GET /api/projetos', () => {
       nome: 'A2',
       atualizadoEm: expect.any(String),
       qtdVariantes: 1,
+      semFoto: 0,
       temParede: false,
       thumbUrl: null,
     });
@@ -142,7 +143,8 @@ describe('GET /api/projetos/:id', () => {
     const criado = await criarProjetoApi(t.app, 'Sala');
     const res = await t.app.inject({ method: 'GET', url: `/api/projetos/${criado.projeto._id}` });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toEqual(JSON.parse(JSON.stringify(criado)));
+    // M3: a resposta traz também o resumo dos rascunhos elegíveis (M3-08).
+    expect(res.json()).toEqual({ ...JSON.parse(JSON.stringify(criado)), rascunhos: [] });
   });
 
   it('404 para id inexistente ou mal formado', async () => {

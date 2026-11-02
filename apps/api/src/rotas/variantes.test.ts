@@ -116,11 +116,20 @@ describe('PUT /api/projetos/:pid/variantes/:id — sucesso', () => {
     expect(revisao).toBe(base.revisao + 3);
   });
 
-  it('apaga o rascunho da própria sessão e preserva o das outras (SV-02)', async () => {
+  it('apaga o rascunho da própria sessão e os obsoletos; preserva o mais novo que a versão oficial (SV-02, A-10)', async () => {
     const { projeto, base } = await novo();
     const rascunhos = [
       rascunho({ _id: idFixture(401), varianteId: base._id, projetoId: projeto._id, sessaoId: 'sessao-a' }),
-      rascunho({ _id: idFixture(402), varianteId: base._id, projetoId: projeto._id, sessaoId: 'sessao-b' }),
+      // Mais novo que qualquer salvamento do teste: continua oferecível (M3-08).
+      rascunho({
+        _id: idFixture(402),
+        varianteId: base._id,
+        projetoId: projeto._id,
+        sessaoId: 'sessao-b',
+        salvoEm: new Date('2100-01-01T00:00:00Z'),
+      }),
+      // Mais velho que a nova versão oficial: obsoleto, apagado (A-10).
+      rascunho({ _id: idFixture(403), varianteId: base._id, projetoId: projeto._id, sessaoId: 'sessao-c' }),
     ];
     await t.db.collection('rascunhos').insertMany(rascunhos.map((r) => paraMongo(r) as never));
 
@@ -412,5 +421,27 @@ describe('recalibrar mantém as fotos (PRD aceite 5, RN-10, RN-35)', () => {
     };
     expect(depois.variantes[0]!.fotos).toEqual(fotos);
     expect(depois.variantes[0]!.areaUtil).toEqual(areaUtil());
+  });
+});
+
+describe('M3 — hard save sem escala (A-11)', () => {
+  it('422 "A parede está sem escala." quando há fotos e a parede não tem escala', async () => {
+    const { projeto, base } = await novo();
+    const res = await salvarVarianteApi(
+      t.app,
+      projeto._id,
+      base._id,
+      corpo(base, { areaUtil: null, fotos: [foto({ imagemId: null })] }),
+    );
+    expect(res.statusCode).toBe(422);
+    expect(res.json()).toMatchObject({ erro: 'A parede está sem escala.' });
+    const salva = await t.db.collection('variantes').findOne({ _id: new ObjectId(base._id) });
+    expect(salva!.revisao).toBe(base.revisao);
+  });
+
+  it('sem fotos, salvar sem escala continua valendo (grid e área útil do M1)', async () => {
+    const { projeto, base } = await novo();
+    const res = await salvarVarianteApi(t.app, projeto._id, base._id, corpo(base, { fotos: [] }));
+    expect(res.statusCode).toBe(200);
   });
 });

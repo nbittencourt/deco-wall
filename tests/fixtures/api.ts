@@ -32,7 +32,9 @@ export function relogio(inicio = '2026-10-24T12:00:00-03:00'): () => Date {
   };
 }
 
-export async function criarAppTeste(opcoes: { uploadMaxMb?: number } = {}): Promise<AppTeste> {
+export async function criarAppTeste(
+  opcoes: { uploadMaxMb?: number; autosaveMinutos?: number } = {},
+): Promise<AppTeste> {
   const { client, db } = await abrirBancoTesteLimpo();
   await executarMigracoes(db);
   const pasta = await mkdtemp(join(tmpdir(), 'parede-fotos-m1-'));
@@ -41,6 +43,7 @@ export async function criarAppTeste(opcoes: { uploadMaxMb?: number } = {}): Prom
     pastaFotos: pasta,
     mongo: client,
     uploadMaxMb: opcoes.uploadMaxMb ?? 50,
+    autosaveMinutos: opcoes.autosaveMinutos ?? 5,
     agora: relogio(),
   });
   await app.ready();
@@ -338,4 +341,56 @@ export interface VarianteJson {
   bordaPadrao: Record<string, unknown>;
   areaUtil: null | { xCm: number; yCm: number; larguraCm: number; alturaCm: number };
   fotos: Record<string, unknown>[];
+}
+
+// ---- M3: variantes e rascunhos (docs/specs/M3-variantes-templates-e-salvamento.md §5) ----
+
+export type OrigemVariante =
+  | { tipo: 'vazia' }
+  | { tipo: 'copia'; fotos: Record<string, unknown>[] }
+  | {
+      tipo: 'template';
+      templateId: string;
+      posicaoCm: { xCm: number; yCm: number };
+      borda: { larguraCm: number; cor: string };
+    };
+
+export async function criarVarianteApi(
+  app: FastifyInstance,
+  projetoId: string,
+  corpo: {
+    nome?: string;
+    sessaoId?: string;
+    grid?: Record<string, unknown>;
+    bordaPadrao?: Record<string, unknown>;
+    areaUtil?: Record<string, unknown> | null;
+    origem?: OrigemVariante;
+  } = {},
+): Promise<Resposta> {
+  return app.inject({
+    method: 'POST',
+    url: `/api/projetos/${projetoId}/variantes`,
+    payload: {
+      sessaoId: 'sessao-a',
+      nome: 'Variante 2',
+      grid: { visivel: true, snap: true, passoCm: 5, principalACada: 5, cor: '#1F1B16', opacidade: 0.08 },
+      bordaPadrao: { larguraCm: 0, cor: '#FFFFFF' },
+      areaUtil: null,
+      origem: { tipo: 'vazia' },
+      ...corpo,
+    },
+  });
+}
+
+export async function salvarRascunhoApi(
+  app: FastifyInstance,
+  projetoId: string,
+  varianteId: string,
+  corpo: Record<string, unknown>,
+): Promise<Resposta> {
+  return app.inject({
+    method: 'PUT',
+    url: `/api/projetos/${projetoId}/variantes/${varianteId}/rascunho`,
+    payload: corpo,
+  });
 }
