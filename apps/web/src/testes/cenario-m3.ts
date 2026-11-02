@@ -118,6 +118,8 @@ export interface OpcoesCenario {
   projeto?: Partial<ProjetoDto>;
   variantes?: VarianteDto[];
   rascunhos?: ResumoRascunhoDto[];
+  // Rascunhos já gravados no servidor falso (a chave é `<varianteId>:<sessaoId>`).
+  rascunhosGuardados?: Record<string, RascunhoGuardado>;
   autosaveMinutos?: number;
 }
 
@@ -147,7 +149,7 @@ export function criarCenario(opcoes: OpcoesCenario = {}) {
   const servidor = new Map<string, VarianteDto>(
     (opcoes.variantes ?? variantesPadrao()).map((v) => [v._id, structuredClone(v)]),
   );
-  const rascunhos = new Map<string, RascunhoGuardado>();
+  const rascunhos = new Map<string, RascunhoGuardado>(Object.entries(opcoes.rascunhosGuardados ?? {}));
   const dadosProjeto = projeto(opcoes.projeto);
   const lista = () => [...servidor.values()].sort((a, b) => a.ordem - b.ordem);
 

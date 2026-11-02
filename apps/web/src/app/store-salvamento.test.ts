@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ErroApi } from '../infra/dto';
 import {
   abrirCenario,
@@ -9,6 +9,8 @@ import {
   RASCUNHO_EM,
   SALVA_EM_2,
   variante,
+  variantesPadrao,
+  type OpcoesCenario,
 } from '../testes/cenario-m3';
 import { resumoDasVariantes } from './store';
 
@@ -306,20 +308,25 @@ describe('recuperação de rascunho (SV-03, SV-07, M3-08, A-08, A-09)', () => {
     ...sobrescrita,
   });
 
-  async function comRascunhoGuardado(resumoDoRascunho = resumo(), opcoes = {}) {
-    const c = await abrirCenario({ rascunhos: [resumoDoRascunho], ...opcoes });
-    c.rascunhos.set(`${ID_BASE}:aba-fechada`, {
-      sessaoId: 'aba-fechada',
-      revisaoBase: resumoDoRascunho.revisaoBase,
-      conteudo: {
-        grid: { ...c.servidor.get(ID_BASE)!.grid, passoCm: 10 },
-        bordaPadrao: { larguraCm: 3, cor: '#FFFFFF' },
-        areaUtil: c.servidor.get(ID_BASE)!.areaUtil,
-        fotos: [foto(1)],
+  async function comRascunhoGuardado(resumoDoRascunho = resumo(), opcoes: OpcoesCenario = {}) {
+    const base = (opcoes.variantes ?? variantesPadrao()).find((v) => v._id === ID_BASE)!;
+    return abrirCenario({
+      rascunhos: [resumoDoRascunho],
+      rascunhosGuardados: {
+        [`${resumoDoRascunho.varianteId}:aba-fechada`]: {
+          sessaoId: 'aba-fechada',
+          revisaoBase: resumoDoRascunho.revisaoBase,
+          conteudo: {
+            grid: { ...base.grid, passoCm: 10 },
+            bordaPadrao: { larguraCm: 3, cor: '#FFFFFF' },
+            areaUtil: base.areaUtil,
+            fotos: [foto(1)],
+          },
+          salvoEm: resumoDoRascunho.salvoEm,
+        },
       },
-      salvoEm: resumoDoRascunho.salvoEm,
+      ...opcoes,
     });
-    return c;
   }
 
   it('o rascunho elegível da variante aberta vira uma oferta ao abrir o projeto', async () => {
@@ -340,6 +347,21 @@ describe('recuperação de rascunho (SV-03, SV-07, M3-08, A-08, A-09)', () => {
       variantes: [variante({ revisao: 4 })],
     });
     expect(estado().ui.recuperacao).toMatchObject({ desatualizado: true });
+  });
+
+  it('base antiga: busca o conteúdo do rascunho para o diálogo mostrar as duas versões (A-09)', async () => {
+    const { api, estado } = await comRascunhoGuardado(resumo({ revisaoBase: 1 }), {
+      variantes: [variante({ revisao: 4 })],
+    });
+    await vi.waitFor(() => expect(estado().ui.recuperacao?.previa).not.toBeNull());
+    expect(api.obterRascunho).toHaveBeenCalledWith(ID_PROJETO, ID_BASE, 'aba-fechada');
+    expect(estado().ui.recuperacao?.previa?.fotos).toEqual([foto(1)]);
+  });
+
+  it('base atual: não busca o rascunho antes da escolha', async () => {
+    const { api, estado } = await comRascunhoGuardado();
+    expect(estado().ui.recuperacao?.previa).toBeNull();
+    expect(api.obterRascunho).not.toHaveBeenCalled();
   });
 
   it('sem rascunho elegível, nenhuma oferta', async () => {

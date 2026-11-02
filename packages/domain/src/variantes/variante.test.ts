@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { areaUtil, borda, foto as fotoFixture, grid, id } from '../../../../tests/fixtures/dominio';
 import type { FotoNaParede } from '../schemas';
-import { conteudoIgual, copiarParaNovaVariante, preencherVaga, semFoto } from './variante';
+import { conteudoIgual, copiarParaNovaVariante, preencherVaga, semFoto, vagaNoPonto } from './variante';
 
 // Operações de variante (M3-01, M3-04, A-06, A-23; docs/specs/M3-variantes-templates-e-salvamento.md §4.1).
 
@@ -103,5 +103,32 @@ describe('preencherVaga (M3-01, A-23)', () => {
   it('foto que já tem imagem não aceita outra (trocar a imagem é a RF-37, ideia futura)', () => {
     const original = foto({ imagemId: id(1) });
     expect(preencherVaga(original, id(2))).toEqual(original);
+  });
+});
+
+describe('vagaNoPonto (soltar uma miniatura sobre a vaga — M3-01, A-23)', () => {
+  const vagas = [
+    vaga({ _id: id(1), xCm: 10, yCm: 10, tamanho: { sugeridoId: '20x30', larguraCm: 20, alturaCm: 30 } }),
+    vaga({ _id: id(2), xCm: 20, yCm: 20, tamanho: { sugeridoId: '20x30', larguraCm: 20, alturaCm: 30 } }),
+    foto({ _id: id(3), xCm: 100, yCm: 10 }),
+  ];
+
+  it('acha a vaga que contém o ponto', () => {
+    expect(vagaNoPonto(vagas, { x: 12, y: 12 })?._id).toBe(id(1));
+  });
+
+  it('com várias sob o ponto, a do topo da pilha (a última)', () => {
+    expect(vagaNoPonto(vagas, { x: 25, y: 25 })?._id).toBe(id(2));
+  });
+
+  it('foto com imagem não conta, e fora de qualquer vaga: null', () => {
+    expect(vagaNoPonto(vagas, { x: 105, y: 15 })).toBeNull();
+    expect(vagaNoPonto(vagas, { x: 500, y: 500 })).toBeNull();
+  });
+
+  it('usa o retângulo externo (com a borda)', () => {
+    const comBorda = [vaga({ _id: id(1), xCm: 10, yCm: 10, borda: { larguraCm: 5, cor: '#FFFFFF' } })];
+    expect(vagaNoPonto(comBorda, { x: 33, y: 12 })?._id).toBe(id(1)); // 10 + 20 + 2 × 5 = 40
+    expect(vagaNoPonto(comBorda, { x: 51, y: 12 })).toBeNull();
   });
 });

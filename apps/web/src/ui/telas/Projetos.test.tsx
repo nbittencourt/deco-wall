@@ -83,6 +83,13 @@ describe('lista', () => {
     expect(screen.getByText('1 variante · parede não definida')).toBeTruthy();
   });
 
+  it('o card mostra o selo "N sem foto" só com vagas nas variantes salvas (M3-02, A-24)', async () => {
+    montar(apiCom([{ ...SALA, semFoto: 9 }, CORREDOR]));
+    await screen.findByText('Sala de estar');
+    expect(screen.getByText('9 sem foto')).toBeTruthy();
+    expect(screen.queryAllByText(/sem foto$/)).toHaveLength(1);
+  });
+
   it('card com parede mostra a miniatura; sem parede, "Sem foto da parede"', async () => {
     montar(apiCom([SALA, CORREDOR]));
     await screen.findByText('Sala de estar');

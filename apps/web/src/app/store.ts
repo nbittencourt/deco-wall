@@ -49,6 +49,7 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 import {
   ErroApi,
   type ClienteApi,
+  type ConteudoRascunho,
   type DadosPerspectiva,
   type ImagemDto,
   type OrigemVariante,
@@ -106,6 +107,8 @@ export interface Recuperacao {
   qtdFotos: number;
   // Base antiga (SV-07): a revisão oficial passou da que o rascunho conhecia.
   desatualizado: boolean;
+  // Com base antiga, o conteúdo do rascunho vem antes da escolha, para o diálogo mostrar as duas versões (A-09).
+  previa: ConteudoRascunho | null;
 }
 
 // M3, RN-32: o posicionamento do template, com as vagas já calculadas pelo domínio.
@@ -512,6 +515,7 @@ export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): Sto
           const resumo = resumosRascunho.find((r) => r.varianteId === varianteId);
           const variante = get().documento.variante;
           if (!resumo || !variante || variante._id !== varianteId) return;
+          const desatualizado = rascunhoDesatualizado(resumo, variante);
           set((estado) => {
             estado.ui.recuperacao = {
               varianteId,
@@ -519,9 +523,22 @@ export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): Sto
               salvoEm: new Date(resumo.salvoEm),
               revisaoBase: resumo.revisaoBase,
               qtdFotos: resumo.qtdFotos,
-              desatualizado: rascunhoDesatualizado(resumo, variante),
+              desatualizado,
+              previa: null,
             };
           });
+          if (!desatualizado) return;
+          const projetoId = get().documento.projeto?._id;
+          if (!projetoId) return;
+          api
+            .obterRascunho(projetoId, varianteId, resumo.sessaoId)
+            .then((rascunho) =>
+              set((estado) => {
+                const oferta = estado.ui.recuperacao;
+                if (oferta && oferta.varianteId === varianteId) oferta.previa = rascunho.conteudo;
+              }),
+            )
+            .catch(() => undefined);
         };
 
         // A contagem do seletor da ativa acompanha o conteúdo, mas a lista guarda a última situação salva.

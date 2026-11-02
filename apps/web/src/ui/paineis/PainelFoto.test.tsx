@@ -59,6 +59,8 @@ function montar(sobrescrita: Partial<PropsPainelFoto> = {}) {
     onPersonalizado: vi.fn(),
     onDuplicar: vi.fn(),
     onRemover: vi.fn(),
+    onPreencher: vi.fn(),
+    podePreencher: false,
     ...sobrescrita,
   };
   render(
@@ -251,6 +253,29 @@ describe('placeholder (M2-06, A-15)', () => {
     expect(props.onAjustarRecorte).not.toHaveBeenCalled();
     act(() => botao.focus());
     expect((await screen.findAllByText('Sem imagem para enquadrar.')).length).toBeGreaterThan(0);
+  });
+
+  it('"Preencher com a foto selecionada" usa a miniatura da biblioteca (M3-01, A-23)', () => {
+    const props = montar({ foto: PLACEHOLDER, imagem: undefined, podePreencher: true });
+    const botao = screen.getByRole('button', { name: 'Preencher com a foto selecionada' });
+    expect(botao.getAttribute('aria-disabled')).toBeNull();
+    fireEvent.click(botao);
+    expect(props.onPreencher).toHaveBeenCalledTimes(1);
+  });
+
+  it('sem miniatura selecionada, o botão fica inativo com o motivo', async () => {
+    const props = montar({ foto: PLACEHOLDER, imagem: undefined, podePreencher: false });
+    const botao = screen.getByRole('button', { name: 'Preencher com a foto selecionada' });
+    expect(botao.getAttribute('aria-disabled')).toBe('true');
+    fireEvent.click(botao);
+    expect(props.onPreencher).not.toHaveBeenCalled();
+    act(() => botao.focus());
+    expect((await screen.findAllByText('Selecione uma foto na biblioteca.')).length).toBeGreaterThan(0);
+  });
+
+  it('foto com imagem não mostra o botão de preencher', () => {
+    montar({ podePreencher: true });
+    expect(screen.queryByRole('button', { name: 'Preencher com a foto selecionada' })).toBeNull();
   });
 
   it('tamanho, orientação, borda, posição, Duplicar e Remover continuam ativos', () => {
