@@ -50,7 +50,7 @@ Contradições menores, corrigidas sem decisão nova (DS-02: a documentação pr
 
 ### 0.2 Premissas (a revisar pelo Nicholas)
 
-Formato **"Decidi <premissa> porque <causa> com o risco <o que pode dar errado>"**. **A-01 a A-14 aprovadas pelo Nicholas em 02/11**; as demais seguem em revisão.
+Formato **"Decidi <premissa> porque <causa> com o risco <o que pode dar errado>"**. **A-01 a A-21 aprovadas pelo Nicholas em 02/11**; as demais seguem em revisão.
 
 | # | Premissa |
 |---|---|
