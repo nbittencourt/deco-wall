@@ -13,13 +13,13 @@
 |---|---|---|---|
 | PR-M4-01 | **Aceite do M3** (§8 da spec M3). O M4 usa a store por variante, o histórico, os placeholders, a comparação e o diálogo de decisão da A-12. | spec e T1 | ✅ M3 aceito pelo Nicholas em 02/11 (já na `main`) |
 | PR-M4-02 | Escopo do marco: ciclo de vida das imagens, exportação, **pendências técnicas** (M4-01) e **RN-36** (M4-02). | spec | ✅ pedido pelo Nicholas em 02/11 |
-| PR-M4-03 | Lacunas da §0.1 decididas pelo Nicholas (M4-03 a M4-17). | T1 | ⏳ propostas abaixo, a revisar |
+| PR-M4-03 | Lacunas da §0.1 decididas pelo Nicholas (M4-01 a M4-18). | T1 | ✅ 02/11 (limite de 16 MP da M4-18 a confirmar) |
 | PR-M4-04 | Premissas da §0.2 revisadas pelo Nicholas. | T1 | ⏳ a revisar |
 | PR-M4-05 | Alterações da §11 aplicadas aos outros documentos depois da revisão, com este branch atualizado com a `main`. | T1 | ⏳ (a RN-36 já está no PRD v0.15) |
 
 ### 0.1 Lacunas e contradições (com proposta)
 
-M4-01 a M4-13 (ADR-16, opção (b)) e o princípio da M4-18 são **decisões do Nicholas de 02/11** (M4-03 a M4-12 aprovadas como propostas). As demais (M4-14 a M4-17) e o limite de 16 MP da M4-18 são **propostas** a aprovar, ajustar ou trocar.
+M4-01 a M4-17 (M4-13 = ADR-16, opção (b)) e o princípio da M4-18 são **decisões do Nicholas de 02/11** (M4-03 a M4-12 e M4-14 a M4-17 aprovadas como propostas). Só o limite de 16 MP da M4-18 segue como **proposta** a confirmar.
 
 | # | Lacuna ou contradição | Proposta / decisão |
 |---|---|---|
