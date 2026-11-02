@@ -9,7 +9,13 @@ import {
   AGRUPAR_SETAS_MS,
   BORDA_MAX_CM,
   DESLOCAMENTO_SEM_SNAP_CM,
+  FAIXA_HACHURA_CM,
+  FAIXA_HACHURA_MIN_PX,
   HISTORICO_LIMITE,
+  INTERVALO_PURGA_HORAS,
+  LADO_PREVIA_EXPORTACAO_PX,
+  LIMITE_PNG_MP,
+  QUALIDADE_JPG,
   MINIMO_DENTRO_CM,
   GRID_PADRAO,
   GRID_PASSO_MIN_PX,
@@ -233,5 +239,20 @@ describe('constantes do M2 (docs/specs/M2-biblioteca-e-composicao.md §4.1)', ()
     expect(NOME_VARIANTE_MAX).toBe(60);
     expect(FALHAS_ANTES_DO_AVISO).toBe(2);
     expect(AVISO_CRIACAO_MS).toBe(6000);
+  });
+});
+
+describe('M4 (docs/specs/M4-ciclo-de-vida-e-exportacao.md §4.1)', () => {
+  it('purga a cada 24 h, 30 dias de prazo', () => {
+    expect(INTERVALO_PURGA_HORAS).toBe(24);
+    expect(PRAZO_PURGA_DIAS).toBe(30);
+  });
+
+  it('exportação: JPG 0,92, prévia de 480 px, hachura de 0,5 cm (mínimo 3 px), PNG demorado acima de 16 MP', () => {
+    expect(QUALIDADE_JPG).toBe(0.92);
+    expect(LADO_PREVIA_EXPORTACAO_PX).toBe(480);
+    expect(FAIXA_HACHURA_CM).toBe(0.5);
+    expect(FAIXA_HACHURA_MIN_PX).toBe(3);
+    expect(LIMITE_PNG_MP).toBe(16);
   });
 });
