@@ -382,7 +382,7 @@ Vitest 1.341 testes (domínio, API e web), Playwright 99/99, `typecheck`, `lint`
 
 | # | Escolha | Por quê |
 |---|---|---|
-| I-01 | A criação de variante (`POST`) grava `atualizadoEm` (§5, item 4); só o `PATCH` de `ultimaVarianteId` o preserva. | **A confirmar com o Nicholas:** a M3-04 diz que `ultimaVarianteId` muda "ao trocar e ao criar (sem alterar `atualizadoEm`)" e a §5 manda atualizar `atualizadoEm` na criação. Segui a §5 (criar variante é uma edição real); a consequência é o projeto subir na lista de projetos ao criar uma variante. |
+| I-01 | A criação de variante (`POST`) grava `atualizadoEm` (§5, item 4); só o `PATCH` de `ultimaVarianteId` o preserva. | **Confirmada pelo Nicholas (02/11):** a M3-04 diz que `ultimaVarianteId` muda "ao trocar e ao criar (sem alterar `atualizadoEm`)" e a §5 manda atualizar `atualizadoEm` na criação. Segui a §5 (criar variante é uma edição real); a consequência é o projeto subir na lista de projetos ao criar uma variante. |
 | I-02 | O temporizador do rascunho passa por `agendador.periodico` (`apps/web/src/app/autosave.ts`). | Os testes capturam o intervalo e disparam os ticks sem relógio falso, que atrapalha a espera do Testing Library. Os E2E usam `page.clock`. |
 | I-03 | Em base antiga, a recuperação busca o conteúdo do rascunho antes da escolha (`ui.recuperacao.previa`) para o diálogo mostrar as duas versões (A-09). | O resumo do projeto só traz o número de fotos. |
 | I-04 | Duplicar pelo menu ⋯ de outra variante primeiro abre essa variante (com a decisão da A-12) e depois o diálogo de nome. | "Duplicar copia o estado em tela" (M3-04): só a ativa tem estado em tela. |
