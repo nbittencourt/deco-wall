@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Versão | 0.14 (alterações do M3: associação básica a placeholder, "N sem foto", variantes, template, rascunho e comparação) |
+| Versão | 0.15 (RN-36: mesma variante nos dois painéis da comparação; escopo do M4 no roadmap) |
 | Data | 2026-11-02 |
 | Autor | Nicholas Bittencourt |
 | Status | Requisitos e regras fechados — arquitetura em `docs/ARCHITECTURE.md` |
@@ -141,7 +141,7 @@ Prioridade: **P0** = obrigatório na v1 · **P1** = desejável na v1. Demais ite
 | RF-91 | Variantes de composição por projeto: criar (vazia ou duplicando), renomear, excluir, alternar. Parede compartilhada entre variantes. Criar, duplicar, renomear e excluir valem na hora (sem esperar o Salvar); duplicar copia o estado em tela; a variante nova nasce salva; a última variante não se exclui. Deixar a variante ativa com alterações não salvas pede antes **Salvar e continuar · Descartar · Cancelar**. | P0 | D |
 | RF-93 | **Templates de layout**: galeria de 12 modelos pré-definidos (catálogo e geometria em `docs/specs/templates.md`) para criar uma variante nova com vagas (*placeholders*) posicionadas. | P0 | U |
 | RF-94 | **Área útil por variante**: retângulo da parede onde as fotos devem ficar; definida após a escala e editável a qualquer momento. | P0 | U |
-| RF-92 | Comparação lado a lado de 2 variantes, com zoom e pan sempre sincronizados, permitindo focar um recorte da parede, e atalho "Parede inteira". Somente visualização (sem edição). Mostra o estado em memória (a variante ativa com marcador "não salva"), abre com a ativa e a seguinte, em visualização limpa (chaves Grid, Área útil e Alertas desligadas por padrão, valendo para os dois lados). | P0 | D |
+| RF-92 | Comparação lado a lado de 2 variantes, com zoom e pan sempre sincronizados, permitindo focar um recorte da parede, e atalho "Parede inteira". Somente visualização (sem edição). Mostra o estado em memória (a variante ativa com marcador "não salva"), abre com a ativa e a seguinte, em visualização limpa (chaves Grid, Área útil e Alertas desligadas por padrão, valendo para os dois lados). Os dois painéis podem mostrar a mesma variante (RN-36). | P0 | D |
 
 ## 6. Regras de negócio
 
@@ -182,6 +182,7 @@ Prioridade: **P0** = obrigatório na v1 · **P1** = desejável na v1. Demais ite
 | RN-24 | Imagem: "remover do projeto" (sai das variantes do projeto, fica na biblioteca) ou "excluir" (*soft delete* 30 dias, consultável e restaurável; depois remoção definitiva). Detalhes em `docs/specs/M0-setup.md` §4.10. | Decidido |
 | RN-26 | Salvamento manual tem prioridade sobre o automático; conflito entre sessões exige escolha do usuário, detectado também ao gravar o rascunho (que, em conflito, não é gravado). Detalhes em `docs/specs/M0-setup.md` §4.9. | Decidido |
 | RN-27 | Medidas em cm arredondadas a 1 mm. | Decidido |
+| RN-36 | Comparação de variantes: o seletor de cada painel aceita **qualquer** variante, inclusive a que já está no outro painel; nesse caso os dois painéis mostram a mesma variante e o sistema **não troca nem altera automaticamente** o outro lado (revê a troca de lados da spec M3, M3-10). Zoom e pan seguem sincronizados. (Decisão do Nicholas, 02/11; entra no M4.) | Decidido |
 
 ## 7. Requisitos não funcionais
 
@@ -231,7 +232,7 @@ Cada marco tem especificação própria em `docs/specs/`, escrita após o aceite
 | M1 — Parede e escala | Projetos (CRUD), upload e troca da parede, perspectiva + prévia, calibração, área útil, grid, canvas com zoom/pan, salvamento manual (*hard save*) | 01, 02, 04, 04a, 05, 11, 13 |
 | M2 — Biblioteca e composição | Upload em lote, biblioteca e filtros, adicionar/mover, tamanhos + personalizado, recorte, borda e cor, snap, medidas, sobreposição e "fora da área", desfazer | 03, 03a, 03b, 07, 16 |
 | M3 — Variantes, templates e salvamento | Variantes, galeria e posicionamento de templates, preenchimento básico das vagas, selo "N sem foto", *soft save* (rascunho e recuperação), diálogo de conflito, comparação | 06, 09, 14, 15, 15b |
-| M4 — Ciclo de vida e exportação | Remover/excluir/restaurar, placeholders, purga, exportação | 08, 10, 12 |
+| M4 — Ciclo de vida e exportação | Remover/excluir/restaurar, placeholders (exclusão que os gera, recomendação da imagem anterior), purga, exportação; **RN-36** (mesma variante nos dois painéis da comparação); **pendências técnicas** (ADR-16 perfil Alto, status HTTP de `/api/saude`, divisão do pacote JS, títulos dos diálogos, quedas 0xC0000409) | 08, 10, 12 |
 | M5 — v1 desejável | P1: RF-23 (contador de uso), RF-52 (linha forte do grid) | — |
 
 ### Ideias futuras (sem prioridade definida)
