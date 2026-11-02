@@ -255,11 +255,13 @@ describe('afastamento das vizinhas (M3-06, A-31, §4.3 passo 3)', () => {
     const b = retanguloExterno(fotos[1]!);
     // Sem sobreposição depois do afastamento.
     expect(a.xCm + a.larguraCm).toBeLessThanOrEqual(b.xCm + TOLERANCIA_CM);
-    // A primeira mantém o centro da célula (6; 8,5); a segunda é a empurrada, no eixo de menor penetração (X).
-    expect(b.yCm + b.alturaCm / 2).toBeCloseTo(8.5, 1);
-    expect(b.xCm + b.larguraCm / 2).toBeGreaterThan(19);
-    expect(a.xCm + a.larguraCm / 2).toBeCloseTo(6, 1);
-    expect(a.yCm + a.alturaCm / 2).toBeCloseTo(8.5, 1);
+    // O conjunto cresce 1 cm para cima e para a esquerda (as vagas crescidas passam das células) e a posição é o
+    // canto do conjunto: a primeira vaga mantém o centro da célula (6; 8,5), deslocado por esse 1 cm → (7; 9,5).
+    expect(a.xCm + a.larguraCm / 2).toBeCloseTo(7, 1);
+    expect(a.yCm + a.alturaCm / 2).toBeCloseTo(9.5, 1);
+    // A segunda é a empurrada, no eixo de menor penetração (X): mesma altura, mais à direita.
+    expect(b.yCm + b.alturaCm / 2).toBeCloseTo(9.5, 1);
+    expect(b.xCm + b.larguraCm / 2).toBeGreaterThanOrEqual(7 + 14 - TOLERANCIA_CM);
   });
 
   it('o conjunto passa a incluir a vaga empurrada', () => {

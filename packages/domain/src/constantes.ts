@@ -108,3 +108,10 @@ export const DESLOCAMENTO_SEM_SNAP_CM = 5; // A-04, A-25: cascata e cópia sem s
 export const AGRUPAR_SETAS_MS = 1000; // A-08: setas seguidas formam 1 passo de desfazer
 export const CASCATA_TENTATIVAS = 10; // A-04: deslocamentos da foto nova sobre outra
 export const PASSOS_COM_SHIFT = 5; // M2-01: Shift + seta anda 5 passos (ou 5 cm sem snap)
+
+// ---- M3 (docs/specs/M3-variantes-templates-e-salvamento.md §4.1) ----
+
+export const NOME_VARIANTE_MAX = 60; // M0 §4.5: nome da variante, 1 a 60 caracteres
+export const FALHAS_ANTES_DO_AVISO = 2; // A-07: falhas seguidas do rascunho até o aviso
+export const AVISO_CRIACAO_MS = 6000; // A-20: tempo do aviso "Variante criada com N vagas"
+export const PASSADAS_AFASTAMENTO = 10; // A-31: passadas do afastamento das vagas vizinhas
