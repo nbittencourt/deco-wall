@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Versão | 0.5 (decisões da spec M3: seletor de variante, comparação, modo Template, conflito) |
+| Versão | 0.6 (decisões da spec M4: ciclo de vida das imagens, exportação, comparação sem troca de lados) |
 | Data | 2026-11-02 |
 | Status | Identidade e protótipos de alta fidelidade aprovados para implementação |
 | Protótipos | `docs/design/` (ver §10) |
@@ -181,7 +181,9 @@ Somente tema claro na v1. Foco visível: `ring` 2 px `accent` com offset 2 px em
 | Caixa de aviso | `Alert` | `warning-tint`/`warning-ink` + ícone triângulo. Alerta: `danger-tint`/`danger-ink-strong` + ícone círculo. |
 | Campo de confirmação por palavra | `Input` | Acima do rodapé do diálogo de conflito: “Para confirmar, digite a palavra da opção”; cada botão de saída só ativa quando a palavra dele (minha · salva · nova) está digitada (spec M3, A-14). |
 | Diálogo | `Dialog` | 640 px, raio 16, título Newsreader 22–24, rodapé `surface-muted` com ações à direita (fantasma → secundário → primário). |
-| Thumbnail | — | Raio 6, altura 92; contador de uso “1×” em pill `ink` 85% no canto (RF-23 — P1, entra na marco M5; ausente até lá); selecionada = anel 2 px `accent`. |
+| Thumbnail | — | Raio 6, altura 92; contador de uso “1×” em pill `ink` 85% no canto (RF-23 — P1, entra na marco M5; ausente até lá); selecionada = anel 2 px `accent`; botão ⋯ de 28 px no canto superior direito (visível no hover, no foco e na miniatura selecionada) com o item “Remover ou excluir…” (M4). |
+| Item de imagem excluída | — | Linha com miniatura 44 × 56 esmaecida (55%, tons de cinza), nome em 13 px, “N dias restantes” em 12 px (`danger-ink` com 3 dias ou menos; “1 dia restante” no singular) e botão **Restaurar** (secundário, 32 px). Não é selecionável nem arrastável (M4, protótipo 12). |
+| Bloco “Foto anterior” | — | Card `accent-wash` com borda 2 px `accent`, raio 10, miniatura 48 × 32, “Foto anterior, restaurada” em 12 px `accent-ink` peso 600, nome do arquivo em 13 px e botão **Usar** (primário, 32 px). Só no painel do placeholder, quando a imagem anterior está ativa (M4). |
 | Ícones | — | Traço 1,6–1,8 px, 16–18 px, `currentColor`. `lucide-react` (ADR-15). Nunca emoji. |
 
 ## 7. Layout
@@ -196,7 +198,7 @@ Somente tema claro na v1. Foco visível: `ring` 2 px `accent` com offset 2 px em
 - **Painel sem seleção (protótipo 11):** Composição (Fotos, Área total e, só quando > 0, Sobreposições, Sem foto e **Fora da área**) · Escala · **Área útil desta variante** (L, A, X, Y + “Ajustar”) · Borda padrão · Grid (“Linha forte a cada” inativo). Cada seção abre com título Newsreader 18 px `ink` e divisória `line-faint` acima (padding 18 px); labels de campo seguem em `label`.
 - **Modos (perspectiva, calibração, área útil, posicionamento de template):** header escuro `ink` + área `stage-dark` + painel direito de 320–360 px.
 - **Prévia frontal (perspectiva):** sob demanda — botão secundário “Gerar prévia” no bloco “Prévia frontal”; estados: vazio (texto de instrução), gerando (indicador), pronta, **desatualizada** (prévia esmaecida + aviso “Os cantos mudaram” + botão reativado). Não há atualização ao vivo (DV-06).
-- **Comparação:** dois painéis lado a lado, cada um com seletor de variante (ponto âmbar se não salva), “N fotos” e a Área total em mono; selo “Somente visualização”; zoom/pan **sempre sincronizados** e botão “Parede inteira” (enquadra a parede nos dois). A alternância “Zoom sincronizado / Independente” do protótipo 06 **não** será implementada (DV-01). Visualização **limpa** por padrão (parede, fotos, placeholders), sem seleção, com três chaves no cabeçalho — **Grid**, **Área útil** e **Alertas** — desligadas ao abrir e valendo para os dois lados; o protótipo 06 desenha o grid sempre ligado (M3-10, A-16, A-17, A-26).
+- **Comparação:** dois painéis lado a lado, cada um com seletor de variante (ponto âmbar se não salva), “N fotos” e a Área total em mono; selo “Somente visualização”; zoom/pan **sempre sincronizados** e botão “Parede inteira” (enquadra a parede nos dois). A alternância “Zoom sincronizado / Independente” do protótipo 06 **não** será implementada (DV-01). Visualização **limpa** por padrão (parede, fotos, placeholders), sem seleção, com três chaves no cabeçalho — **Grid**, **Área útil** e **Alertas** — desligadas ao abrir e valendo para os dois lados; o protótipo 06 desenha o grid sempre ligado (M3-10, A-16, A-17, A-26). Os dois seletores aceitam **a mesma variante** nos dois painéis, sem troca de lados, sem mensagem e sem destaque do outro lado (RN-36, M4-02).
 
 ### 7.0 Modo de recorte (RN-14, DV-09)
 
@@ -214,7 +216,6 @@ Somente tema claro na v1. Foco visível: `ring` 2 px `accent` com offset 2 px em
 - Casos atuais:
   - botão **“Parede”** do header do editor quando alguma variante tem fotos (trocar a parede mantendo as fotos — RF-04). Sem fotos, o botão fica ativo e troca a parede com confirmação (RF-07, M1-05);
   - controle **“Linha forte a cada”** do painel Grid (RF-52 — P1, marco M5);
-  - filtro **“Excluídas”** no menu ⋯ da Biblioteca (ciclo de vida das imagens, marco M4);
   - campos **“Buscar projeto”** (Projetos) e **“Buscar por nome”** (Biblioteca) — campo inativo (`aria-disabled`, sem aceitar digitação), mesmo tooltip (RF-33b / RF-33c, Ideias futuras).
 - Controles indisponíveis **pelo estado** (não por versão futura) usam o mesmo padrão inativo, com tooltip que diz o que falta: Perspectiva e Calibrar sem parede (“Carregue a foto da parede primeiro.”), Área útil sem escala (“Defina a escala primeiro.”), Calibrar com a perspectiva aplicada (“Com a perspectiva aplicada, use Perspectiva para refazer a escala.” — RN-08), Adicionar sem escala (“Defina a escala primeiro.”) ou sem miniatura selecionada (“Selecione uma foto na biblioteca.”), Duplicar e ordem sem foto selecionada (“Selecione uma foto na parede.”), Ajustar recorte em placeholder (“Sem imagem para enquadrar.”).
 
@@ -230,6 +231,18 @@ Somente tema claro na v1. Foco visível: `ring` 2 px `accent` com offset 2 px em
 - **Painel direito do modo** (A-22, o protótipo 15 não o desenha): *Modelo* (nome, “N vagas”, total), *Borda das fotos* (somente leitura), *Posição do conjunto* (X e Y em `CampoCm`) e **Centralizar na área útil**; avisos “O template é maior que a área útil…” e “N vagas ficaram maiores que o espaço do modelo; as vizinhas foram afastadas.”. Palco só com parede, grid, área útil e conjunto; Desfazer, Refazer e Salvar inativos.
 - **Geometria:** a fonte é `docs/specs/templates.md` (TPL-07, TPL-08). Os esboços e as vagas dos protótipos são **ilustrativos** e não seguem a geometria aprovada.
 
+### 7.4 Ciclo de vida das imagens (RF-28, RF-29, RF-30a, RN-24)
+
+- **Diálogo “Remover ou excluir”** (protótipo 08, 640 px): cabeçalho com miniatura de 52 px, nome do arquivo em Newsreader 22 e “O que deseja fazer com esta imagem?”; dois radio cards, **Remover deste projeto** (marcado ao abrir; o protótipo marca “Excluir”, mas vale a opção reversível — M4-03) e **Excluir da biblioteca** (`danger-wash` quando marcado); tabela “Usada em N lugares” (Projeto · Variante · Vezes; rolável a partir de 6 linhas); aviso de que o histórico de desfazer das variantes afetadas será zerado; rodapé com **Cancelar** e a confirmação “Remover do projeto” (primário) ou “Excluir imagem” (`destructive`). “Remover deste projeto” fica inativo, com “Esta imagem não está neste projeto.”, quando o projeto aberto não a usa nem a carregou.
+- **Lista “Excluídas”** (protótipo 12): título “Biblioteca” com o contador “N excluídas”, chip “Excluídas ×”, texto “Removidas definitivamente após 30 dias. Restaurar não devolve a foto às composições.” e a lista de itens (§6). Vazio: “Nenhuma imagem excluída.”.
+- **Painel do placeholder** (protótipo 12, no painel direito — a coluna esquerda do protótipo é ilustrativa): cabeçalho “Sem foto”; o bloco “Foto anterior, restaurada” (§6) quando houver; **Escolher outra na biblioteca** (foca a primeira miniatura) e **Preencher com a foto selecionada**.
+
+### 7.5 Exportar (RF-80, RN-19)
+
+- **Diálogo “Exportar imagem”** (protótipo 10, 640 px): à esquerda a prévia da composição (gerada pelo mesmo compositor, lado maior de 480 px, reflete “Incluir grid”); à direita **Formato** (segmented PNG · JPG, 160 px), **Incluir grid** (`Switch`, desligado), **Resolução** em mono (“3072 × 2000 px”) e o texto “Espaços sem foto aparecem em vermelho hachurado. O que passar da parede é recortado.”; avisos quando houver: alterações não salvas e fotos com imagem indisponível.
+- Acima de 16 MP o formato abre em **JPG**; ao escolher PNG, `Alert` de aviso e o primário vira **“Aceitar e baixar PNG”**.
+- Rodapé: **Cancelar** e o primário “Baixar PNG” / “Baixar JPG” (ícone de download); gerando: “Gerando…”, botão desabilitado; erro: `Alert` vermelho com nova tentativa.
+
 ## 8. Textos e formatos (pt-BR)
 
 - Números: vírgula decimal, 1 casa para cm (“24,0 × 34,0 cm”), sinal “×” (U+00D7) com espaços.
@@ -241,6 +254,8 @@ Somente tema claro na v1. Foco visível: `ring` 2 px `accent` com offset 2 px em
 - Conflito (SV-05): título “Esta variante foi salva em outra aba”; “Usar a salva” · “Salvar a minha como nova variante” · “Manter a minha”, cada um liberado só depois de digitar a palavra (“salva”, “nova”, “minha”). Conflito achado no rascunho: `Alert` “Esta variante foi salva em outra aba às hh:mm.” com “Resolver…”.
 - Recuperação: “Recuperar alterações não salvas de hh:mm?” com Recuperar · Descartar; com base antiga, “Estas alterações foram feitas sobre a revisão R; a versão salva já está na revisão N.” e “Salvar como nova variante”.
 - Variante: “Salvar as alterações de “<nome>”?” com Cancelar · Descartar alterações · Salvar e continuar; excluir: “A variante “X” e as fotos posicionadas nela serão apagadas. As imagens da biblioteca continuam disponíveis.”.
+- Imagem (M4): “Remover ou excluir…”; “Remover deste projeto”: “Sai das variantes de <projeto>. Continua na biblioteca.”; “Excluir da biblioteca”: “Fica em Excluídas por 30 dias e pode ser restaurada. Nas composições, o espaço da foto é mantido sem imagem.”; avisos de 6 s: ““<nome>” removida do projeto: N fotos em M variantes.”, ““<nome>” excluída. N fotos viraram espaço sem foto em M variantes.”, ““<nome>” restaurada.”; “Foto anterior, restaurada”; “Usar”; “Escolher outra na biblioteca”; salvar com imagem excluída: “N fotos viraram espaço sem foto porque a imagem foi excluída em outra aba.”.
+- Exportar (M4): “Exportar imagem”; “Incluir grid”; “Baixar PNG” / “Baixar JPG”; “Gerando…”; “Não foi possível gerar a imagem.”; “Exporta o que está na tela, inclusive alterações não salvas.”; “Esta imagem tem N MP. Gerar PNG pode demorar bastante e o arquivo fica grande. JPG é mais rápido e abre em qualquer computador.”; “Aceitar e baixar PNG”.
 - Tom: frases curtas, instrução direta, sem jargão técnico (“escala”, não “homografia”).
 
 ## 9. Acessibilidade
@@ -268,11 +283,11 @@ Arquivos em `docs/design/`, no formato `.dc.html` do canvas de Design do Claude 
 | 05 | `Calibracao.dc.html` | Calibração linear | RF-10, RF-12, RN-08 |
 | 06 | `Comparacao.dc.html` | Comparar variantes (zoom sempre sincronizado; o grid desenhado é ilustrativo: vale a visualização limpa com chaves, M3-10) | RF-92, DV-01 |
 | 07 | `Upload.dc.html` | Upload em lote | RF-20/21/25, RN-20/21 |
-| 08 | `ExcluirImagem.dc.html` | Remover × excluir imagem | RF-29, RN-24 |
+| 08 | `ExcluirImagem.dc.html` | Remover × excluir imagem (o protótipo marca “Excluir” ao abrir; vale “Remover deste projeto” marcado — M4-03) | RF-29, RN-24 |
 | 09 | `Conflito.dc.html` | Conflito de versão | RF-73, SV-04–06 |
 | 10 | `Exportar.dc.html` | Exportar imagem | RF-80, RN-12, RN-19 |
 | 11 | `PainelComposicao.dc.html` | Painel direito sem seleção (com área útil; “Linha forte a cada” inativo) | RF-12, RF-50–53, RF-94, RN-03, RN-15 |
-| 12 | `BibliotecaExcluidas.dc.html` | Biblioteca filtrada em Excluídas + associação de placeholder | RF-28/29, RF-30a |
+| 12 | `BibliotecaExcluidas.dc.html` | Biblioteca filtrada em Excluídas + associação de placeholder (o bloco “Espaço sem foto” vale no painel direito do placeholder, não na coluna esquerda — M4-08) | RF-28/29, RF-30a |
 | 13 | `AreaUtil.dc.html` | Confirmação da área útil após a perspectiva | RF-94, RN-33, AU-01 |
 | 14 | `Templates.dc.html` | Galeria de templates (interativa) | RF-93, RN-30, TPL-04 |
 | 15 | `TemplatePosicionar.dc.html` | Posicionar template na área útil (sem painel direito e com palco claro: ilustrativo; vale a §7) | RN-32, TPL-06 |

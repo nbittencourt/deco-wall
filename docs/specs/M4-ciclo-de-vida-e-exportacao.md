@@ -5,7 +5,7 @@
 | Versão | 0.2 (revisada: lacunas M4-01 a M4-18 e premissas A-01 a A-28 aprovadas) |
 | Data | 2026-11-02 |
 | Base | `docs/PRD.md` v0.15 · `docs/ARCHITECTURE.md` v0.9 · `docs/DESIGN.md` v0.5 + protótipos 08, 10, 12 (e 03, 06, 11 no que tocam o M4) · `docs/specs/M0-setup.md` v0.6 (§4.10) · `docs/specs/M1-parede-e-escala.md` v0.3 · `docs/specs/M2-biblioteca-e-composicao.md` v0.4 · `docs/specs/M3-variantes-templates-e-salvamento.md` (aceita) · `MEMORY.md` (Questões em aberto) |
-| Status | **Revisada pelo Nicholas** (02/11): lacunas (§0.1) e premissas (§0.2) aprovadas. Escrita só com a documentação (regra do `CLAUDE.md`). Faltam a aplicação da §11 aos outros documentos (PR-M4-05) e a conclusão da spec pelo Nicholas; a implementação só começa depois (gate). |
+| Status | **Revisada pelo Nicholas** (02/11): lacunas (§0.1) e premissas (§0.2) aprovadas. Escrita só com a documentação (regra do `CLAUDE.md`). §11 aplicada aos outros documentos em 02/11 (PR-M4-05). Falta a conclusão da spec pelo Nicholas; a implementação só começa depois (gate). |
 
 ## 0. Pré-requisitos
 
@@ -15,7 +15,7 @@
 | PR-M4-02 | Escopo do marco: ciclo de vida das imagens, exportação, **pendências técnicas** (M4-01) e **RN-36** (M4-02). | spec | ✅ pedido pelo Nicholas em 02/11 |
 | PR-M4-03 | Lacunas da §0.1 decididas pelo Nicholas (M4-01 a M4-18). | T1 | ✅ 02/11 (inclui o limite de 16 MP da M4-18) |
 | PR-M4-04 | Premissas da §0.2 revisadas pelo Nicholas. | T1 | ✅ 02/11 (A-01 a A-28) |
-| PR-M4-05 | Alterações da §11 aplicadas aos outros documentos depois da revisão, com este branch atualizado com a `main`. | T1 | ⏳ (a RN-36 já está no PRD v0.15) |
+| PR-M4-05 | Alterações da §11 aplicadas aos outros documentos depois da revisão, com este branch atualizado com a `main`. | T1 | ✅ 02/11 (PRD v0.16, DESIGN v0.6, ARCHITECTURE v0.10, specs M0, M2 e M3) |
 
 ### 0.1 Lacunas e contradições (com proposta)
 
@@ -315,7 +315,7 @@ Dependências novas: nenhuma prevista. Qualquer uma para e pede aprovação.
 
 ## 11. Alterações a fazer em outros documentos (após a revisão, PR-M4-05)
 
-**Já aplicada (02/11):** PRD v0.15 — RN-36, RF-92 ("os dois painéis podem mostrar a mesma variante") e linha do M4 no roadmap com o escopo desta spec.
+**Aplicadas em 02/11** (PRD v0.16, DESIGN v0.6, ARCHITECTURE v0.10 e specs M0, M2 e M3); a tabela abaixo fica como registro do que mudou. Antes, em 02/11: PRD v0.15 com a RN-36, o RF-92 e a linha do M4 no roadmap.
 
 | Documento | Alteração prevista |
 |---|---|

@@ -235,13 +235,13 @@ Operação atômica: o *hard save* usa `updateOne({ _id, revisao: revisaoBase },
 
 | Ação | Efeito |
 |---|---|
-| **Remover do projeto** | Remove a imagem de todas as variantes do projeto aberto. A imagem continua na biblioteca. Exige que não haja alterações sem *hard save*; gera nova revisão das variantes afetadas. |
-| **Excluir** | Mostra as associações (projetos e variantes que a usam) e pede confirmação. Marca `excluidaEm` e `purgaEm = +30 dias`; some da biblioteca ativa. Em todas as variantes e rascunhos que a usam, a foto vira **placeholder**: `imagemAnteriorId = id`, `imagemId = null`, mantendo tamanho, posição e borda (variantes afetadas ganham nova revisão). |
-| **Consultar excluídas** | Filtro "Excluídas" na biblioteca, com dias restantes até a purga. |
-| **Restaurar** | Limpa `excluidaEm`/`purgaEm`; volta à biblioteca ativa. **Não** repõe a imagem nos placeholders automaticamente. |
-| **Associar foto ao placeholder** | O placeholder aceita qualquer imagem da biblioteca (arrastar ou escolher). Se a `imagemAnteriorId` estiver ativa (restaurada), ela aparece em destaque como recomendação. |
+| **Remover do projeto** | Remove a imagem de todas as variantes do projeto aberto. A imagem continua na biblioteca. Exige que a variante ativa esteja salva (antes: Salvar e continuar · Descartar · Cancelar); gera `revisao + 1` nas variantes afetadas, **sem alterar `salvaEm` nem `salvaPorSessao`**. Faz o mesmo nos rascunhos do projeto, sem mudar `salvoEm` nem `revisaoBase`. Sai de `imagens.projetos` (spec M4, M4-04, A-05). |
+| **Excluir** | Mostra as associações (projetos e variantes que a usam) e pede confirmação. Marca `excluidaEm` e `purgaEm = +30 dias`; some da biblioteca ativa. Em todas as variantes e rascunhos que a usam, a foto vira **placeholder**: `imagemAnteriorId = id`, `imagemId = null`, mantendo tamanho, posição, borda e recorte (variantes afetadas ganham `revisao + 1`, sem alterar `salvaEm` nem `salvaPorSessao`). Vale para **todos os projetos**; `imagens.projetos` **não muda**; idempotente (imagem já excluída responde 200 sem converter). Exige a ativa salva, como em "Remover do projeto". O *hard save* com foto de imagem excluída converte em placeholder em vez de recusar (spec M4, M4-05, M4-06). |
+| **Consultar excluídas** | Filtro "Excluídas" na biblioteca, só com `purgaEm` futuro, com os dias restantes (arredondados para cima) até a purga. |
+| **Restaurar** | Limpa `excluidaEm`/`purgaEm`; volta à biblioteca ativa, na hora e sem confirmação. **Não** repõe a imagem nos placeholders automaticamente. Imagem com `purgaEm` vencido não é restaurável (410), mesmo que a purga ainda não tenha rodado. |
+| **Associar foto ao placeholder** | O placeholder aceita qualquer imagem da biblioteca (arrastar ou escolher). Se a `imagemAnteriorId` estiver ativa (restaurada), ela aparece em destaque como recomendação no **painel direito do placeholder** (bloco "Foto anterior, restaurada", botão **Usar**); imagem excluída ou purgada não é recomendada (spec M4, M4-08). |
 | **Indicador** | Seletor de variantes e lista de projetos sinalizam variantes com placeholders sem foto (quantidade). |
-| **Purga** | Rotina na inicialização da API e a cada 24 h: apaga documento e arquivos de imagens com `purgaEm` vencido e zera `imagemAnteriorId` que apontava para elas (placeholder continua, sem recomendação). |
+| **Purga** | Rotina na inicialização da API e a cada 24 h: apaga documento e arquivos de imagens com `purgaEm` vencido e zera `imagemAnteriorId` que apontava para elas (placeholder continua, sem recomendação). Ordem por imagem (sem transação): (1) zera `imagemAnteriorId` nas variantes e rascunhos, sem mudar revisão; (2) apaga `render` e `thumb` (arquivo ausente conta como feito; outro erro mantém o documento para a próxima rodada); (3) apaga o documento. Idempotente, sem rodadas sobrepostas, e uma falha não interrompe as outras imagens (spec M4, M4-09). |
 | **Placeholder na tela** | Vermelho hachurado com ícone e tamanho em mono (DESIGN §2.2), no tamanho externo da foto; selecionável, movível e com as mesmas regras de snap/medida. Vale também para vagas de template (DM-16). |
 | **Placeholder na exportação** | Retângulo **vermelho hachurado, semitransparente**, no tamanho externo (exceção explícita à RN-19). |
 
@@ -283,7 +283,7 @@ Scripts na raiz:
 | Config | Lê `.env`, valida: `PASTA_FOTOS` existe e é gravável; `MONGODB_URI` válido e Mongo acessível; portas, `AUTOSAVE_MINUTOS` e `UPLOAD_MAX_MB` numéricos e positivos. Erro → mensagem clara e encerra |
 | Mongo | Conexão única (driver oficial), migração `0001-inicial` |
 | Armazenamento | Cria subpastas; helper de gravação atômica |
-| Rotas | `GET /api/saude` → `{ api: 'ok', mongo: 'ok'|'erro', pasta: 'ok'|'erro', versao }` |
+| Rotas | `GET /api/saude` → `{ api: 'ok', mongo: 'ok'|'erro', pasta: 'ok'|'erro', versao }`; **503** (mesmo corpo) quando `mongo` ou `pasta` está em `erro` (spec M4, M4-14) |
 | Servidor | Escuta em `127.0.0.1`; log via logger nativo do Fastify |
 | Produção local | Serve `apps/web/dist` como estático em `start` |
 

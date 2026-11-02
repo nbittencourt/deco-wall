@@ -2,9 +2,9 @@
 
 | Campo | Valor |
 |---|---|
-| Versão | 0.9 |
+| Versão | 0.10 (M4: ciclo de vida, exportação, ADR-16 decidida) |
 | Data | 2026-11-02 |
-| Base | `docs/PRD.md` v0.14 |
+| Base | `docs/PRD.md` v0.16 |
 | Status | Decisões fechadas; modelo de dados em `docs/specs/M0-setup.md` §4 |
 
 > **Objetivo deste arquivo:** registrar a arquitetura e cada decisão técnica (ADR) com critérios, alternativas avaliadas e consequências. Toda escolha de biblioteca ou componente nova entra aqui antes de entrar no código.
@@ -142,6 +142,8 @@ Decidido: **sharp no servidor**. Upload envia o original via localhost (custo ir
 
 Detecção de duplicatas: **não** será feita (decidido 17/10).
 
+Exceção (M4, ADR-16, decidida em 02/11): a **retificada** da parede é codificada em WebP com qualidade **0,80** em todos os perfis, no Worker e na conferência do servidor. Fotos e parede enviada seguem a tabela acima. O WebP é só formato interno de armazenamento: o que o usuário baixa é sempre PNG ou JPG (ADR-08).
+
 ### ADR-06 — Entrada de arquivos · **Decidido**
 
 `<input type="file" multiple>`, `<input webkitdirectory>` e drag-and-drop, enviando via `multipart/form-data` com progresso por arquivo. A File System Access API **deixa de ser necessária** (as fotos passam a viver em `PASTA_FOTOS`, servidas pela API).
@@ -182,6 +184,8 @@ Nomes por id (o nome original fica no Mongo). Gravação atômica (arquivo tempo
 - Domínio gera **lista de comandos de desenho** a partir da variante; a mesma lista alimenta Konva e exportador.
 - Exportador desenha em `OffscreenCanvas` na resolução da parede retificada, uma imagem por vez; com/sem grid; sem overlay (RN-19). Download PNG/JPG.
 - Imagens servidas na **mesma origem** (`/api`) para não "contaminar" o canvas por CORS e bloquear a exportação.
+- **Onde roda (M4, M4-12):** em **Web Worker** (`exportar.worker.ts`), sem Konva: o Worker recebe os comandos em cm e as URLs, busca cada arquivo, decodifica uma imagem por vez (`createImageBitmap`), desenha em `OffscreenCanvas` e devolve o `Blob`. A prévia do diálogo usa o mesmo caminho com o lado maior de 480 px. Fechar o diálogo aborta.
+- **Região e resolução (M4-10):** parede inteira, na resolução do bitmap exibido (retificada com perspectiva; foto processada com escala linear). PNG mantém o alfa fora da região retificada; JPG (qualidade 0,92) preenche de branco. Acima de 16 MP o formato padrão é JPG e o PNG só gera depois do aceite do aviso (M4-18).
 
 ### ADR-09 — UI: shadcn/ui + Tailwind 4 · **Decidido**
 
@@ -225,6 +229,7 @@ Componentes copiados para o projeto (Radix). Cor da borda: cores prontas em `Pop
 - **Estado em memória**: só a variante **ativa** tem estado de trabalho (conteúdo, pilha de desfazer, sujo, revisão base, conflito); as variantes salvas deixam conteúdo e pilha num cache por `varianteId` ao trocar. Deixar a ativa suja pede antes Salvar e continuar · Descartar · Cancelar (spec M3, M3-03 e A-05).
 - **Comparação lado a lado**: 2 viewports com **zoom e pan sincronizados**, podendo enquadrar um recorte da parede. **Modo comparação é somente visualização**: nenhuma edição em nenhuma das duas variantes; sair da comparação volta à edição da variante ativa. Mostra o estado em memória e usa **viewport controlado** (um só `{ centroCm, zoom }` aplicado aos dois palcos de leitura; spec M3, M3-10 e A-17).
 - **Desfazer por variante** (ADR-03).
+- **RN-36 (M4-02):** os dois seletores da comparação aceitam qualquer variante, inclusive a do outro painel; a escolha só muda o painel em que foi feita, sem troca de lados. Revê a troca de lados da spec M3 (M3-10).
 
 ### ADR-13 — Servidor local: Node + Fastify · **Decidido**
 
@@ -238,7 +243,7 @@ Rotas iniciais (detalhar com o modelo de dados):
 
 | Recurso | Operações |
 |---|---|
-| `/api/imagens` | upload (lote, com perfil), listar, obter metadados, excluir |
+| `/api/imagens` | upload (lote, com perfil), listar (`?situacao=ativas\|excluidas`), obter metadados, excluir (`DELETE /api/imagens/:id`, *soft delete* de 30 dias), `GET /api/imagens/:id/associacoes`, `POST /api/imagens/:id/restaurar` (410 se vencida) — spec M4 §5 |
 | `/api/imagens/:id/arquivo` | render / thumb (cache imutável — RN-21) |
 | `/api/config` | valores do `.env` que a web precisa (`uploadMaxMb`, `autosaveMinutos`) — spec M2, A-28; spec M3, M3-07 |
 | `/api/projetos` | listar, criar, obter, renomear, excluir |
@@ -246,6 +251,8 @@ Rotas iniciais (detalhar com o modelo de dados):
 | `/api/projetos/:id/variantes` | criar (vazia, cópia ou template), obter, renomear (`PATCH`), excluir, salvar (*hard save* com `revisao`) — spec M3 §5 |
 | `/api/projetos/:id/variantes/:vid/rascunho` | rascunho (*soft save*) por sessão: `PUT` com conferência de revisão (409 sem gravar), `GET`, `DELETE` por sessão — spec M3 §5 |
 | `PATCH /api/projetos/:id` | `nome` e `ultimaVarianteId` (este não altera `atualizadoEm`) |
+| `DELETE /api/projetos/:id/imagens/:imagemId` | remover a imagem do projeto (tira as fotos das variantes e dos rascunhos; spec M4 §5) |
+| `GET /api/saude` | `{ api, mongo, pasta, versao }`; **503** quando `mongo` ou `pasta` está em `erro` (spec M4, M4-14) |
 
 ### ADR-14 — Fontes empacotadas com `@fontsource` · **Decidido**
 
@@ -267,7 +274,7 @@ Consequências: importar só os pesos usados (Newsreader 500 variável com `opsz
 
 Consequências: `strokeWidth` 1,6–1,8 e tamanho 16–18 px por padrão (DESIGN §6); ícone sem texto exige `aria-label`; ícones ausentes na biblioteca (ex.: imagem-cortada do placeholder) podem ser SVG próprio no mesmo estilo.
 
-### ADR-16 — Desempenho da retificação: o gargalo é a codificação WebP · **Proposta** (24/10, medição do M1; aguarda a decisão do Nicholas)
+### ADR-16 — Desempenho da retificação: o gargalo é a codificação WebP · **Decidido** (02/11: opção (b); medição do M1 em 24/10)
 
 Medição no Chromium (Worker com warp + codificação WebP; `performance.measure('deco:retificacao')`; máquina de desenvolvimento do Nicholas; E2E `tests/e2e/desempenho.spec.ts`):
 
@@ -280,8 +287,8 @@ Medição no Chromium (Worker com warp + codificação WebP; `performance.measur
 - O warp (a parte que a ADR-04 previa como risco) custa ~0,9 s em 28 MP: **o plano B (WebGL) não resolve nada** — o que domina é o encoder WebP (libwebp), igual no Chromium e no `sharp` (7 s em Node para a mesma imagem ruidosa). Mover a codificação para o servidor não ajuda.
 - Leve e Médio (o uso normal; Leve é o padrão) cumprem os 3 s com folga. **Só o perfil Alto, com foto de 28 MP, fica no limite (≈ 3 s) ou acima dele (fotos com textura).**
 - Otimizações aplicadas: laço do warp sem alocações e com saída em `Uint8Array` (de 0,97 para ~0,78 s em Node).
-- **Decisão provisória (até o Nicholas decidir):** manter o pipeline da ADR-04 (Worker → WebP, servidor confere e grava) e a qualidade da ADR-05; o orçamento de 3 s (§8) vale para Leve e Médio. Para o Alto, o E2E guarda contra regressões com teto de 4,5 s na foto sintética e imprime o tempo; o app já mostra "Aplicando perspectiva…" com **Cancelar** (aborta o Worker).
-- **Opções para reduzir o Alto, se o Nicholas quiser** (cada uma muda a ADR-05 ou a arquitetura): (a) limitar o lado maior da retificada a 4096 px em qualquer perfil (÷2,25 nos dois custos); (b) qualidade WebP 0,8 só na retificada (de 3 a 5× mais rápido em imagens com ruído, arquivos 2× menores); (c) dividir o warp em 2–4 Workers (−0,6 s; exige `SharedArrayBuffer`, logo cabeçalhos COOP/COEP na API); (d) JPEG quando a retificada não tem transparência (0,2 s, mas fora do `.webp` do modelo de dados).
+- **Decisão (Nicholas, 02/11): opção (b)** — WebP com qualidade 0,80 só na retificada, em todos os perfis (pipeline da ADR-04 mantido; fotos e parede enviada seguem a ADR-05). Meta: Alto com foto sintética ≤ 3 s (§8); o tempo da foto ruidosa é medido e registrado no `MEMORY.md` (tarefa T13 do M4). Se o Alto ruidoso passar de 4,5 s, parar e perguntar (o próximo passo seria a opção (a), que reduz a exportação do Alto). O app mostra "Aplicando perspectiva…" com **Cancelar** (aborta o Worker). Antes da decisão valia o pipeline atual com teto de 4,5 s no E2E.
+- **Opções consideradas; escolhida a (b)** (cada uma muda a ADR-05 ou a arquitetura): (a) limitar o lado maior da retificada a 4096 px em qualquer perfil (÷2,25 nos dois custos); (b) qualidade WebP 0,8 só na retificada (de 3 a 5× mais rápido em imagens com ruído, arquivos 2× menores); (c) dividir o warp em 2–4 Workers (−0,6 s; exige `SharedArrayBuffer`, logo cabeçalhos COOP/COEP na API); (d) JPEG quando a retificada não tem transparência (0,2 s, mas fora do `.webp` do modelo de dados).
 
 ## 6. Estrutura do repositório
 
@@ -330,8 +337,10 @@ deco-wall/
           dto.ts            # formatos da API, porta `ClienteApi` e `ErroApi`
           clienteApi.ts     # implementação com fetch (upload com progresso por XMLHttpRequest)
           retificacao.ts    # cliente do Worker (prévia e retificação completa)
+          exportacao.ts     # M4: cliente do Worker de exportação (prévia e arquivo final)
           workers/
             retificar.worker.ts   # warp + codificação WebP fora da thread da UI (ADR-04)
+            exportar.worker.ts    # M4: compositor 2D em OffscreenCanvas, PNG/JPG (ADR-08)
         ui/
           canvas/
             theme.ts        # cores/medidas do canvas Konva — DESIGN §2.2
@@ -341,7 +350,7 @@ deco-wall/
             useImagem.ts
           paineis/          # Composição, Perspectiva, Calibração, Área útil, Foto, Recorte, Template (M3), BarraModo, CamposAreaUtil
           telas/            # Projetos, Editor, Comparação, /dev/ui
-            editor/         # HeaderEditor, Biblioteca, DialogoUpload, ToolbarCanvas, EstadoVazio, cenas.ts; M3: SeletorVariante, DialogosVariante (nome, excluir, decisão), DialogoTemplates, DialogoConflito (e variante excluída), DialogoRecuperar, DialogosGlobais (monta os três diálogos de conflito e recuperação)
+            editor/         # HeaderEditor, Biblioteca, DialogoUpload, ToolbarCanvas, EstadoVazio, cenas.ts; M3: SeletorVariante, DialogosVariante (nome, excluir, decisão), DialogoTemplates, DialogoConflito (e variante excluída), DialogoRecuperar, DialogosGlobais (monta os três diálogos de conflito e recuperação); M4: DialogoImagem (remover ou excluir), DialogoExportar e a lista de excluídas dentro de Biblioteca
               modos/        # ModoPerspectiva, ModoCalibracao, ModoAreaUtil, ModoRecorte, ModoTemplate (M3), LayoutModo
             comparacao/     # M3: tela Comparação (`/projetos/<id>/comparar`)
           componentes/
@@ -356,7 +365,7 @@ deco-wall/
       contexto.ts  erros.ts
       config.ts             # leitura/validação do .env
       rotas/                # projetos, parede (upload, escala, arquivos), variantes (hard save), saude; imagens e config (M2)
-      servicos/             # projetos, parede, variantes, imagem (sharp), imagens (biblioteca — M2), reparo (A-18); purga no M4
+      servicos/             # projetos, parede, variantes, imagem (sharp), imagens (biblioteca — M2), reparo (A-18), purga (M4: `purga.ts`, rotina da inicialização e de 24 h)
       repositorios/         # MongoDB (conexão e conversão ObjectId ↔ string hex)
       migracoes/            # 0001-inicial…
       armazenamento/        # PASTA_FOTOS (inclui gravação em duas fases)
@@ -372,6 +381,8 @@ deco-wall/
           catalogo.ts       # catálogo de templates (constante; fonte: docs/specs/templates.md)
           aplicacao.ts      # M3: tamanho da vaga, aplicação do template, conjunto (posição, centralizar, limite)
         variantes/          # M3: nomes, cópia, conteúdo igual, estado de salvamento, rascunho, esboço, preencher vaga
+        imagens/            # M4: converter em placeholder, remover fotos da imagem, usos, dias restantes, recomendação, escolha de variante na comparação (RN-36)
+        exportacao/         # M4: região, resolução, comandos de desenho, nome do arquivo, formato padrão
   tests/
     e2e/                    # Playwright: smoke, rede, projetos, parede e escala, salvamento, desempenho, biblioteca, composição (ajudantes.ts)
     fixtures/
@@ -406,6 +417,12 @@ Arquivos de dados fora do repositório: `PASTA_FOTOS` (definida no `.env`; estru
 
 **Conflito:** 409 do *hard save* abre o diálogo (Manter a minha · Usar a salva · Salvar a minha como nova variante, cada uma confirmada digitando a palavra); 409 do rascunho vira `Alert` com Resolver… e suspende o rascunho.
 
+**Remover do projeto (M4):** com a ativa salva (senão, a decisão Salvar e continuar · Descartar · Cancelar), `DELETE /api/projetos/:pid/imagens/:id` tira as fotos da imagem das variantes e rascunhos do projeto (`revisao + 1`, sem mexer em `salvaEm`); a web recarrega as variantes afetadas, zera a pilha delas e atualiza o resumo.
+
+**Excluir e restaurar (M4):** `DELETE /api/imagens/:id` marca 30 dias e converte as fotos em placeholder em todos os projetos (variantes e rascunhos); `POST …/restaurar` limpa a marca sem repor placeholders. A purga (inicialização e a cada 24 h) zera as referências, apaga os arquivos e depois o documento. O *hard save* com foto de imagem excluída converte em placeholder e devolve `imagensExcluidas`.
+
+**Exportar (M4):** `comandosDeExportacao` (domínio, em cm) → Worker busca as imagens e desenha em `OffscreenCanvas` na resolução da parede → `Blob` PNG ou JPG → download por `<a download>` com o nome `<projeto>-<variante>-AAAAMMDD-HHmm.<ext>`. Nada é gravado no servidor.
+
 ## 8. Orçamentos de desempenho
 
 | Métrica | Alvo |
@@ -418,6 +435,10 @@ Arquivos de dados fora do repositório: `PASTA_FOTOS` (definida no `.env`; estru
 | Aplicar template e abrir o posicionamento (M3) | < 200 ms |
 | Arrastar o conjunto do template (12 vagas) (M3) | ≥ 50 fps |
 | Pan/zoom na comparação, 2 × 40 fotos (M3) | ≥ 50 fps; memória < 400 MB (Leve, imagens compartilhadas entre os palcos) |
+| Exportar 40 fotos (M4) | Leve (3072 px) < 3 s; Alto (6144 px) < 8 s; sem tarefa longa (> 100 ms) na thread principal; prévia < 500 ms |
+| Diálogo de imagem com associações (M4) | < 300 ms |
+| Purga de 200 imagens (M4) | < 5 s |
+| Retificação, perfil Alto, foto sintética (M4, ADR-16) | ≤ 3 s |
 
 ## 9. Riscos técnicos
 
@@ -433,7 +454,7 @@ Arquivos de dados fora do repositório: `PASTA_FOTOS` (definida no `.env`; estru
 
 ## 10. Decisões pendentes
 
-1. Desempenho do perfil Alto (28 MP): decisão do Nicholas sobre as opções da ADR-16.
+Nenhuma. (ADR-16 decidida em 02/11: opção (b).)
 
 ## 11. Referências
 

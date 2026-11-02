@@ -276,7 +276,7 @@ Upload (`POST /api/imagens`):
 Arquivos da imagem nunca mudam (RN-21), por isso o cache imutável, diferente da parede (A-19 do M1).
 
 Salvamento da variante (ampliação do M1):
-- Todo `imagemId` não nulo precisa existir em `imagens`; senão, 422 com a lista. (A imagem excluída e o placeholder automático são do M4.)
+- Todo `imagemId` não nulo precisa existir em `imagens`; senão, 422 com a lista. (Imagem **excluída** não é recusada: no M4 o servidor converte a foto em placeholder e devolve `imagensExcluidas` — spec M4, M4-06.)
 - Depois do `updateOne` com revisão, `$addToSet: { projetos: projetoId }` nas imagens usadas (M2-05). Falha nessa etapa não desfaz o salvamento: é registrada no log e repetida no próximo salvamento.
 - Placeholder (`imagemId: null`) é aceito (M2-06).
 
@@ -381,7 +381,7 @@ Aplicadas depois da revisão das premissas, com o branch atualizado com a `main`
 | # | Conflito | Decisão |
 |---|---|---|
 | M2-13 | A implementação trocou o `zundo` por uma pilha própria (`packages/domain/src/historico.ts`). O motivo dado: o `zundo` mescla o estado só no primeiro nível, e desfazer substituiria o `documento` inteiro. | **Vale a ADR-03: `zundo`.** A store é reestruturada para isolar a parte desfazível (§4.7). A pilha própria sai. Se o `zundo` se mostrar inviável, a implementação para e pergunta (T16). |
-| M2-14 | O servidor passou a recusar (422) salvar fotos sem escala, com imagem excluída ou com `_id` repetido, e o PRD ganhou um RN-36 (tolerância dos alertas). | **Saem todos os acréscimos.** O salvamento só confere se as imagens existem (§5), e a imagem excluída fica para o M4. O RN-36 não entra: a tolerância já está no §4.5. |
+| M2-14 | O servidor passou a recusar (422) salvar fotos sem escala, com imagem excluída ou com `_id` repetido, e o PRD ganhou um RN-36 (tolerância dos alertas). | **Saem todos os acréscimos.** O salvamento só confere se as imagens existem (§5), e a imagem excluída fica para o M4 (spec M4, M4-06: o servidor converte em placeholder). O RN-36 não entra: a tolerância já está no §4.5. |
 | M2-15 | O domínio ficou em `fotos/` (tamanho, geometria, alertas, recorte, composição) e `historico.ts`. | **Vale a §4.1:** `composicao/` e `biblioteca/`, com as funções e os nomes da tabela (T15). |
 
 ### 12.2 O que já atende a esta spec

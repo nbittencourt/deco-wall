@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Versão | 0.15 (RN-36: mesma variante nos dois painéis da comparação; escopo do M4 no roadmap) |
+| Versão | 0.16 (M4: ciclo de vida das imagens, exportação e RN-36 aplicados aos requisitos e regras) |
 | Data | 2026-11-02 |
 | Autor | Nicholas Bittencourt |
 | Status | Requisitos e regras fechados — arquitetura em `docs/ARCHITECTURE.md` |
@@ -87,8 +87,8 @@ Prioridade: **P0** = obrigatório na v1 · **P1** = desejável na v1. Demais ite
 | RF-26 | Imagens processadas gravadas na pasta definida em configuração (`.env`). | P0 | D |
 | RF-27 | Biblioteca única: toda foto carregada fica disponível em todos os projetos. | P0 | D |
 | RF-28 | Filtros da biblioteca: Todas · Neste projeto (carregadas no projeto ou usadas em qualquer variante) · Nesta variante · Excluídas. "Neste projeto" e "Nesta variante" refletem o estado salvo. "Excluídas" entra com o ciclo de vida das imagens (M4). | P0 | D |
-| RF-29 | Ao excluir/remover uma imagem: perguntar se é remoção do projeto ou exclusão; mostrar associações; exclusão reversível por 30 dias (restaurar), depois definitiva. | P0 | D |
-| RF-30a | Foto excluída vira *placeholder* nas variantes (mantém formato, posição, borda); restaurar não repõe automaticamente; placeholder aceita outra foto e recomenda a anterior se restaurada; variantes com placeholder são sinalizadas. A **associação básica** (arrastar uma foto da biblioteca sobre a vaga ou "Preencher com a foto selecionada") vale já no M3 (necessária às vagas de template); a recomendação da imagem anterior, a exclusão que gera placeholders e a restauração ficam no M4. | P0 | D |
+| RF-29 | Ao excluir/remover uma imagem: perguntar se é remoção do projeto ou exclusão (diálogo aberto pelo botão ⋯ da miniatura, com "Remover deste projeto" marcado); mostrar associações; exclusão reversível por 30 dias (restaurar), depois definitiva. As duas ações exigem a variante ativa salva (antes: Salvar e continuar · Descartar · Cancelar). Remover tira as fotos da imagem das variantes e dos rascunhos do projeto aberto; excluir converte as fotos em placeholder em todos os projetos. A restauração vale na hora e não repõe a imagem nos placeholders; imagem vencida não é restaurável. | P0 | D |
+| RF-30a | Foto excluída vira *placeholder* nas variantes (mantém formato, posição, borda); restaurar não repõe automaticamente; placeholder aceita outra foto e recomenda a anterior se restaurada; variantes com placeholder são sinalizadas. A **associação básica** (arrastar uma foto da biblioteca sobre a vaga ou "Preencher com a foto selecionada") vale já no M3 (necessária às vagas de template); a recomendação da imagem anterior, a exclusão que gera placeholders e a restauração ficam no M4 (a recomendação aparece no painel do placeholder, só para imagem ativa, com o botão **Usar**). Salvar uma variante com foto de imagem excluída converte a foto em placeholder e avisa. | P0 | D |
 
 ### 5.4 Fotos na parede
 
@@ -131,7 +131,7 @@ Prioridade: **P0** = obrigatório na v1 · **P1** = desejável na v1. Demais ite
 
 | ID | Requisito | Prior. | Origem |
 |---|---|---|---|
-| RF-80 | Exportar a simulação como PNG/JPG na resolução da parede. Nome do arquivo: `<projeto>-<variante>-AAAAMMDD-HHmm.<ext>` (minúsculas, sem acentos, espaços → hífen, hora de Brasília). | P0 | I/D |
+| RF-80 | Exportar a simulação como PNG/JPG na resolução da parede (parede inteira, estado em tela da variante ativa). Nome do arquivo: `<projeto>-<variante>-AAAAMMDD-HHmm.<ext>` (minúsculas, sem acentos, espaços → hífen, hora de Brasília). Acima de 16 MP o formato padrão é JPG; escolher PNG avisa que pode demorar e só gera depois do aceite. O arquivo baixado é sempre PNG ou JPG. | P0 | I/D |
 
 ### 5.9 Projetos e variantes
 
@@ -165,7 +165,7 @@ Prioridade: **P0** = obrigatório na v1 · **P1** = desejável na v1. Demais ite
 | RN-16 | Teclado: seta move 1 cm; Shift + seta move 5 cm; com snap ligado, seta move um passo do grid e Shift + seta, 5 passos. | Decidido |
 | RN-17 | Vários projetos persistidos; um projeto aberto por vez; excluir projeto pede confirmação. | Decidido |
 | RN-18 | Desfazer/refazer **por variante**, até 100 passos (mínimo 50), mantido enquanto o projeto está aberto (não persistido). Mudanças na parede (upload, troca, perspectiva, calibração) **não** entram no histórico: gravam ao confirmar o modo, que tem Cancelar. Entram no histórico as fotos, a área útil e a borda padrão; o grid (visível, snap, passo, cor, opacidade) fica fora, mas é salvo com a variante. | Decidido |
-| RN-19 | Exportação: opção de incluir ou não o grid; nunca inclui handles de seleção nem destaques de alerta. Exceção: placeholders saem como retângulo vermelho hachurado semitransparente. | Decidido |
+| RN-19 | Exportação: opção de incluir ou não o grid (desligado por padrão; desenhado abaixo das fotos); nunca inclui handles de seleção, destaques de alerta, área útil, rótulo de origem nem bounding box. Exceção: placeholders saem como retângulo vermelho hachurado semitransparente, sem borda. Foto com imagem indisponível sai como retângulo cinza no tamanho externo. A região exportada é a parede inteira; o PNG mantém a transparência fora da região retificada e o JPG preenche de branco. | Decidido |
 | RN-20 | Arquivos não suportados na pasta são ignorados, com aviso da quantidade ignorada. | Decidido |
 | RN-28 | Tamanho personalizado: escolhido em "Personalizado…", editado no modo de recorte (largura × altura); 5 a 150 cm por lado, passo 0,1 cm; mudar o tamanho recentraliza o recorte (*cover*); orientação troca largura e altura; tamanhos quadrados não têm orientação; personalizado igual a um sugerido é tratado como o sugerido. | Decidido |
 | RN-29 | Aplicar template: sempre cria **variante nova** com o nome do modelo; cada espaço do modelo é uma célula com seu tamanho real (polegadas → cm, 1 mm); em cada célula entra o sugerido de **maior área impressa** (RN-01), na orientação da célula (quadrada = retrato), cujo tamanho externo (impresso + 2 × borda) caiba na célula (folga de 0,05 cm), centralizado; a sobra vira espaçamento; se nenhum couber, usa 10×15 na orientação da célula e a vaga cresce em torno do centro, afastando as vizinhas, com aviso. | Decidido |
@@ -179,7 +179,7 @@ Prioridade: **P0** = obrigatório na v1 · **P1** = desejável na v1. Demais ite
 | RN-22 | Biblioteca global, sem autenticação: imagens carregadas em qualquer projeto ficam disponíveis em todos. | Decidido |
 | RN-23 | Todo projeto tem ao menos 1 variante. Novo projeto nasce com a variante vazia **"Base"**. | Decidido |
 | RN-25 | Upload não verifica duplicatas: a mesma foto pode ser carregada mais de uma vez (inclusive em perfis diferentes). | Decidido |
-| RN-24 | Imagem: "remover do projeto" (sai das variantes do projeto, fica na biblioteca) ou "excluir" (*soft delete* 30 dias, consultável e restaurável; depois remoção definitiva). Detalhes em `docs/specs/M0-setup.md` §4.10. | Decidido |
+| RN-24 | Imagem: "remover do projeto" (sai das variantes do projeto, fica na biblioteca) ou "excluir" (*soft delete* 30 dias, consultável e restaurável; depois remoção definitiva). A exclusão não altera `imagens.projetos`; as operações do servidor sobre variantes somam `revisao + 1` nas afetadas sem alterar `salvaEm`. Detalhes em `docs/specs/M0-setup.md` §4.10 e `docs/specs/M4-ciclo-de-vida-e-exportacao.md`. | Decidido |
 | RN-26 | Salvamento manual tem prioridade sobre o automático; conflito entre sessões exige escolha do usuário, detectado também ao gravar o rascunho (que, em conflito, não é gravado). Detalhes em `docs/specs/M0-setup.md` §4.9. | Decidido |
 | RN-27 | Medidas em cm arredondadas a 1 mm. | Decidido |
 | RN-36 | Comparação de variantes: o seletor de cada painel aceita **qualquer** variante, inclusive a que já está no outro painel; nesse caso os dois painéis mostram a mesma variante e o sistema **não troca nem altera automaticamente** o outro lado (revê a troca de lados da spec M3, M3-10). Zoom e pan seguem sincronizados. (Decisão do Nicholas, 02/11; entra no M4.) | Decidido |
@@ -216,7 +216,7 @@ Layout, componentes, estados e textos: `docs/DESIGN.md` (v0.2) e protótipos em 
 5. Recalibrar mantém X/Y/tamanho em cm de todas as fotos.
 6. Após perspectiva com retângulo de L × A cm, o retângulo retificado mede L × A cm (±1%).
 7. Fechar e reabrir o app restaura projetos, variantes e posições a partir do MongoDB.
-8. Exportação PNG segue RN-19.
+8. Exportação PNG e JPG seguem RN-19 e RF-80.
 9. Arquivos não suportados seguem RN-20.
 10. Imagem carregada no projeto A aparece na biblioteca do projeto B.
 11. Na comparação, zoom/pan em um viewport é replicado no outro.
