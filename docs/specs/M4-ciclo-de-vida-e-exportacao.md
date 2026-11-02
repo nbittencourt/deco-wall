@@ -329,4 +329,64 @@ Dependências novas: nenhuma prevista. Qualquer uma para e pede aprovação.
 
 ## 12. Registro da implementação
 
-(a preencher depois da implementação)
+Implementado em 02/11 na branch `claude/m4-implementation-10286f`, em commits `test(m4)` vermelhos seguidos do `feat(m4)`/`fix(m4)` correspondente, por camada (A-26). A branch partiu da `main` sem a spec; a spec v1.0 estava em `claude/marcos-abertos-58a6b5` e entrou por avanço rápido antes do primeiro commit de código (a mesma lição do M2, `MEMORY.md` de 25/10). **A validação do Nicholas (T15) está pendente: o M4 não está aceito.**
+
+### 12.1 O que foi entregue
+
+| Tarefa | Entrega |
+|---|---|
+| T1 | Constantes do M4 em `constantes.ts` (`INTERVALO_PURGA_HORAS`, `QUALIDADE_JPG`, `LADO_PREVIA_EXPORTACAO_PX`, `FAIXA_HACHURA_CM`, `FAIXA_HACHURA_MIN_PX`, `LIMITE_PNG_MP`, `QUALIDADE_WEBP_RETIFICADA`); pastas `imagens/` e `exportacao/` (já previstas na ARCHITECTURE §6). A migração `0002` não foi preciso criar: a purga de 200 imagens termina em menos de 1,7 s sem índice novo (§12.3). |
+| T2 | `imagens/ciclo-de-vida.ts` e `imagens/comparacao.ts` (RN-36, `escolherVarianteDoPainel`, `parInicial`). |
+| T3 | `exportacao/{resolucao,comandos,nome-arquivo}.ts`. |
+| T4 | `GET /api/imagens?situacao=`, `GET …/associacoes`, `DELETE /api/imagens/:id`, `POST …/restaurar`, `DELETE /api/projetos/:pid/imagens/:id` em `servicos/imagens.ts`. |
+| T5 | Conversão no *hard save* e na cópia (`imagensExcluidas`); `servicos/purga.ts` (rotina, trava, agendador injetável), ligada ao `main.ts` depois do reparo. |
+| T6 | Store (`dialogoImagem`, `avisoCiclo`, `excluidas`, `adotarVariantesAlteradas`), `Biblioteca` com o menu ⋯ e a lista de excluídas, `DialogoImagem`, decisão da A-12 nas duas entradas novas. |
+| T7 | Painel do placeholder com "Foto anterior, restaurada" (**Usar** / **Escolher outra na biblioteca**); conversão local ao salvar com o `Alert` da A-11. |
+| T8 | `DialogoExportar`, `infra/exportacao.ts`, `infra/exportacao-compositor.ts` e `infra/workers/exportar.worker.ts`. |
+| T9 | Seletores da comparação sem troca de lados. |
+| T10 | `/api/saude` responde 503 com `mongo` ou `pasta` em erro; `buscarSaude` lê o corpo também no 503. |
+| T11 | `React.lazy` em Editor, Comparação e `/dev/ui`; grupos `react`, `konva` e `bson` no `rolldownOptions.output.codeSplitting`. Maior chunk: 329 kB (Konva). |
+| T12 | `extendTailwindMerge` com o grupo `font-size`. |
+| T13 | Retificada em WebP 0,8 (`QUALIDADE_WEBP_RETIFICADA`). |
+| T14 | **reproduzida uma vez, causa não identificada.** Execuções: 30 do projeto `api` completo do Vitest com `NODE_OPTIONS=--report-on-fatalerror --report-uncaught-exception` — **1 queda** (rodada 18: "Worker exited unexpectedly with exit code 3221226505 during started state" ao rodar `apps/api/src/rotas/imagens.test.ts`) e 29 sem queda; 40 execuções só de `imagens.test.ts` — 0 quedas; 2 × 200 requisições a `GET /api/imagens/:id/arquivo` (100 em série, alternando `render` e `thumb`, mais 10 lotes de 10 em paralelo) contra `tsx apps/api/src/main.ts` em outras portas (3191 e 3192) e outro banco — 0 quedas e 0 falhas. Relatórios de diagnóstico do Node gerados: 0 (um *fast fail* do Windows não passa pelo relatório do Node) e nenhum evento "Application Error" no Visualizador de Eventos. **Cenário do painel de preview (25/10: o `npm start` do painel saiu com 0xC0000409 no primeiro `GET /api/imagens/:id/arquivo`, e o mesmo build iniciado à mão serviu normalmente) não foi executado:** a porta 3001 estava ocupada por outro processo, que não foi tocado. Os dois incidentes têm em comum o código que lê e serve imagens da biblioteca (`sharp`/libvips e a leitura do arquivo); o código de saída é o de falha rápida do Windows, típico de código nativo, mas isso é só hipótese. **Plano de observação:** na próxima queda, abrir o dump para ver o módulo da pilha — para isso o Nicholas precisaria habilitar o `LocalDumps` do Windows Error Reporting para `node.exe` (chave `HKLM\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps`, `DumpType` 2; exige administrador, por isso não foi feito) e abrir o `.dmp` no WinDbg com `!analyze -v`; manter `--report-on-fatalerror` ligado nas repetições. Nenhuma mitigação (repetir teste, ignorar o código de saída) foi aplicada, e a queda **não bloqueia** o aceite do M4 (M4-17). |
+| T15 | E2E, desempenho e documentos; **validação do Nicholas pendente**. |
+
+### 12.2 Decisões da implementação (para o Nicholas confirmar)
+
+1. **Recorte no comando de exportação.** `comandosDeExportacao` leva o `offset` do recorte (não a janela em px): a janela depende do tamanho da imagem em px, que o domínio não conhece. O executor chama `calcularRecorte`, a mesma função do canvas (§4.5 pedia "a mesma função", e é).
+2. **Operações do servidor atômicas por documento.** Excluir e remover usam `findOneAndUpdate` com `arrayFilters` ou `$pull` mais `$inc` (sem ler e regravar), então um salvamento concorrente nunca é sobrescrito. **Excluir repetido** não muda o prazo, mas ainda converte o que sobrou (repara uma falha no meio, já que não há transações).
+3. **`adotarVariantesAlteradas` relê o projeto** (um `GET`), troca a ativa afetada pela versão salva (pilha zerada) e **recoloca no cache** as outras afetadas, em vez de só descartá-las: sem a entrada no cache o seletor não conseguiria alternar para elas. As não afetadas mantêm a pilha.
+4. **`POST` com `origem: copia`** devolve `imagensExcluidas`, mas a web não mostra aviso nesse caso (a variante nova já aparece com o selo "N sem foto"); só o *hard save* avisa (A-11).
+5. **Vite 8 usa Rolldown:** `manualChunks` está obsoleto, então a divisão está em `build.rolldownOptions.output.codeSplitting.groups`. O grupo do React precisa vir **antes** (com `priority`) do grupo do Konva; sem isso o Konva arrasta o React e a tela Projetos passa a baixá-lo (o E2E de rede pega). Registro para quem fizer `bisect`: o commit `88d816b` tem uma tentativa com `includeDependenciesRecursively: false` que compila, mas não abre o editor no navegador ("c is not a function"); o commit seguinte (`26e3f1b`) a substitui pela ordem dos grupos.
+6. **`text-mono` não existe no tema** (a M4-16 citava): as utilidades de tipografia são `text-display-*`, `text-body`, `text-body-sm`, `text-label` e `text-medida`; todas registradas.
+7. **Linhas do grid exportadas** ficam no centro do pixel (nítidas, 1 px inteiro), em vez de repartidas entre dois.
+8. **`Exportar` fora do modo editor:** os modos trocam o header por uma barra própria, então o botão simplesmente não existe neles; a ação da store também recusa fora do modo editor.
+9. **Prévia sempre em PNG** (formato interno do Worker); só o arquivo baixado respeita PNG ou JPG.
+10. **`GET /api/imagens?situacao=` inválida** responde 400.
+
+### 12.3 Medições (Chromium headless, Windows)
+
+| Medida | Resultado | Meta |
+|---|---|---|
+| Retificação, Alto (28 MP), foto sintética (ADR-16 b) | **2,4 s** (warp 0,7 + WebP 1,5) | ≤ 3 s ✓ |
+| Retificação, Alto, ruído gaussiano suavizado | **3,7 s** (WebP 2,4) | < 4,5 s ✓ (não precisou da opção (a)) |
+| Retificação, Leve | 0,7 s | ≤ 3 s ✓ |
+| Exportar a parede do Alto (6144 × 4608) **sem fotos**, JPG / PNG, parede sintética | 0,3 s / 0,4 s | (só a parede; as 40 fotos estão na linha da A-20 abaixo) |
+| Exportar a parede do Alto **sem fotos**, JPG / PNG, parede com ruído | 0,7 s / 1,5 s | idem |
+| Exportar 40 fotos, parede do Leve (3072 × 2304 px), PNG / JPG | 0,25 s / 0,24 s | < 3 s ✓ |
+| Exportar 40 fotos, parede do Alto (6144 × 4608 px), JPG / PNG | 0,39 s / 0,51 s | JPG < 8 s ✓ |
+| Exportar 40 fotos, parede de 1200 × 900 px: arquivo / prévia (do clique até a prévia aparecer) | 0,14 s / 0,32 s | prévia < 500 ms ✓ |
+| Tarefas longas (> 100 ms) na thread principal durante essa exportação | nenhuma | ≤ 100 ms ✓ |
+| Diálogo de imagem com 40 usos (do clique no menu até a tabela) | 0,15 s | < 300 ms ✓ |
+| Purga de 200 imagens (documentos e 400 arquivos) | < 1,7 s (duração do teste inteiro; o tempo da purga em si não foi impresso) | < 5 s ✓ |
+
+Ressalvas: as paredes são sintéticas (gradiente suave) e as 40 fotos reaproveitam a mesma imagem (`retrato.jpg`, Leve), então o decodificador e o codificador trabalham menos que com fotos reais; os tempos de exportação do Alto com a parede ruidosa só foram medidos sem fotos (linhas acima). Os números valem para o Chromium headless desta máquina.
+
+### 12.4 Verificação
+
+Verde: Vitest 1.578 testes (99 arquivos), Playwright 123/123 (3,6 min, execução completa com a máquina ociosa), `typecheck`, `lint` e `format:check`; cobertura do domínio 98,7% das instruções e 96,1% dos ramos; nenhuma requisição fora de `localhost` nos fluxos da biblioteca, da composição e da exportação.
+
+### 12.5 Pendências
+
+- **Validação do Nicholas (T15):** teste no app de remover, excluir, restaurar, recomendação, exportação PNG/JPG, comparação e os diálogos com a serifa.
+- Confirmar ou trocar as decisões da §12.2.
