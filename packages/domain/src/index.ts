@@ -32,3 +32,8 @@ export * from './variantes/nomes';
 export * from './variantes/variante';
 export * from './variantes/salvamento';
 export * from './variantes/esboco';
+export * from './imagens/ciclo-de-vida';
+export * from './imagens/comparacao';
+export * from './exportacao/resolucao';
+export * from './exportacao/comandos';
+export * from './exportacao/nome-arquivo';

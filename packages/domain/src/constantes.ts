@@ -115,3 +115,12 @@ export const NOME_VARIANTE_MAX = 60; // M0 §4.5: nome da variante, 1 a 60 carac
 export const FALHAS_ANTES_DO_AVISO = 2; // A-07: falhas seguidas do rascunho até o aviso
 export const AVISO_CRIACAO_MS = 6000; // A-20: tempo do aviso "Variante criada com N vagas"
 export const PASSADAS_AFASTAMENTO = 10; // A-31: passadas do afastamento das vagas vizinhas
+
+// ---- M4 (docs/specs/M4-ciclo-de-vida-e-exportacao.md §4.1) ----
+
+export const INTERVALO_PURGA_HORAS = 24; // A-10: a purga roda na inicialização e a cada 24 h
+export const QUALIDADE_JPG = 0.92; // A-19
+export const LADO_PREVIA_EXPORTACAO_PX = 480; // A-17: lado maior da prévia do diálogo
+export const FAIXA_HACHURA_CM = 0.5; // A-16: largura da faixa da hachura do placeholder
+export const FAIXA_HACHURA_MIN_PX = 3; // A-16: faixa mínima na saída
+export const LIMITE_PNG_MP = 16; // A-28: acima disto o padrão é JPG e o PNG pede aceite
