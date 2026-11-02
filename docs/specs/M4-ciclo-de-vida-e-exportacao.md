@@ -19,7 +19,7 @@
 
 ### 0.1 Lacunas e contradições (com proposta)
 
-M4-01, M4-02, M4-13 (ADR-16, opção (b)) e o princípio da M4-18 são **decisões do Nicholas de 02/11**. As demais (M4-03 a M4-12 e M4-14 a M4-17) e o limite de 16 MP da M4-18 são **propostas** a aprovar, ajustar ou trocar.
+M4-01 a M4-07, M4-13 (ADR-16, opção (b)) e o princípio da M4-18 são **decisões do Nicholas de 02/11** (M4-03 a M4-07 aprovadas como propostas). As demais (M4-08 a M4-12 e M4-14 a M4-17) e o limite de 16 MP da M4-18 são **propostas** a aprovar, ajustar ou trocar.
 
 | # | Lacuna ou contradição | Proposta / decisão |
 |---|---|---|
