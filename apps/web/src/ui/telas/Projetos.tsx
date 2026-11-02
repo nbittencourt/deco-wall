@@ -16,6 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../componentes/ui/dropdown-menu';
+import { SeloSemFoto } from './editor/SeletorVariante';
 
 // Tela Projetos com dados reais (spec M1 §3.1; protótipo 01). Busca de projetos segue inativa (DV-03).
 
@@ -143,6 +144,8 @@ export function Projetos({
                   )}
                   <div className="flex min-w-0 flex-col gap-0.5 p-4 pr-14">
                     <h2 className="text-display-sm truncate text-ink">{projeto.nome}</h2>
+                    {/* M3-02, A-24: soma das vagas das variantes salvas. */}
+                    <SeloSemFoto quantidade={projeto.semFoto} className="w-fit" />
                     <p className="text-body-sm text-ink-3">
                       {formatarMetaProjeto(
                         {

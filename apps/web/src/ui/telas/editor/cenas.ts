@@ -1,7 +1,14 @@
 import { escalaPxPorCm, paredeInteira, type AreaUtil, type FotoNaParede, type Grid } from '@deco-wall/domain';
 import { urlArquivoImagem, urlArquivoParede } from '../../../infra/clienteApi';
 import type { ImagemDto, ProjetoDto } from '../../../infra/dto';
-import type { CenaAreaUtil, CenaParede, CenaRecorte, FotoCena, RecorteCena } from '../../canvas/cena';
+import type {
+  CenaAreaUtil,
+  CenaParede,
+  CenaRecorte,
+  CenaTemplate,
+  FotoCena,
+  RecorteCena,
+} from '../../canvas/cena';
 
 // Monta as cenas do Palco a partir do projeto e da variante (spec M1 §3.9, spec M2 §3.3). Sem Konva: roda nos
 // testes.
@@ -143,4 +150,27 @@ export function cenaDoRecorte(base: CenaParede, recorte: RecorteCena): CenaRecor
   const { tipo: _tipo, ...resto } = base;
   void _tipo;
   return { ...resto, tipo: 'recorte', interativa: false, recorte };
+}
+
+// Posicionar template (RN-32): a parede com grid e área útil, sem as fotos da variante, e o conjunto arrastável.
+export function cenaDoTemplate(
+  base: CenaParede,
+  template: Pick<CenaTemplate, 'conjunto' | 'maiorQueAreaUtil' | 'rotuloTotal' | 'onMoverConjunto'> & {
+    fotos: readonly FotoNaParede[];
+  },
+): CenaTemplate {
+  const { tipo: _tipo, ...resto } = base;
+  void _tipo;
+  return {
+    ...resto,
+    tipo: 'template',
+    fotos: [],
+    selecaoId: null,
+    interativa: false,
+    conjunto: template.conjunto,
+    vagas: fotosDaCena({ fotos: [...template.fotos] }, []),
+    maiorQueAreaUtil: template.maiorQueAreaUtil,
+    rotuloTotal: template.rotuloTotal,
+    onMoverConjunto: template.onMoverConjunto,
+  };
 }

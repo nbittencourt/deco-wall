@@ -1,4 +1,5 @@
-import type { AreaUtil, Borda, FotoNaParede, Grid } from '../schemas';
+import { retanguloExterno } from '../composicao/foto';
+import type { AreaUtil, Borda, FotoNaParede, Grid, Pt } from '../schemas';
 
 // Operações de variante (M3-01, M3-02, M3-04, A-06, A-23; docs/specs/M3-variantes-templates-e-salvamento.md §4.1).
 
@@ -54,4 +55,23 @@ export function conteudoIgual(a: ConteudoSalvavel, b: ConteudoSalvavel): boolean
 export function preencherVaga(foto: FotoNaParede, imagemId: string): FotoNaParede {
   if (foto.imagemId !== null) return foto;
   return { ...foto, imagemId, recorte: { offsetX: 0, offsetY: 0 } };
+}
+
+// M3-01, A-23: ao soltar uma miniatura sobre o canvas, a vaga sob o ponto (retângulo externo); com várias, a do
+// topo da pilha. Foto que já tem imagem não conta.
+export function vagaNoPonto(fotos: readonly FotoNaParede[], ponto: Pt): FotoNaParede | null {
+  for (let i = fotos.length - 1; i >= 0; i -= 1) {
+    const foto = fotos[i]!;
+    if (foto.imagemId !== null) continue;
+    const r = retanguloExterno(foto);
+    if (
+      ponto.x >= r.xCm &&
+      ponto.x <= r.xCm + r.larguraCm &&
+      ponto.y >= r.yCm &&
+      ponto.y <= r.yCm + r.alturaCm
+    ) {
+      return foto;
+    }
+  }
+  return null;
 }

@@ -56,6 +56,8 @@ export interface CenaParede {
   mostrarAreaTotal: boolean;
   // Só no editor as fotos reagem ao mouse (selecionar, arrastar, duplo clique).
   interativa: boolean;
+  // M3-10, A-16: a comparação desliga as marcas de sobreposição e de fora da parede/área útil (padrão: ligadas).
+  mostrarAlertas?: boolean;
   onSelecionar?: (id: string | null) => void;
   // Chamado uma vez, ao soltar a foto arrastada (já encaixada no grid, se o snap estiver ligado).
   onMoverFoto?: (id: string, xCm: number, yCm: number) => void;
@@ -73,6 +75,20 @@ export interface CenaAreaUtil extends Omit<CenaParede, 'tipo'> {
 export interface CenaRecorte extends Omit<CenaParede, 'tipo'> {
   tipo: 'recorte';
   recorte: RecorteCena;
+}
+
+// M3, RN-32: o conjunto do template sobre a parede (grid e área útil como no editor; as fotos da ativa ficam
+// ocultas). As vagas saem a 80% de opacidade, com o contorno do conjunto e o total numa pill; o conjunto se arrasta.
+export interface CenaTemplate extends Omit<CenaParede, 'tipo'> {
+  tipo: 'template';
+  conjunto: AreaUtil;
+  vagas: FotoCena[];
+  // Maior que a área útil: contorno em `danger` (a confirmação continua liberada).
+  maiorQueAreaUtil: boolean;
+  // "151,0 × 70,6 cm"
+  rotuloTotal: string;
+  // Devolve a posição efetiva (com snap e limite), para o nó arrastado acompanhá-la.
+  onMoverConjunto: (xCm: number, yCm: number) => { xCm: number; yCm: number };
 }
 
 export interface CenaPerspectiva {
@@ -98,12 +114,19 @@ export interface CenaCalibracao {
   onSegmentoChange: (p1: Pt, p2: Pt) => void;
 }
 
-export type Cena = CenaParede | CenaAreaUtil | CenaRecorte | CenaPerspectiva | CenaCalibracao;
+export type Cena = CenaParede | CenaAreaUtil | CenaRecorte | CenaTemplate | CenaPerspectiva | CenaCalibracao;
 
 export interface EstadoPalco {
   zoomPercentual: number;
   // O grid está ligado, mas o passo na tela ficou abaixo de 4 px (A-07).
   gridOculto: boolean;
+}
+
+// M3 (A-17): vista compartilhada entre palcos, em unidades do conteúdo (cm): o ponto no centro do palco e os px de
+// tela por unidade. Cada palco a converte para o próprio tamanho.
+export interface ViewportCompartilhado {
+  centro: Pt;
+  escala: number;
 }
 
 // Comandos que a toolbar do editor dá ao palco.

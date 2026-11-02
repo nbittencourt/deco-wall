@@ -43,6 +43,9 @@ export function comArrasto(fotos: readonly FotoCena[], arrasto: Arrasto | null):
 
 // A-12: pills e contornos. `acima`: as fotos da camada superior de cada sobreposição, que recebem a pill.
 export function destaquesDaCena(fotos: readonly FotoCena[], cena: CenaParede | CenaRecorte) {
+  // M3-10: a comparação pode esconder os alertas (visualização limpa).
+  if (cena.mostrarAlertas === false)
+    return { alertas: new Map<string, AlertasDaFoto>(), acima: new Set<string>() };
   const geometricas = fotos.map((f) => ({
     _id: f.id,
     xCm: f.xCm,

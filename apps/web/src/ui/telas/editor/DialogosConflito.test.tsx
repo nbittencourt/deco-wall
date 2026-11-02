@@ -165,7 +165,7 @@ describe('DialogoRecuperar (SV-07, M3-08, A-09)', () => {
   function montar(extra: Record<string, unknown> = {}) {
     const props = {
       aberto: true,
-      rotuloHora: 'às 14:30',
+      hora: '14:30',
       desatualizado: false,
       revisaoRascunho: 1,
       revisaoSalva: 1,

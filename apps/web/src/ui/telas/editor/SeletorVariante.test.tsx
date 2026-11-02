@@ -107,11 +107,11 @@ describe('lista', () => {
 describe('menu ⋯ de cada variante', () => {
   const abrirMenu = (nome: string) => {
     abrir();
+    // O Radix abre o menu no pointerdown; depois disso o resto da tela fica oculto para o leitor de tela.
     fireEvent.pointerDown(screen.getByRole('button', { name: `Ações de ${nome}` }), {
       button: 0,
       ctrlKey: false,
     });
-    fireEvent.click(screen.getByRole('button', { name: `Ações de ${nome}` }));
   };
 
   it('Renomear, Duplicar e Excluir chamam as ações com o id da variante', async () => {

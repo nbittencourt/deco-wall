@@ -1,16 +1,21 @@
 import {
   alertasDaComposicao,
   alertasPorFoto,
+  AVISO_CRIACAO_MS,
   formatarCm,
   formatarHora,
+  nomeCopia,
+  nomeNovaVariante,
+  vagaNoPonto,
   type DirecaoSeta,
   type Perfil,
 } from '@deco-wall/domain';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { agendador, MS_POR_MINUTO } from '../../app/autosave';
 import { useAvisoAoSair } from '../../app/avisoAoSair';
-import { navegarPadrao } from '../../app/navegacao';
+import { caminhoDoProjeto, navegarPadrao } from '../../app/navegacao';
 import { ProvedorStore, useEditor, useStoreEditor, useVistaDaVariante } from '../../app/StoreContext';
-import { criarStoreEditor } from '../../app/store';
+import { criarStoreEditor, resumoDasVariantes } from '../../app/store';
 import { clienteHttp } from '../../infra/clienteApi';
 import type { ClienteApi } from '../../infra/dto';
 import { Palco } from '../canvas/Palco';
@@ -21,14 +26,20 @@ import { Alert } from '../componentes/ui/alert';
 import { Button } from '../componentes/ui/button';
 import { PainelComposicao } from '../paineis/PainelComposicao';
 import { PainelFoto } from '../paineis/PainelFoto';
+import { Comparacao } from './comparacao/Comparacao';
 import { Biblioteca, TIPO_ARRASTO_IMAGEM } from './editor/Biblioteca';
 import { cenaDaParede, dadosDaParede } from './editor/cenas';
+import { DialogoTemplates } from './editor/DialogoTemplates';
+import { DialogosGlobais } from './editor/DialogosGlobais';
+import { DialogoDecisao, DialogoExcluirVariante, DialogoNomeVariante } from './editor/DialogosVariante';
 import { EstadoVazio } from './editor/EstadoVazio';
 import { HeaderEditor } from './editor/HeaderEditor';
 import { ModoAreaUtil } from './editor/modos/ModoAreaUtil';
 import { ModoCalibracao } from './editor/modos/ModoCalibracao';
 import { ModoPerspectiva } from './editor/modos/ModoPerspectiva';
 import { ModoRecorte } from './editor/modos/ModoRecorte';
+import { ModoTemplate } from './editor/modos/ModoTemplate';
+import { SeletorVariante } from './editor/SeletorVariante';
 import { ToolbarCanvas } from './editor/ToolbarCanvas';
 
 // Editor da parede (DESIGN §7, protótipos 02, 03 e 11; spec M1 §3.2, §3.3, §3.8; spec M2 §3). Header, três
@@ -39,9 +50,16 @@ export interface PropsEditor {
   projetoId: string;
   api?: ClienteApi;
   navegar?: (caminho: string) => void;
+  // M3 (A-26): a comparação usa a mesma store do editor; trocar de tela não recarrega o projeto.
+  tela?: 'editor' | 'comparar';
 }
 
-export function Editor({ projetoId, api = clienteHttp, navegar = navegarPadrao }: PropsEditor) {
+export function Editor({
+  projetoId,
+  api = clienteHttp,
+  navegar = navegarPadrao,
+  tela = 'editor',
+}: PropsEditor) {
   const [store] = useState(() => criarStoreEditor(api));
   useEffect(() => {
     void store.getState().abrirProjeto(projetoId);
@@ -51,26 +69,44 @@ export function Editor({ projetoId, api = clienteHttp, navegar = navegarPadrao }
 
   return (
     <ProvedorStore store={store}>
-      <EditorConteudo api={api} navegar={navegar} />
+      <EditorConteudo api={api} navegar={navegar} tela={tela} />
     </ProvedorStore>
   );
 }
 
-function EditorConteudo({ api, navegar }: { api: ClienteApi; navegar: (caminho: string) => void }) {
+function EditorConteudo({
+  api,
+  navegar,
+  tela,
+}: {
+  api: ClienteApi;
+  navegar: (caminho: string) => void;
+  tela: 'editor' | 'comparar';
+}) {
   const store = useStoreEditor();
   const projeto = useEditor((s) => s.documento.projeto);
   const variante = useEditor((s) => s.documento.variante);
   const sujo = useEditor((s) => s.documento.sujo);
   const erroCarregar = useEditor((s) => s.documento.erroCarregar);
   const modo = useEditor((s) => s.ui.modo);
+  const autosaveMinutos = useEditor((s) => s.config.autosaveMinutos);
 
   useAvisoAoSair(sujo);
 
-  // Ctrl+S salva, inclusive com o foco num campo, e impede o "salvar página" do browser (RF-72).
+  // RF-71, SV-01: a cada AUTOSAVE_MINUTOS grava o rascunho da variante ativa, se mudou (inclusive nos modos e na
+  // comparação: o salvamento automático segue em segundo plano).
+  useEffect(
+    () => agendador.periodico(() => void store.getState().salvarRascunho(), autosaveMinutos * MS_POR_MINUTO),
+    [store, autosaveMinutos],
+  );
+
+  // Ctrl+S salva, inclusive com o foco num campo, e impede o "salvar página" do browser (RF-72). Na comparação
+  // os atalhos de edição ficam inativos (A-16).
   useEffect(() => {
     const aoTeclar = (evento: KeyboardEvent) => {
       if ((evento.ctrlKey || evento.metaKey) && evento.key.toLowerCase() === 's') {
         evento.preventDefault();
+        if (tela === 'comparar') return;
         store
           .getState()
           .salvarVariante()
@@ -79,7 +115,7 @@ function EditorConteudo({ api, navegar }: { api: ClienteApi; navegar: (caminho: 
     };
     window.addEventListener('keydown', aoTeclar);
     return () => window.removeEventListener('keydown', aoTeclar);
-  }, [store]);
+  }, [store, tela]);
 
   if (erroCarregar) {
     return (
@@ -95,11 +131,19 @@ function EditorConteudo({ api, navegar }: { api: ClienteApi; navegar: (caminho: 
     return <p className="p-6 text-body-sm text-ink-2">Carregando projeto…</p>;
   }
 
-  if (modo === 'perspectiva') return <ModoPerspectiva />;
-  if (modo === 'calibracao') return <ModoCalibracao />;
-  if (modo === 'area-util') return <ModoAreaUtil />;
-  if (modo === 'recorte') return <ModoRecorte />;
-  return <EditorNormal api={api} navegar={navegar} />;
+  let conteudo = <EditorNormal api={api} navegar={navegar} />;
+  if (tela === 'comparar') conteudo = <Comparacao navegar={navegar} />;
+  else if (modo === 'perspectiva') conteudo = <ModoPerspectiva />;
+  else if (modo === 'calibracao') conteudo = <ModoCalibracao />;
+  else if (modo === 'area-util') conteudo = <ModoAreaUtil />;
+  else if (modo === 'recorte') conteudo = <ModoRecorte />;
+  else if (modo === 'template') conteudo = <ModoTemplate />;
+  return (
+    <>
+      {conteudo}
+      <DialogosGlobais />
+    </>
+  );
 }
 
 // Elementos em que as setas, Esc e Ctrl+Z são do próprio elemento (texto, menus, controles com roving focus).
@@ -129,6 +173,12 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
   const arrasto = useEditor((s) => s.ui.arrasto);
   const conflito = useEditor((s) => s.documento.conflito);
   const erroSalvamento = useEditor((s) => s.documento.erroSalvamento);
+  // M3: lista de variantes, galeria, avisos e o diálogo de conflito (aberto ou adiado).
+  const listaVariantes = useEditor((s) => s.documento.lista);
+  const galeriaAberta = useEditor((s) => s.ui.galeriaAberta);
+  const dialogoConflito = useEditor((s) => s.ui.dialogoConflito);
+  const avisoRascunho = useEditor((s) => s.documento.avisoRascunho);
+  const avisoCriacao = useEditor((s) => s.ui.avisoCriacao);
   const avisoAreaUtilFora = useEditor((s) => s.ui.avisoAreaUtilFora);
   const selecaoId = useEditor((s) => s.ui.selecaoId);
   const bibliotecaSelecaoId = useEditor((s) => s.ui.bibliotecaSelecaoId);
@@ -144,6 +194,23 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
   const [avisoTroca, setAvisoTroca] = useState(false);
   const [progresso, setProgresso] = useState<number | null>(null);
   const [erroEnvio, setErroEnvio] = useState<string | null>(null);
+  // M3: decisão ao deixar a ativa com alterações (A-12) e os diálogos de variante (A-02).
+  const [pendente, setPendente] = useState<{ acao: () => void | Promise<void> } | null>(null);
+  const [decidindo, setDecidindo] = useState(false);
+  const [dialogoVar, setDialogoVar] = useState<
+    | { tipo: 'nova' }
+    | { tipo: 'duplicar'; id: string }
+    | { tipo: 'renomear'; id: string }
+    | { tipo: 'excluir'; id: string }
+    | null
+  >(null);
+
+  // A-20: o aviso "Variante criada" some sozinho.
+  useEffect(() => {
+    if (!avisoCriacao) return undefined;
+    const id = setTimeout(() => store.getState().dispensarAvisoCriacao(), AVISO_CRIACAO_MS);
+    return () => clearTimeout(id);
+  }, [avisoCriacao, store]);
 
   const parede = projeto.parede;
   const dados = dadosDaParede(projeto);
@@ -209,6 +276,46 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
       .salvarVariante()
       .catch(() => undefined);
 
+  // A-12: qualquer ação que deixe a ativa com alterações não salvas pergunta antes.
+  const comDecisao = (acao: () => void | Promise<void>) => {
+    if (store.getState().documento.sujo) setPendente({ acao });
+    else void acao();
+  };
+  const aoSalvarEContinuar = async () => {
+    setDecidindo(true);
+    try {
+      await store.getState().salvarVariante();
+    } catch {
+      // O 409 abre o diálogo de conflito e interrompe a ação.
+    } finally {
+      setDecidindo(false);
+    }
+    const acao = pendente?.acao;
+    setPendente(null);
+    const estado = store.getState().documento;
+    if (estado.sujo || estado.conflito) return;
+    await acao?.();
+  };
+  const aoDescartarEContinuar = async () => {
+    const acao = pendente?.acao;
+    setDecidindo(true);
+    try {
+      await store.getState().descartarAlteracoes();
+    } finally {
+      setDecidindo(false);
+    }
+    setPendente(null);
+    await acao?.();
+  };
+
+  const nomesDasVariantes = listaVariantes.map((i) => i.nome);
+  const nomeDe = (id: string) => listaVariantes.find((i) => i._id === id)?.nome ?? '';
+  const aoDuplicar = (id: string) =>
+    comDecisao(async () => {
+      if (id !== store.getState().documento.variante?._id) await store.getState().alternarVariante(id);
+      setDialogoVar({ tipo: 'duplicar', id });
+    });
+
   const aoVoltar = () => {
     if (sujo) setDialogoSair(true);
     else navegar('/');
@@ -262,7 +369,11 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
     if (!imagemId) return;
     evento.preventDefault();
     const ponto = palco.current?.dePaginaParaConteudo(evento.clientX, evento.clientY);
-    if (ponto) store.getState().adicionarFoto(imagemId, ponto);
+    if (!ponto) return;
+    // M3-01, A-23: soltar sobre uma vaga a preenche; fora de vaga, a foto entra como nova (M2 A-04).
+    const vaga = vagaNoPonto(variante.fotos, ponto);
+    if (vaga) store.getState().preencherVaga(vaga._id, imagemId);
+    else store.getState().adicionarFoto(imagemId, ponto);
   };
 
   const dicaDeTeclas = variante.grid.snap
@@ -275,6 +386,26 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
         nome={projeto.nome}
         onRenomear={(nome) => store.getState().renomearProjeto(nome)}
         nomeVariante={nomeVariante}
+        seletorVariante={
+          <SeletorVariante
+            itens={resumoDasVariantes(store.getState())}
+            onAlternar={(id) => comDecisao(() => void store.getState().alternarVariante(id))}
+            onNova={() => comDecisao(() => setDialogoVar({ tipo: 'nova' }))}
+            onDuplicar={aoDuplicar}
+            onTemplate={() => comDecisao(() => store.getState().abrirGaleria())}
+            onRenomear={(id) => setDialogoVar({ tipo: 'renomear', id })}
+            onExcluir={(id) => setDialogoVar({ tipo: 'excluir', id })}
+          />
+        }
+        motivoComparar={
+          listaVariantes.length < 2
+            ? 'Crie ao menos duas variantes para comparar.'
+            : dados.metodo === null
+              ? 'Defina a escala primeiro.'
+              : undefined
+        }
+        onComparar={() => navegar(`${caminhoDoProjeto(projeto._id)}/comparar`)}
+        onTemplates={() => comDecisao(() => store.getState().abrirGaleria())}
         temParede={parede !== null}
         metodo={dados.metodo}
         pxPorCm={dados.pxPorCm}
@@ -336,13 +467,25 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
             )}
 
             <div className="pointer-events-none absolute inset-x-0 top-3 flex flex-col items-center gap-2 px-4">
-              {conflito && (
+              {conflito?.origem === 'variante' && !dialogoConflito && (
                 <Alert variant="alerta" className="pointer-events-auto max-w-[560px]">
                   <span>
-                    {conflito.origem === 'variante'
-                      ? `Esta variante foi salva em outra aba ${formatarHora(conflito.salvaEm)}. Recarregue para ver a versão salva.`
-                      : 'Este projeto foi alterado em outra aba. Recarregue para ver a versão salva.'}
+                    {conflito.excluida
+                      ? 'Esta variante foi excluída em outra aba.'
+                      : `Esta variante foi salva em outra aba ${formatarHora(conflito.salvaEm)}.`}
                   </span>{' '}
+                  <Button
+                    variant="outline"
+                    className="ml-2 h-7 px-3 text-sm"
+                    onClick={() => void store.getState().abrirDialogoConflito()}
+                  >
+                    Resolver…
+                  </Button>
+                </Alert>
+              )}
+              {conflito?.origem === 'projeto' && (
+                <Alert variant="alerta" className="pointer-events-auto max-w-[560px]">
+                  <span>Este projeto foi alterado em outra aba. Recarregue para ver a versão salva.</span>{' '}
                   <Button
                     variant="outline"
                     className="ml-2 h-7 px-3 text-sm"
@@ -352,6 +495,19 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
                   </Button>
                 </Alert>
               )}
+              {avisoRascunho && (
+                <Alert className="pointer-events-auto max-w-[560px]">
+                  <span>Não foi possível salvar o rascunho automático. Use Salvar.</span>
+                  <Button
+                    variant="ghost"
+                    className="ml-2 h-7 px-3 text-sm"
+                    onClick={() => store.getState().dispensarAvisoRascunho()}
+                  >
+                    Dispensar
+                  </Button>
+                </Alert>
+              )}
+              {avisoCriacao && <Alert className="pointer-events-auto max-w-[560px]">{avisoCriacao}</Alert>}
               {erroSalvamento && !conflito && (
                 <Alert variant="alerta" className="pointer-events-auto max-w-[560px]">
                   {erroSalvamento}
@@ -414,6 +570,8 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
               onPersonalizado={() => store.getState().abrirRecorte(selecionada._id, { personalizado: true })}
               onDuplicar={() => store.getState().duplicarFoto(selecionada._id)}
               onRemover={() => store.getState().removerFoto(selecionada._id)}
+              podePreencher={bibliotecaSelecaoId !== null}
+              onPreencher={() => store.getState().preencherVagaSelecionada()}
             />
           ) : (
             <PainelComposicao
@@ -456,6 +614,68 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
         onCancelar={() => setDialogoSair(false)}
         onSairSemSalvar={() => navegar('/')}
         onSalvarESair={() => void aoSalvarESair()}
+      />
+      <DialogoDecisao
+        aberto={pendente !== null}
+        nome={nomeVariante}
+        ocupado={decidindo}
+        onCancelar={() => setPendente(null)}
+        onSalvar={() => void aoSalvarEContinuar()}
+        onDescartar={() => void aoDescartarEContinuar()}
+      />
+      <DialogoNomeVariante
+        aberto={dialogoVar?.tipo === 'nova'}
+        titulo="Nova variante"
+        rotuloConfirmar="Criar variante"
+        nomeInicial={nomeNovaVariante(nomesDasVariantes)}
+        onCancelar={() => setDialogoVar(null)}
+        onConfirmar={async (nome) => {
+          await store.getState().criarVarianteEmBranco(nome);
+          setDialogoVar(null);
+        }}
+      />
+      <DialogoNomeVariante
+        aberto={dialogoVar?.tipo === 'duplicar'}
+        titulo="Duplicar variante"
+        rotuloConfirmar="Duplicar"
+        nomeInicial={nomeCopia(nomeVariante, nomesDasVariantes)}
+        onCancelar={() => setDialogoVar(null)}
+        onConfirmar={async (nome) => {
+          await store.getState().duplicarVariante(nome);
+          setDialogoVar(null);
+        }}
+      />
+      <DialogoNomeVariante
+        aberto={dialogoVar?.tipo === 'renomear'}
+        titulo="Renomear variante"
+        rotuloConfirmar="Renomear"
+        nomeInicial={dialogoVar?.tipo === 'renomear' ? nomeDe(dialogoVar.id) : ''}
+        onCancelar={() => setDialogoVar(null)}
+        onConfirmar={async (nome) => {
+          if (dialogoVar?.tipo === 'renomear') await store.getState().renomearVariante(dialogoVar.id, nome);
+          setDialogoVar(null);
+        }}
+      />
+      <DialogoExcluirVariante
+        aberto={dialogoVar?.tipo === 'excluir'}
+        nome={dialogoVar?.tipo === 'excluir' ? nomeDe(dialogoVar.id) : ''}
+        naoSalva={
+          dialogoVar?.tipo === 'excluir' && dialogoVar.id === store.getState().documento.variante?._id && sujo
+        }
+        onCancelar={() => setDialogoVar(null)}
+        onConfirmar={async () => {
+          if (dialogoVar?.tipo === 'excluir') await store.getState().excluirVariante(dialogoVar.id);
+          setDialogoVar(null);
+        }}
+      />
+      <DialogoTemplates
+        aberto={galeriaAberta}
+        areaUtil={variante.areaUtil ?? dados.interior}
+        bordaPadrao={bordaPadrao}
+        temEscala={dados.metodo !== null}
+        nomesExistentes={nomesDasVariantes}
+        onCancelar={() => store.getState().fecharGaleria()}
+        onPosicionar={(escolha) => store.getState().abrirPosicionarTemplate(escolha)}
       />
       <DialogoTrocarParede
         aberto={dialogoTroca}

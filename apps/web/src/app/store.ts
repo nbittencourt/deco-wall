@@ -93,6 +93,15 @@ export interface ItemLista {
   semFoto: number;
 }
 
+// M3-10: o que a comparação mostra de uma variante (a ativa em memória, as outras no cache).
+export interface VisaoDaVariante {
+  _id: string;
+  nome: string;
+  grid: Grid;
+  conteudo: ConteudoVariante;
+  naoSalva: boolean;
+}
+
 export interface ResumoVariante extends ItemLista {
   ativa: boolean;
   naoSalva: boolean;
@@ -160,6 +169,8 @@ export interface Documento {
   // M3: todas as variantes do projeto, na ordem; aviso do rascunho depois de falhas seguidas (A-07).
   lista: ItemLista[];
   avisoRascunho: boolean;
+  // Hora da última alteração local da ativa (cartão "A minha" do conflito, A-14).
+  alteradoEm: Date | null;
   carregando: boolean;
   erroCarregar: string | null;
 }
@@ -275,6 +286,9 @@ export interface EstadoEditor {
   podeDesfazer(): boolean;
   podeRefazer(): boolean;
 
+  // ---- M3: comparação (RF-92, M3-10): o estado de trabalho da variante, só para leitura ----
+  visaoDaVariante(id: string): VisaoDaVariante | null;
+
   // ---- M3: variantes (RF-91, M3-03 a M3-05) ----
   // Só a ativa tem estado de trabalho: com alterações não salvas (ou fora do modo editor), alternar recusa.
   alternarVariante(id: string): Promise<boolean>;
@@ -302,7 +316,8 @@ export interface EstadoEditor {
   abrirGaleria(): void;
   fecharGaleria(): void;
   abrirPosicionarTemplate(escolha: { templateId: string; borda: Borda }): void;
-  moverConjunto(xCm: number, yCm: number): void;
+  // Devolve a posição efetiva (com snap e limite), para o nó arrastado acompanhá-la.
+  moverConjunto(xCm: number, yCm: number): { xCm: number; yCm: number };
   centralizarConjunto(): void;
   cancelarTemplate(): void;
   confirmarTemplate(): Promise<void>;
@@ -429,6 +444,7 @@ export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): Sto
         const reavaliarStatus = (estado: EstadoEditor) => {
           const doc = estado.documento;
           if (!doc.salvo || !estado.conteudo || !doc.variante) return;
+          doc.alteradoEm = new Date();
           const igual =
             JSON.stringify(estado.conteudo) === JSON.stringify(doc.salvo.conteudo) &&
             JSON.stringify(doc.variante.grid) === JSON.stringify(doc.salvo.grid);
@@ -458,6 +474,7 @@ export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): Sto
         // Marca a variante como alterada, mesmo que o conteúdo seja igual ao salvo (confirmar a área útil).
         const sujar = (estado: EstadoEditor) => {
           estado.documento.sujo = true;
+          estado.documento.alteradoEm = new Date();
           estado.documento.alteracoes += 1;
           if (
             estado.documento.salvamento.tipo !== 'salvando' &&
@@ -586,6 +603,7 @@ export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): Sto
               doc.conflito = null;
               doc.erroSalvamento = null;
               doc.avisoRascunho = false;
+              doc.alteradoEm = null;
               estado.ui.dialogoConflito = false;
               estado.ui.selecaoId = null;
               estado.ui.recorte = null;
@@ -781,6 +799,7 @@ export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): Sto
             erroSalvamento: null,
             lista: [],
             avisoRascunho: false,
+            alteradoEm: null,
             carregando: false,
             erroCarregar: null,
           },
@@ -1318,6 +1337,29 @@ export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): Sto
             }
           },
 
+          visaoDaVariante(id) {
+            const doc = get().documento;
+            const conteudo = get().conteudo;
+            if (doc.variante?._id === id && conteudo) {
+              return {
+                _id: id,
+                nome: doc.variante.nome,
+                grid: doc.variante.grid,
+                conteudo,
+                naoSalva: doc.sujo,
+              };
+            }
+            const entrada = cache.get(id);
+            if (!entrada) return null;
+            return {
+              _id: id,
+              nome: entrada.variante.nome,
+              grid: entrada.variante.grid,
+              conteudo: entrada.conteudo,
+              naoSalva: false,
+            };
+          },
+
           // ---- M3: variantes (RF-91, M3-03 a M3-05, A-05) ----
 
           async alternarVariante(id) {
@@ -1725,7 +1767,7 @@ export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): Sto
             const grid = get().documento.variante?.grid;
             const parede = paredeInteiraDe(get().documento.projeto);
             const template = atual && templatePorId(atual.templateId);
-            if (!atual || !grid || !parede || !template) return;
+            if (!atual || !grid || !parede || !template) return { xCm, yCm };
             const posicao = limitarConjunto(
               encaixarConjunto({ xCm, yCm }, { snap: grid.snap, passoCm: grid.passoCm }),
               atual.conjunto,
@@ -1742,6 +1784,7 @@ export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): Sto
               estado.ui.template.conjunto = resultado.conjunto;
               estado.ui.template.fotos = resultado.fotos;
             });
+            return posicao;
           },
 
           centralizarConjunto() {

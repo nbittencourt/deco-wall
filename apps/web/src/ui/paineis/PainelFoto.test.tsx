@@ -197,6 +197,8 @@ function baseProps(sobrescrita: Partial<PropsPainelFoto> = {}): PropsPainelFoto 
     onPersonalizado: vi.fn(),
     onDuplicar: vi.fn(),
     onRemover: vi.fn(),
+    onPreencher: vi.fn(),
+    podePreencher: false,
     ...sobrescrita,
   };
 }

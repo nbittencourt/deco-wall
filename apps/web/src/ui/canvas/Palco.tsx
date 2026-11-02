@@ -18,7 +18,7 @@ import {
 } from '@deco-wall/domain';
 import Konva from 'konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
-import { useCallback, useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
+import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type Ref } from 'react';
 import {
   Circle,
   Group,
@@ -39,9 +39,11 @@ import type {
   CenaParede,
   CenaPerspectiva,
   CenaRecorte,
+  CenaTemplate,
   EstadoPalco,
   PalcoApi,
   RetanguloConteudo,
+  ViewportCompartilhado,
 } from './cena';
 import { anotacoesDaCena, opacidadeDaFoto, type Anotacao } from './anotacoes';
 import {
@@ -86,6 +88,10 @@ export interface PropsPalco {
   cena: Cena;
   onEstado?: (estado: EstadoPalco) => void;
   ref?: Ref<PalcoApi>;
+  // M3 (A-17): com `onViewport`, a vista é controlada de fora (comparação): o palco mostra `viewport` e avisa cada
+  // mudança do usuário (roda, pan) ou do enquadramento. Sem `viewport` ainda, espera o primeiro enquadramento.
+  viewport?: ViewportCompartilhado | null;
+  onViewport?: (viewport: ViewportCompartilhado) => void;
 }
 
 const aTela = (vp: Viewport, p: Pt): Pt => ({ x: p.x * vp.escala + vp.x, y: p.y * vp.escala + vp.y });
@@ -101,10 +107,24 @@ function conteudoDe(cena: Cena): RetanguloConteudo {
 const pxPorUnidadeDe = (cena: Cena) =>
   cena.tipo === 'perspectiva' || cena.tipo === 'calibracao' ? 1 : cena.pxPorUnidade;
 
-export function Palco({ cena, onEstado, ref }: PropsPalco) {
+export function Palco({ cena, onEstado, ref, viewport, onViewport }: PropsPalco) {
   const caixa = useRef<HTMLDivElement>(null);
   const [tela, setTela] = useState({ largura: 0, altura: 0 });
-  const [vp, setVp] = useState<Viewport | null>(null);
+  const [vpInterno, setVpInterno] = useState<Viewport | null>(null);
+  // Vista controlada (A-17): o centro e a escala vêm de fora; x e y dependem do tamanho deste palco.
+  const controlado = onViewport !== undefined;
+  const vpControlado = useMemo<Viewport | null>(
+    () =>
+      viewport && tela.largura > 0 && tela.altura > 0
+        ? {
+            x: tela.largura / 2 - viewport.centro.x * viewport.escala,
+            y: tela.altura / 2 - viewport.centro.y * viewport.escala,
+            escala: viewport.escala,
+          }
+        : null,
+    [viewport, tela],
+  );
+  const vp = controlado ? vpControlado : vpInterno;
   const vpAtual = useRef<Viewport | null>(null);
   const ajuste = useRef<Viewport | null>(null);
   const chaveAjustada = useRef<string | null>(null);
@@ -132,11 +152,28 @@ export function Palco({ cena, onEstado, ref }: PropsPalco) {
   const cenaAtual = useRef(cena);
   const ultimoEstado = useRef<EstadoPalco | null>(null);
 
+  // Toda mudança de vista (roda, pan, botões, enquadramento) passa por aqui: grava na vista interna ou, se ela é
+  // controlada, avisa quem controla. A ref evita capturar valores velhos nos ouvintes de janela.
+  const mudarVp = (novo: Viewport) => {
+    if (onViewport) {
+      onViewport({
+        centro: { x: (tela.largura / 2 - novo.x) / novo.escala, y: (tela.altura / 2 - novo.y) / novo.escala },
+        escala: novo.escala,
+      });
+    } else {
+      setVpInterno(novo);
+    }
+  };
+  const mudarVpAtual = useRef(mudarVp);
+  const viewportAtual = useRef(viewport);
+
   useEffect(() => {
     vpAtual.current = vp;
     cenaAtual.current = cena;
     falhasAtuais.current = falhas;
     arrastoAtual.current = arrasto;
+    mudarVpAtual.current = mudarVp;
+    viewportAtual.current = viewport;
   });
 
   useEffect(() => {
@@ -169,7 +206,10 @@ export function Palco({ cena, onEstado, ref }: PropsPalco) {
     chaveAjustada.current = cena.chave;
     const inicial = ajustarATela(conteudoDe(cenaAtual.current), tela, MARGEM_AJUSTE_PX);
     ajuste.current = inicial;
-    setVp(inicial);
+    // Vista controlada que já tem posição (ex.: troca de lados na comparação) não é refeita.
+    if (controlado && viewportAtual.current) return;
+    mudarVpAtual.current(inicial);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `controlado` só muda no primeiro render
   }, [cena.chave, tela]);
 
   const limitesEscala = () => {
@@ -182,7 +222,7 @@ export function Palco({ cena, onEstado, ref }: PropsPalco) {
     const atual = vpAtual.current;
     if (!atual) return;
     const centro = ponto ?? { x: tela.largura / 2, y: tela.altura / 2 };
-    setVp(zoomNoPonto(atual, fator, centro, limitesEscala()));
+    mudarVp(zoomNoPonto(atual, fator, centro, limitesEscala()));
   };
 
   useImperativeHandle(
@@ -193,7 +233,7 @@ export function Palco({ cena, onEstado, ref }: PropsPalco) {
       ajustar: () => {
         const novo = ajustarATela(conteudoDe(cenaAtual.current), tela, MARGEM_AJUSTE_PX);
         ajuste.current = novo;
-        setVp(novo);
+        mudarVp(novo);
       },
       dePaginaParaConteudo: (clientX, clientY) => {
         const retangulo = caixa.current?.getBoundingClientRect();
@@ -212,7 +252,12 @@ export function Palco({ cena, onEstado, ref }: PropsPalco) {
     const base = pxPorUnidadeDe(cena);
     // Só a parede com escala tem grid (`grid` é null sem escala).
     const grid =
-      cena.tipo === 'parede' || cena.tipo === 'area-util' || cena.tipo === 'recorte' ? cena.grid : null;
+      cena.tipo === 'parede' ||
+      cena.tipo === 'area-util' ||
+      cena.tipo === 'recorte' ||
+      cena.tipo === 'template'
+        ? cena.grid
+        : null;
     const estado: EstadoPalco = {
       zoomPercentual: Math.round((vp.escala / base) * 100),
       gridOculto: Boolean(grid?.visivel && !gridVisivelNoZoom(grid.passoCm, vp.escala)),
@@ -289,7 +334,7 @@ export function Palco({ cena, onEstado, ref }: PropsPalco) {
     const mover = (evento: MouseEvent) => {
       const inicio = pan.current;
       if (!inicio) return;
-      setVp({
+      mudarVpAtual.current({
         ...inicio.vp,
         x: inicio.vp.x + evento.clientX - inicio.x,
         y: inicio.vp.y + evento.clientY - inicio.y,
@@ -435,7 +480,7 @@ function CamadaParede({
   onSoltar,
   onFalhaDaImagem,
 }: {
-  cena: CenaParede | CenaAreaUtil | CenaRecorte;
+  cena: CenaParede | CenaAreaUtil | CenaRecorte | CenaTemplate;
   vp: Viewport;
   tela: { largura: number; altura: number };
   onArrasto: (arrasto: Arrasto) => void;
@@ -482,7 +527,11 @@ function CamadaParede({
       )}
       {cena.comEscala && (
         <FotosDaCena
-          cena={cena.tipo === 'area-util' ? { ...cena, tipo: 'parede' as const, interativa: false } : cena}
+          cena={
+            cena.tipo === 'area-util' || cena.tipo === 'template'
+              ? { ...cena, tipo: 'parede' as const, interativa: false }
+              : cena
+          }
           ocultaId={cena.tipo === 'recorte' ? cena.recorte.foto.id : undefined}
           onArrasto={onArrasto}
           onSoltar={onSoltar}
@@ -491,6 +540,93 @@ function CamadaParede({
       )}
       {cena.tipo === 'recorte' && <CamadaRecorte cena={cena} />}
       {noModoArea && parede && <InteriorArrastavel cena={cena} parede={parede} />}
+      {cena.tipo === 'template' && <ConjuntoDoTemplate cena={cena} vp={vp} />}
+    </>
+  );
+}
+
+// M3, RN-32, A-21: as vagas do template a 80%, o contorno do conjunto com 8 px de folga (`danger` se maior que a
+// área útil) e a pill com o total. Um retângulo transparente sobre o conjunto o arrasta, com snap e limite.
+function ConjuntoDoTemplate({ cena, vp }: { cena: CenaTemplate; vp: Viewport }) {
+  const { conjunto } = cena;
+  const folga = 8 / vp.escala;
+  const cmPorPx = 1 / vp.escala;
+  const cor = cena.maiorQueAreaUtil ? CORES_CANVAS.sobreposicao : CORES_CANVAS.areaUtil;
+  return (
+    <>
+      <Group opacity={0.8} listening={false}>
+        <FotosDaCena
+          cena={{
+            ...cena,
+            tipo: 'parede',
+            fotos: cena.vagas,
+            selecaoId: null,
+            interativa: false,
+            mostrarAreaTotal: false,
+            mostrarAlertas: false,
+          }}
+          onArrasto={() => undefined}
+          onSoltar={() => undefined}
+          onFalhaDaImagem={() => undefined}
+        />
+      </Group>
+      <Rect
+        listening={false}
+        x={conjunto.xCm - folga}
+        y={conjunto.yCm - folga}
+        width={conjunto.larguraCm + 2 * folga}
+        height={conjunto.alturaCm + 2 * folga}
+        stroke={cor}
+        strokeWidth={1.5}
+        strokeScaleEnabled={false}
+        dash={[6, 4]}
+      />
+      <Group
+        x={conjunto.xCm - folga}
+        y={conjunto.yCm - folga - 28 * cmPorPx}
+        scaleX={cmPorPx}
+        scaleY={cmPorPx}
+        listening={false}
+      >
+        <Label>
+          <Tag
+            fill={cena.maiorQueAreaUtil ? CORES_CANVAS.sobreposicao : CORES_CANVAS.pillMedida}
+            cornerRadius={11}
+          />
+          <Text
+            text={`✥ ${cena.rotuloTotal}`}
+            fontFamily={FONTE_MONO}
+            fontSize={11}
+            fill="#FFFFFF"
+            padding={6}
+          />
+        </Label>
+      </Group>
+      <Rect
+        name="conjunto"
+        x={conjunto.xCm}
+        y={conjunto.yCm}
+        width={conjunto.larguraCm}
+        height={conjunto.alturaCm}
+        fill="rgba(0,0,0,0.001)"
+        draggable
+        onMouseEnter={(e) => {
+          const container = e.target.getStage()?.container();
+          if (container) container.style.cursor = 'move';
+        }}
+        onMouseLeave={(e) => {
+          const container = e.target.getStage()?.container();
+          if (container) container.style.cursor = '';
+        }}
+        onDragMove={(e) => {
+          const p = cena.onMoverConjunto(e.target.x(), e.target.y());
+          e.target.position({ x: p.xCm, y: p.yCm });
+        }}
+        onDragEnd={(e) => {
+          const p = cena.onMoverConjunto(e.target.x(), e.target.y());
+          e.target.position({ x: p.xCm, y: p.yCm });
+        }}
+      />
     </>
   );
 }
@@ -616,6 +752,27 @@ function Sobreposicao({
           <SobreposicaoRecorte cena={cena} vp={vp} />
         </>
       );
+    case 'template':
+      // As vagas do conjunto levam a hachura de placeholder; sem seleção, alertas nem caixa "Área total".
+      return (
+        <>
+          <RotulosDaParede cena={cena} vp={vp} />
+          <SobreposicaoFotos
+            cena={{
+              ...cena,
+              tipo: 'parede',
+              fotos: cena.vagas,
+              selecaoId: null,
+              interativa: false,
+              mostrarAreaTotal: false,
+              mostrarAlertas: false,
+            }}
+            vp={vp}
+            arrasto={null}
+            falhas={falhas}
+          />
+        </>
+      );
     default:
       return (
         <>
@@ -626,7 +783,13 @@ function Sobreposicao({
   }
 }
 
-function RotulosDaParede({ cena, vp }: { cena: CenaParede | CenaAreaUtil | CenaRecorte; vp: Viewport }) {
+function RotulosDaParede({
+  cena,
+  vp,
+}: {
+  cena: CenaParede | CenaAreaUtil | CenaRecorte | CenaTemplate;
+  vp: Viewport;
+}) {
   if (!cena.comEscala) return null;
   const origem = aTela(vp, { x: 0, y: 0 });
   const area = cena.tipo === 'area-util' ? cena.area : cena.areaUtil;

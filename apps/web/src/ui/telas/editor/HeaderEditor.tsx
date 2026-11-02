@@ -1,6 +1,6 @@
 import { formatarCmCurto, type Grid } from '@deco-wall/domain';
 import { ArrowLeft, ChevronDown, EyeOff, Grid3x3, Magnet, Redo2, Undo2 } from 'lucide-react';
-import type { MouseEvent } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import { BotaoEmBreve, BotaoInativo, TEXTO_EM_BREVE } from '../../componentes/proprios/BotaoEmBreve';
 import { ChipEscala } from '../../componentes/proprios/ChipEscala';
 import { ComDica } from '../../componentes/proprios/ComDica';
@@ -12,7 +12,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../componentes/ui/dropdown-menu';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../componentes/ui/select';
 import { Toggle } from '../../componentes/ui/toggle';
 
 // Header do editor (DESIGN §7, protótipo 03a). Funcionam: voltar, nome, Área útil, Perspectiva, Calibrar,
@@ -27,6 +26,12 @@ export interface PropsHeaderEditor {
   nome: string;
   onRenomear: (nome: string) => Promise<void>;
   nomeVariante: string;
+  // M3 (A-01): o seletor de variante, montado pela tela.
+  seletorVariante: ReactNode;
+  // M3 (A-25): Comparar pede 2 variantes e escala; Templates abre a galeria.
+  motivoComparar?: string;
+  onComparar: () => void;
+  onTemplates: () => void;
   temParede: boolean;
   metodo: 'perspectiva' | 'linear' | null;
   pxPorCm: number | null;
@@ -156,24 +161,23 @@ export function HeaderEditor(props: PropsHeaderEditor) {
       <span className="shrink-0 text-body-sm font-semibold text-ink">Parede</span>
       <NomeProjeto nome={props.nome} onRenomear={props.onRenomear} />
 
-      <Select value={props.nomeVariante}>
-        <SelectTrigger aria-label="Variante" className="w-auto gap-2 px-2.5">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={props.nomeVariante}>{props.nomeVariante}</SelectItem>
-        </SelectContent>
-      </Select>
+      {props.seletorVariante}
 
       <Divisor />
 
       {/* DESIGN §7: abaixo de 1440 px só Área útil, Perspectiva, Calibrar e Parede vão para o menu. */}
-      <BotaoEmBreve variant="ghost" className="px-[9px]">
-        Comparar
-      </BotaoEmBreve>
-      <BotaoEmBreve variant="ghost" className="px-[9px]">
+      {props.motivoComparar ? (
+        <BotaoInativo variant="ghost" className="px-[9px]" motivo={props.motivoComparar}>
+          Comparar
+        </BotaoInativo>
+      ) : (
+        <Button variant="ghost" className="px-[9px]" onClick={props.onComparar}>
+          Comparar
+        </Button>
+      )}
+      <Button variant="ghost" className="px-[9px]" onClick={props.onTemplates}>
         Templates
-      </BotaoEmBreve>
+      </Button>
       <div className="hidden items-center gap-1 min-[1440px]:flex">
         {itens.map((item) => (
           <BotaoParede key={item.rotulo} item={item} />
@@ -249,7 +253,7 @@ export function HeaderEditor(props: PropsHeaderEditor) {
 
       <div className="flex-1" />
 
-      <ComDica texto="Salvar (Ctrl+S)">
+      <ComDica texto={`Salvar “${props.nomeVariante}” (Ctrl+S)`}>
         <Button variant="outline" aria-disabled={props.salvando || undefined} onClick={props.onSalvar}>
           Salvar
         </Button>

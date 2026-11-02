@@ -9,6 +9,7 @@ import {
   variante,
   type OpcoesCenario,
 } from '../../testes/cenario-m3';
+import { agendador } from '../../app/autosave';
 import { ErroApi } from '../../infra/dto';
 import { TooltipProvider } from '../componentes/ui/tooltip';
 import { Editor } from './Editor';
@@ -29,11 +30,30 @@ beforeAll(() => {
 
 afterEach(() => {
   cleanup();
-  vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
-async function montar(opcoes: OpcoesCenario = {}, relogio = false) {
-  if (relogio) vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+// O temporizador do salvamento automático passa pelo `agendador`: o teste o captura e dispara os "ticks" à mão,
+// sem relógio falso (que atrapalharia a espera do Testing Library).
+function interceptarAgendador() {
+  const ativos = new Map<number, { fn: () => void; ms: number }>();
+  let n = 0;
+  vi.spyOn(agendador, 'periodico').mockImplementation((fn, ms) => {
+    const id = (n += 1);
+    ativos.set(id, { fn, ms });
+    return () => ativos.delete(id);
+  });
+  return {
+    intervaloMs: () => [...ativos.values()].at(-1)?.ms,
+    tick: async () => {
+      await act(async () => {
+        for (const { fn } of ativos.values()) fn();
+      });
+    },
+  };
+}
+
+async function montar(opcoes: OpcoesCenario = {}) {
   const cenario = criarCenario(opcoes);
   const navegar = vi.fn();
   render(
@@ -41,11 +61,12 @@ async function montar(opcoes: OpcoesCenario = {}, relogio = false) {
       <Editor projetoId={ID_PROJETO} api={cenario.api} navegar={navegar} />
     </TooltipProvider>,
   );
-  await screen.findByRole('button', { name: /^Variante: / });
+  // Com um diálogo aberto ao carregar (recuperação), o resto da tela fica oculto para o leitor de tela.
+  await screen.findByRole('button', { name: /^Variante: /, hidden: true });
   return { ...cenario, navegar };
 }
 
-const gatilho = () => screen.getByRole('button', { name: /^Variante: / });
+const gatilho = () => screen.getByRole('button', { name: /^Variante: /, hidden: true });
 const abrirSeletor = () => fireEvent.click(gatilho());
 const lista = () => screen.getByRole('dialog');
 
@@ -53,12 +74,6 @@ const lista = () => screen.getByRole('dialog');
 function sujarAAtiva() {
   fireEvent.click(screen.getByRole('switch', { name: 'Mostrar grid' }));
 }
-
-const avancarMinutos = async (minutos: number) => {
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(minutos * 60_000);
-  });
-};
 
 describe('seletor de variante no header (A-01)', () => {
   it('mostra a variante aberta e a lista com todas', async () => {
@@ -176,7 +191,6 @@ describe('criar, duplicar, renomear e excluir (M3-04, A-02)', () => {
     const { api } = await montar();
     abrirSeletor();
     fireEvent.pointerDown(screen.getByRole('button', { name: 'Ações de Variante 2' }), { button: 0 });
-    fireEvent.click(screen.getByRole('button', { name: 'Ações de Variante 2' }));
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Renomear' }));
     const dialogo = await screen.findByRole('dialog', { name: 'Renomear variante' });
     fireEvent.change(within(dialogo).getByRole('textbox'), { target: { value: 'Sala escura' } });
@@ -188,7 +202,6 @@ describe('criar, duplicar, renomear e excluir (M3-04, A-02)', () => {
     const { api } = await montar();
     abrirSeletor();
     fireEvent.pointerDown(screen.getByRole('button', { name: 'Ações de Variante 2' }), { button: 0 });
-    fireEvent.click(screen.getByRole('button', { name: 'Ações de Variante 2' }));
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Excluir' }));
     const dialogo = await screen.findByRole('dialog', { name: 'Excluir variante' });
     fireEvent.click(within(dialogo).getByRole('button', { name: 'Excluir variante' }));
@@ -197,7 +210,6 @@ describe('criar, duplicar, renomear e excluir (M3-04, A-02)', () => {
 
     abrirSeletor();
     fireEvent.pointerDown(screen.getByRole('button', { name: 'Ações de Base' }), { button: 0 });
-    fireEvent.click(screen.getByRole('button', { name: 'Ações de Base' }));
     expect((await screen.findByRole('menuitem', { name: 'Excluir' })).getAttribute('aria-disabled')).toBe(
       'true',
     );
@@ -306,19 +318,21 @@ describe('templates: galeria e posicionamento (RF-93, RN-32)', () => {
 
 describe('salvamento automático (RF-71, SV-01, A-06, A-07)', () => {
   it('a cada AUTOSAVE_MINUTOS grava o rascunho se houve alteração; o status vira "Rascunho salvo"', async () => {
-    const { api } = await montar({ autosaveMinutos: 5 }, true);
-    await avancarMinutos(5);
+    const relogio = interceptarAgendador();
+    const { api } = await montar({ autosaveMinutos: 5 });
+    expect(relogio.intervaloMs()).toBe(5 * 60_000);
+    await relogio.tick();
     expect(api.salvarRascunho).not.toHaveBeenCalled();
 
     sujarAAtiva();
     expect(screen.getByText('Alterações não salvas')).toBeTruthy();
-    await avancarMinutos(5);
+    await relogio.tick();
+    await waitFor(() => expect(screen.getByText('Rascunho salvo às 10:10')).toBeTruthy());
     expect(api.salvarRascunho).toHaveBeenCalledTimes(1);
-    expect(screen.getByText('Rascunho salvo às 10:10')).toBeTruthy();
     expect(api.salvarVariante).not.toHaveBeenCalled();
 
     // Sem nova alteração, o tick seguinte não grava de novo.
-    await avancarMinutos(5);
+    await relogio.tick();
     expect(api.salvarRascunho).toHaveBeenCalledTimes(1);
 
     // O hard save volta o status a "Salvo".
@@ -327,31 +341,32 @@ describe('salvamento automático (RF-71, SV-01, A-06, A-07)', () => {
   });
 
   it('usa o intervalo vindo de /api/config', async () => {
-    const { api } = await montar({ autosaveMinutos: 2 }, true);
-    sujarAAtiva();
-    await avancarMinutos(2);
-    expect(api.salvarRascunho).toHaveBeenCalledTimes(1);
+    const relogio = interceptarAgendador();
+    await montar({ autosaveMinutos: 2 });
+    await waitFor(() => expect(relogio.intervaloMs()).toBe(2 * 60_000));
   });
 
   it('duas falhas seguidas mostram o aviso dispensável', async () => {
-    const { api } = await montar({ autosaveMinutos: 1 }, true);
+    const relogio = interceptarAgendador();
+    const { api } = await montar({ autosaveMinutos: 1 });
     api.salvarRascunho.mockRejectedValue(new ErroApi(500, { erro: 'Erro interno do servidor.' }));
     sujarAAtiva();
-    await avancarMinutos(1);
+    await relogio.tick();
     expect(screen.queryByText('Não foi possível salvar o rascunho automático. Use Salvar.')).toBeNull();
-    await avancarMinutos(1);
-    const aviso = screen.getByText('Não foi possível salvar o rascunho automático. Use Salvar.');
+    await relogio.tick();
+    const aviso = await screen.findByText('Não foi possível salvar o rascunho automático. Use Salvar.');
     fireEvent.click(
-      within(aviso.closest('[role="alert"]') as HTMLElement).getByRole('button', { name: 'Dispensar' }),
+      within(aviso.closest('[role="status"]') as HTMLElement).getByRole('button', { name: 'Dispensar' }),
     );
     expect(screen.queryByText('Não foi possível salvar o rascunho automático. Use Salvar.')).toBeNull();
   });
 
   it('conflito no rascunho: Alert com "Resolver…", sem abrir o diálogo; Resolver… abre', async () => {
-    const { servidor } = await montar({ autosaveMinutos: 1 }, true);
+    const relogio = interceptarAgendador();
+    const { servidor } = await montar({ autosaveMinutos: 1 });
     sujarAAtiva();
     servidor.get(ID_BASE)!.revisao = 2;
-    await avancarMinutos(1);
+    await relogio.tick();
     const alerta = await screen.findByRole('alert');
     expect(alerta.textContent).toContain('Esta variante foi salva em outra aba às');
     expect(screen.queryByRole('dialog')).toBeNull();

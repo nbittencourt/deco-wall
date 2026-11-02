@@ -319,11 +319,12 @@ describe('parede com escala', () => {
     await waitFor(() => expect(screen.queryByText('Ajuste onde as fotos podem ficar.')).toBeNull());
   });
 
-  it('controles do M3 em diante continuam visíveis e inativos (§2)', async () => {
+  it('controles do M4 em diante continuam visíveis e inativos; Comparar e Templates ativaram no M3 (§2, A-25)', async () => {
     await montar({ parede: PAREDE_LINEAR, areaUtil: AREA_LINEAR });
-    for (const nome of ['Exportar', 'Comparar', 'Templates']) {
-      expect(screen.getByRole('button', { name: nome }).getAttribute('aria-disabled'), nome).toBe('true');
-    }
+    expect(screen.getByRole('button', { name: 'Exportar' }).getAttribute('aria-disabled')).toBe('true');
+    // Com uma só variante, Comparar fica inativo pelo estado; Templates abre a galeria.
+    expect(screen.getByRole('button', { name: 'Comparar' }).getAttribute('aria-disabled')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Templates' }).getAttribute('aria-disabled')).toBeNull();
   });
 
   it('sem foto escolhida ou selecionada, as ações da composição ficam inativas pelo estado (M2)', async () => {
@@ -382,8 +383,8 @@ describe('salvamento manual (M1-01)', () => {
     await waitFor(() => expect(api.salvarVariante).toHaveBeenCalledTimes(1));
   });
 
-  it('409 mostra o aviso com a hora e o botão Recarregar (descarta as alterações locais)', async () => {
-    const { api } = await montar({
+  it('409 abre o diálogo de conflito (M3-09); Esc deixa o aviso com "Resolver…" e o status "Conflito"', async () => {
+    await montar({
       parede: PAREDE_LINEAR,
       areaUtil: AREA_LINEAR,
       api: {
@@ -395,16 +396,14 @@ describe('salvamento manual (M1-01)', () => {
     fireEvent.click(screen.getByRole('switch', { name: 'Mostrar grid' }));
     fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
-    const aviso = await screen.findByRole('alert');
-    expect(aviso.textContent).toContain(
-      'Esta variante foi salva em outra aba às 14:35. Recarregue para ver a versão salva.',
-    );
-    expect(screen.getByText('Conflito')).toBeTruthy();
+    const dialogo = await screen.findByRole('dialog');
+    expect(within(dialogo).getByText('Esta variante foi salva em outra aba')).toBeTruthy();
+    expect(screen.getAllByText('Conflito').length).toBeGreaterThan(0);
 
-    fireEvent.click(within(aviso).getByRole('button', { name: 'Recarregar' }));
-    await waitFor(() => expect(api.obterProjeto).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
-    expect(screen.getByText('Salvo')).toBeTruthy();
+    fireEvent.keyDown(dialogo, { key: 'Escape' });
+    const aviso = await screen.findByRole('alert');
+    expect(aviso.textContent).toContain('Esta variante foi salva em outra aba às 14:35.');
+    expect(within(aviso).getByRole('button', { name: 'Resolver…' })).toBeTruthy();
   });
 });
 

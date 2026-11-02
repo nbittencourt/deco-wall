@@ -59,6 +59,8 @@ beforeAll(() => {
     unobserve() {}
     disconnect() {}
   } as unknown as typeof ResizeObserver;
+  // O jsdom não implementa o que a lista do Select (Radix) usa para rolar até o item escolhido.
+  Element.prototype.scrollIntoView ??= () => undefined;
 });
 
 afterEach(cleanup);

@@ -11,7 +11,7 @@ import {
   type FotoNaParede,
   type Tamanho,
 } from '@deco-wall/domain';
-import { Copy, Crop, ImageOff } from 'lucide-react';
+import { Copy, Crop, ImageOff, ImagePlus } from 'lucide-react';
 import { urlArquivoImagem } from '../../infra/clienteApi';
 import type { ImagemDto } from '../../infra/dto';
 import { BotaoInativo } from '../componentes/proprios/BotaoEmBreve';
@@ -37,6 +37,9 @@ export interface PropsPainelFoto {
   onPersonalizado: () => void;
   onDuplicar: () => void;
   onRemover: () => void;
+  // M3-01, A-23: preencher a vaga com a miniatura escolhida na biblioteca; só no placeholder.
+  onPreencher: () => void;
+  podePreencher: boolean;
 }
 
 // Retrato · Paisagem (152 px); inativo em tamanho quadrado (RN-05).
@@ -77,6 +80,8 @@ export function PainelFoto({
   onPersonalizado,
   onDuplicar,
   onRemover,
+  onPreencher,
+  podePreencher,
 }: PropsPainelFoto) {
   const orientacao = orientacaoDe(foto.tamanho);
   const quadrado = orientacao === 'quadrado';
@@ -208,6 +213,23 @@ export function PainelFoto({
           ))}
         </Alert>
       )}
+
+      {placeholder &&
+        (podePreencher ? (
+          <Button variant="outline" className="justify-start" onClick={onPreencher}>
+            <ImagePlus aria-hidden="true" />
+            Preencher com a foto selecionada
+          </Button>
+        ) : (
+          <BotaoInativo
+            variant="outline"
+            className="justify-start"
+            motivo="Selecione uma foto na biblioteca."
+          >
+            <ImagePlus aria-hidden="true" />
+            Preencher com a foto selecionada
+          </BotaoInativo>
+        ))}
 
       <div className="flex flex-col gap-1.5">
         <span className="text-label">Enquadramento</span>

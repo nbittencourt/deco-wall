@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { TooltipProvider } from '../../componentes/ui/tooltip';
 import { DialogoTemplates } from './DialogoTemplates';
 
 // Galeria de templates (RF-93, RN-29, RN-30, TPL-01 a TPL-08, A-18, A-19; protótipo 14; DESIGN §7.3;
@@ -26,7 +27,11 @@ function montar(extra: Record<string, unknown> = {}) {
     onPosicionar: vi.fn(),
     ...extra,
   };
-  render(<DialogoTemplates {...props} />);
+  render(
+    <TooltipProvider>
+      <DialogoTemplates {...props} />
+    </TooltipProvider>,
+  );
   return { props, dialogo: screen.getByRole('dialog') };
 }
 
@@ -110,7 +115,7 @@ describe('DialogoTemplates — borda e confirmação (RN-30)', () => {
     fireEvent.blur(campo);
     expect(
       within(dialogo).getByText(
-        /Com esta borda, \d+ vagas? ficam? maiores que o espaço do modelo e as vizinhas serão afastadas\./,
+        /Com esta borda, \d+ vagas? (ficam|fica) (maiores|maior) que o espaço do modelo e as vizinhas serão afastadas\./,
       ),
     ).toBeTruthy();
     fireEvent.click(within(dialogo).getByRole('button', { name: 'Posicionar na parede' }));
