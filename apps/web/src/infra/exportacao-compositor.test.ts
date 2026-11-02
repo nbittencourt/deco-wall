@@ -1,5 +1,5 @@
 import type { ComandoExportacao } from '@deco-wall/domain';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, type Mock } from 'vitest';
 import {
   comporExportacao,
   larguraFaixaHachuraPx,
@@ -50,10 +50,10 @@ function contextoGravador() {
   return { ctx, chamadas };
 }
 
-const imagem = (width: number, height: number): ImagemDesenhavel & { close: ReturnType<typeof vi.fn> } => ({
+const imagem = (width: number, height: number): ImagemDesenhavel & { close: Mock<() => void> } => ({
   width,
   height,
-  close: vi.fn(),
+  close: vi.fn<() => void>(),
 });
 
 // Parede de 300 × 200 cm a 10 px/cm (3000 × 2000 px), origem em 0,0.

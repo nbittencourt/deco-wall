@@ -23,6 +23,35 @@ export type ImagemDto = Omit<Imagem, 'criadaEm' | 'excluidaEm' | 'purgaEm'> & {
   purgaEm: string | null;
 };
 
+// M4-07, A-12: a imagem excluída traz os dias que faltam para a purga (calculados no servidor).
+export type ImagemExcluidaDto = ImagemDto & { diasRestantes: number };
+
+// M4, A-06: onde a imagem aparece (variantes salvas) e os projetos em que foi carregada.
+export interface AssociacoesDto {
+  imagem: { _id: string; nomeOriginal: string; thumbUrl: string };
+  usos: { projetoId: string; projetoNome: string; varianteId: string; varianteNome: string; vezes: number }[];
+  projetos: { projetoId: string; projetoNome: string }[];
+}
+
+// M4-04, M4-05: variante tocada por remover ou excluir, com a revisão nova e quantas fotos mudaram.
+export interface VarianteAfetadaDto {
+  projetoId: string;
+  varianteId: string;
+  revisao: number;
+  fotos: number;
+}
+
+export interface RespostaExcluirDto {
+  imagem: { _id: string; excluidaEm: string; purgaEm: string };
+  afetadas: VarianteAfetadaDto[];
+  fotosConvertidas: number;
+}
+
+export interface RespostaRemoverDto {
+  afetadas: Omit<VarianteAfetadaDto, 'projetoId'>[];
+  fotosRemovidas: number;
+}
+
 export interface ResumoProjeto {
   _id: string;
   nome: string;
@@ -155,7 +184,14 @@ export interface ClienteApi {
     projetoId: string,
     varianteId: string,
     corpo: CorpoSalvarVariante,
-  ): Promise<{ revisao: number; salvaEm: string }>;
+  ): Promise<{ revisao: number; salvaEm: string; imagensExcluidas?: string[] }>;
+
+  // ---- M4: ciclo de vida das imagens (spec M4 §5) ----
+  listarImagensExcluidas(): Promise<ImagemExcluidaDto[]>;
+  associacoesDaImagem(imagemId: string): Promise<AssociacoesDto>;
+  excluirImagem(imagemId: string): Promise<RespostaExcluirDto>;
+  restaurarImagem(imagemId: string): Promise<ImagemDto>;
+  removerImagemDoProjeto(projetoId: string, imagemId: string): Promise<RespostaRemoverDto>;
 
   // ---- M3: variantes e rascunhos (spec M3 §5) ----
   obterVariante(projetoId: string, varianteId: string): Promise<VarianteDto>;

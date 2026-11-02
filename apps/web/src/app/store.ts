@@ -6,6 +6,7 @@ import {
   arredondarCm,
   BORDA_MAX_CM,
   centralizarNaAreaUtil,
+  converterEmPlaceholder,
   duplicarFoto as duplicarFotoDaComposicao,
   encaixarConjunto,
   encaixarPosicao,
@@ -27,6 +28,7 @@ import {
   paredeInteira,
   preencherVaga as preencherVagaNaVariante,
   rascunhoDesatualizado,
+  recomendacaoDoPlaceholder,
   semFoto,
   templatePorId,
   trazerParaFrente as trazerParaFrenteNaOrdem,
@@ -48,10 +50,12 @@ import { immer } from 'zustand/middleware/immer';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import {
   ErroApi,
+  type AssociacoesDto,
   type ClienteApi,
   type ConteudoRascunho,
   type DadosPerspectiva,
   type ImagemDto,
+  type ImagemExcluidaDto,
   type OrigemVariante,
   type ProjetoDto,
   type RespostaParede,
@@ -191,6 +195,13 @@ export interface Arrasto {
   yCm: number;
 }
 
+// M4-03, A-02: o diálogo "Remover ou excluir" de uma imagem, com as associações carregadas do servidor.
+export interface DialogoImagemEstado {
+  imagemId: string;
+  associacoes: AssociacoesDto | null;
+  erro: string | null;
+}
+
 export interface Ui {
   modo: Modo;
   contextoAreaUtil: ContextoAreaUtil;
@@ -207,12 +218,19 @@ export interface Ui {
   galeriaAberta: boolean;
   template: EstadoTemplate | null;
   avisoCriacao: string | null;
+  // M4: diálogo de imagem (remover ou excluir), aviso do ciclo de vida (A-04, A-07, A-11) e exportação (A-13).
+  dialogoImagem: DialogoImagemEstado | null;
+  avisoCiclo: string | null;
+  exportacaoAberta: boolean;
 }
 
 export interface Biblioteca {
   imagens: ImagemDto[];
   carregando: boolean;
   erro: string | null;
+  // M4-07: a lista "Excluídas", carregada ao ativar o filtro.
+  excluidas: ImagemExcluidaDto[];
+  carregandoExcluidas: boolean;
 }
 
 export interface OpcoesStore {
@@ -324,6 +342,23 @@ export interface EstadoEditor {
   cancelarTemplate(): void;
   confirmarTemplate(): Promise<void>;
   dispensarAvisoCriacao(): void;
+
+  // ---- M4: ciclo de vida das imagens (RF-28, RF-29, RF-30a, M4-03 a M4-08) ----
+  abrirDialogoImagem(imagemId: string): Promise<void>;
+  fecharDialogoImagem(): void;
+  // Exigem a ativa salva (A-03): a decisão Salvar / Descartar / Cancelar vem antes, na tela.
+  removerImagemDoProjeto(imagemId: string): Promise<void>;
+  excluirImagem(imagemId: string): Promise<void>;
+  carregarExcluidas(): Promise<void>;
+  restaurarImagem(imagemId: string): Promise<void>;
+  // RF-30a, A-09: a imagem anterior de um placeholder, se estiver ativa na biblioteca.
+  recomendacaoDaFoto(fotoId: string): ImagemDto | null;
+  usarFotoAnterior(fotoId: string): void;
+  dispensarAvisoCiclo(): void;
+
+  // ---- M4: exportação (RF-80, A-13) ----
+  abrirExportacao(): void;
+  fecharExportacao(): void;
 }
 
 // O que o zundo guarda a cada passo.
@@ -409,6 +444,16 @@ export function resumoDasVariantes(estado: EstadoEditor): ResumoVariante[] {
 }
 
 const mensagemDe = (erro: unknown, padrao: string) => (erro instanceof Error ? erro.message : padrao);
+
+const plural = (n: number, singular: string, pluralTexto: string) =>
+  `${n} ${n === 1 ? singular : pluralTexto}`;
+
+// O nome da imagem para os avisos: da biblioteca ativa, da lista de excluídas ou do diálogo aberto.
+const nomeDaImagem = (estado: EstadoEditor, imagemId: string) =>
+  estado.biblioteca.imagens.find((i) => i._id === imagemId)?.nomeOriginal ??
+  estado.biblioteca.excluidas.find((i) => i._id === imagemId)?.nomeOriginal ??
+  estado.ui.dialogoImagem?.associacoes?.imagem.nomeOriginal ??
+  'Imagem';
 
 export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): StoreEditor {
   const gerarId = opcoes.gerarId ?? (() => new ObjectId().toHexString());
@@ -702,6 +747,37 @@ export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): Sto
           }
         };
 
+        // M4-04, M4-05, A-04: o servidor mudou variantes por baixo da pilha (remover ou excluir uma imagem). Relê o
+        // projeto: a ativa afetada vira a versão salva (pilha zerada, como em "Usar a salva"), as outras afetadas
+        // entram no cache já recarregadas e sem pilha, e o resumo de rascunhos é refeito. As não afetadas ficam como
+        // estão, com a pilha.
+        const adotarVariantesAlteradas = async (ids: string[]) => {
+          const projeto = get().documento.projeto;
+          if (!projeto) return;
+          const completo = await api.obterProjeto(projeto._id);
+          resumosRascunho = completo.rascunhos ?? [];
+          const afetadas = new Set(ids);
+          const ativaId = get().documento.variante?._id;
+          for (const v of completo.variantes) {
+            if (!afetadas.has(v._id)) continue;
+            if (v._id === ativaId) adotarVersaoSalva(v);
+            else cache.set(v._id, entradaDe(v));
+          }
+          set((estado) => {
+            for (const v of completo.variantes) {
+              if (!afetadas.has(v._id) || v._id === ativaId) continue;
+              const item = estado.documento.lista.find((i) => i._id === v._id);
+              if (item) Object.assign(item, itemDe(v));
+            }
+          });
+        };
+
+        const avisarCiclo = (texto: string) => {
+          set((estado) => {
+            estado.ui.avisoCiclo = texto;
+          });
+        };
+
         const carregar = async (id: string) => {
           const { projeto, variantes, rascunhos } = await api.obterProjeto(id);
           const variante = variantes.find((v) => v._id === projeto.ultimaVarianteId) ?? variantes[0] ?? null;
@@ -819,8 +895,17 @@ export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): Sto
             galeriaAberta: false,
             template: null,
             avisoCriacao: null,
+            dialogoImagem: null,
+            avisoCiclo: null,
+            exportacaoAberta: false,
           },
-          biblioteca: { imagens: [], carregando: false, erro: null },
+          biblioteca: {
+            imagens: [],
+            carregando: false,
+            erro: null,
+            excluidas: [],
+            carregandoExcluidas: false,
+          },
           config: { uploadMaxMb: 50, autosaveMinutos: 5 },
           passos: { desfazer: 0, refazer: 0 },
 
@@ -1278,9 +1363,40 @@ export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): Sto
               // SV-02: o hard save vale como nova base; o rascunho da sessão deixa de contar (A-10).
               rascunhoGravado = null;
               falhasRascunho = 0;
+              // M4-06, A-11: fotos de imagens excluídas em outra aba viraram placeholder no servidor; a tela e o
+              // último salvo acompanham, sem passo de desfazer.
+              const excluidasAgora = new Set(resposta.imagensExcluidas ?? []);
+              const converter = (c: ConteudoVariante): ConteudoVariante =>
+                excluidasAgora.size === 0
+                  ? c
+                  : {
+                      ...c,
+                      fotos: c.fotos.map((f) =>
+                        f.imagemId && excluidasAgora.has(f.imagemId)
+                          ? converterEmPlaceholder(f, f.imagemId)
+                          : f,
+                      ),
+                    };
+              const convertidas = enviado.conteudo.fotos.filter(
+                (f) => f.imagemId && excluidasAgora.has(f.imagemId),
+              ).length;
+              enviado.conteudo = converter(enviado.conteudo);
+              if (excluidasAgora.size > 0) {
+                semPasso(() =>
+                  set((estado) => {
+                    if (estado.conteudo) estado.conteudo = converter(estado.conteudo);
+                  }),
+                );
+              }
               set((estado) => {
                 const doc = estado.documento;
                 doc.avisoRascunho = false;
+                if (convertidas > 0) {
+                  estado.ui.avisoCiclo =
+                    convertidas === 1
+                      ? '1 foto virou espaço sem foto porque a imagem foi excluída em outra aba.'
+                      : `${convertidas} fotos viraram espaço sem foto porque a imagem foi excluída em outra aba.`;
+                }
                 if (doc.variante) {
                   doc.variante.revisao = resposta.revisao;
                   doc.variante.salvaEm = resposta.salvaEm;
@@ -1866,6 +1982,156 @@ export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): Sto
           dispensarAvisoCriacao() {
             set((estado) => {
               estado.ui.avisoCriacao = null;
+            });
+          },
+
+          // ---- M4: ciclo de vida das imagens ----
+
+          async abrirDialogoImagem(imagemId) {
+            try {
+              const associacoes = await api.associacoesDaImagem(imagemId);
+              set((estado) => {
+                estado.ui.dialogoImagem = { imagemId, associacoes, erro: null };
+              });
+            } catch (erro) {
+              set((estado) => {
+                estado.ui.dialogoImagem = {
+                  imagemId,
+                  associacoes: null,
+                  erro: mensagemDe(erro, 'Não foi possível carregar as associações da imagem.'),
+                };
+              });
+            }
+          },
+
+          fecharDialogoImagem() {
+            set((estado) => {
+              estado.ui.dialogoImagem = null;
+            });
+          },
+
+          async removerImagemDoProjeto(imagemId) {
+            const { projeto, sujo } = get().documento;
+            if (!projeto) return;
+            if (sujo) throw new Error(MENSAGEM_SUJA);
+            const nome = nomeDaImagem(get(), imagemId);
+            try {
+              const resposta = await api.removerImagemDoProjeto(projeto._id, imagemId);
+              await adotarVariantesAlteradas(resposta.afetadas.map((a) => a.varianteId));
+              set((estado) => {
+                estado.ui.dialogoImagem = null;
+              });
+              avisarCiclo(
+                resposta.fotosRemovidas > 0
+                  ? `“${nome}” removida do projeto: ${plural(resposta.fotosRemovidas, 'foto', 'fotos')} em ${plural(resposta.afetadas.length, 'variante', 'variantes')}.`
+                  : `“${nome}” removida do projeto.`,
+              );
+              await get().carregarBiblioteca();
+            } catch (erro) {
+              set((estado) => {
+                if (estado.ui.dialogoImagem)
+                  estado.ui.dialogoImagem.erro = mensagemDe(erro, 'Não foi possível remover a imagem.');
+              });
+              throw erro;
+            }
+          },
+
+          async excluirImagem(imagemId) {
+            const { projeto, sujo } = get().documento;
+            if (!projeto) return;
+            if (sujo) throw new Error(MENSAGEM_SUJA);
+            const nome = nomeDaImagem(get(), imagemId);
+            try {
+              const resposta = await api.excluirImagem(imagemId);
+              // Todos os projetos foram tocados; só as variantes do aberto interessam à tela.
+              const doProjeto = resposta.afetadas.filter((a) => a.projetoId === projeto._id);
+              await adotarVariantesAlteradas(doProjeto.map((a) => a.varianteId));
+              set((estado) => {
+                estado.ui.dialogoImagem = null;
+              });
+              avisarCiclo(
+                resposta.fotosConvertidas > 0
+                  ? `“${nome}” excluída. ${resposta.fotosConvertidas} ${resposta.fotosConvertidas === 1 ? 'foto virou' : 'fotos viraram'} espaço sem foto em ${plural(resposta.afetadas.length, 'variante', 'variantes')}.`
+                  : `“${nome}” excluída.`,
+              );
+              await get().carregarBiblioteca();
+              set((estado) => {
+                if (estado.ui.bibliotecaSelecaoId === imagemId) estado.ui.bibliotecaSelecaoId = null;
+              });
+            } catch (erro) {
+              set((estado) => {
+                if (estado.ui.dialogoImagem)
+                  estado.ui.dialogoImagem.erro = mensagemDe(erro, 'Não foi possível excluir a imagem.');
+              });
+              throw erro;
+            }
+          },
+
+          async carregarExcluidas() {
+            set((estado) => {
+              estado.biblioteca.carregandoExcluidas = true;
+            });
+            try {
+              const excluidas = await api.listarImagensExcluidas();
+              set((estado) => {
+                estado.biblioteca.excluidas = excluidas;
+                estado.biblioteca.erro = null;
+              });
+            } catch (erro) {
+              set((estado) => {
+                estado.biblioteca.erro = mensagemDe(erro, 'Não foi possível carregar as imagens excluídas.');
+              });
+            } finally {
+              set((estado) => {
+                estado.biblioteca.carregandoExcluidas = false;
+              });
+            }
+          },
+
+          // M4-07: vale na hora; não repõe a imagem nos placeholders (RF-30a). O 410 (prazo vencido) relê a lista.
+          async restaurarImagem(imagemId) {
+            const nome = get().biblioteca.excluidas.find((i) => i._id === imagemId)?.nomeOriginal ?? '';
+            try {
+              await api.restaurarImagem(imagemId);
+            } catch (erro) {
+              await get().carregarExcluidas();
+              throw erro;
+            }
+            set((estado) => {
+              estado.biblioteca.excluidas = estado.biblioteca.excluidas.filter((i) => i._id !== imagemId);
+            });
+            await get().carregarBiblioteca();
+            avisarCiclo(`“${nome}” restaurada.`);
+          },
+
+          recomendacaoDaFoto(fotoId) {
+            const foto = get().conteudo?.fotos.find((f) => f._id === fotoId);
+            return foto ? recomendacaoDoPlaceholder(foto, get().biblioteca.imagens) : null;
+          },
+
+          usarFotoAnterior(fotoId) {
+            const recomendada = get().recomendacaoDaFoto(fotoId);
+            if (recomendada) get().preencherVaga(fotoId, recomendada._id);
+          },
+
+          dispensarAvisoCiclo() {
+            set((estado) => {
+              estado.ui.avisoCiclo = null;
+            });
+          },
+
+          // ---- M4: exportação ----
+
+          abrirExportacao() {
+            if (!paredeInteiraDe(get().documento.projeto)) return;
+            set((estado) => {
+              estado.ui.exportacaoAberta = true;
+            });
+          },
+
+          fecharExportacao() {
+            set((estado) => {
+              estado.ui.exportacaoAberta = false;
             });
           },
         };

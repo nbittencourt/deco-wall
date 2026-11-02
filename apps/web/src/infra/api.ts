@@ -11,6 +11,10 @@ export interface Saude {
 
 export async function buscarSaude(fetcher: typeof fetch = fetch): Promise<Saude> {
   const resposta = await fetcher('/api/saude', { headers: { accept: 'application/json' } });
-  if (!resposta.ok) throw new Error(`/api/saude respondeu ${resposta.status}`);
-  return (await resposta.json()) as Saude;
+  // M4-14: com mongo ou pasta em erro a API responde 503 com o mesmo corpo; o indicador precisa dele.
+  if (resposta.ok || resposta.status === 503) {
+    const corpo = (await resposta.json().catch(() => null)) as Partial<Saude> | null;
+    if (corpo && corpo.api && corpo.mongo && corpo.pasta) return corpo as Saude;
+  }
+  throw new Error(`/api/saude respondeu ${resposta.status}`);
 }

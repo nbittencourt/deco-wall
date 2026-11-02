@@ -4,13 +4,17 @@ import {
   type CorpoCriarVariante,
   type CorpoRascunho,
   type CorpoSalvarVariante,
+  type AssociacoesDto,
   type DadosPerspectiva,
   type ImagemDto,
+  type ImagemExcluidaDto,
   type OpcoesEnvio,
   type ProjetoCompletoDto,
   type ProjetoDto,
   type RascunhoDto,
+  type RespostaExcluirDto,
   type RespostaParede,
+  type RespostaRemoverDto,
   type ResumoProjeto,
   type SegmentoLinear,
   type VarianteDto,
@@ -128,6 +132,18 @@ export function criarClienteHttp(
 
     listarImagens: () => pedir<ImagemDto[]>('/api/imagens'),
 
+    listarImagensExcluidas: () => pedir<ImagemExcluidaDto[]>('/api/imagens?situacao=excluidas'),
+
+    associacoesDaImagem: (imagemId) => pedir<AssociacoesDto>(`/api/imagens/${imagemId}/associacoes`),
+
+    excluirImagem: (imagemId) => pedir<RespostaExcluirDto>(`/api/imagens/${imagemId}`, { method: 'DELETE' }),
+
+    restaurarImagem: async (imagemId) =>
+      (await pedir<{ imagem: ImagemDto }>(`/api/imagens/${imagemId}/restaurar`, { method: 'POST' })).imagem,
+
+    removerImagemDoProjeto: (projetoId, imagemId) =>
+      pedir<RespostaRemoverDto>(`/api/projetos/${projetoId}/imagens/${imagemId}`, { method: 'DELETE' }),
+
     enviarImagem: ({ arquivo, perfil, projetoId }, opcoes) => {
       const form = new FormData();
       form.append('perfil', perfil);
@@ -137,7 +153,7 @@ export function criarClienteHttp(
     },
 
     salvarVariante: (projetoId, varianteId, corpo: CorpoSalvarVariante) =>
-      pedir<{ revisao: number; salvaEm: string }>(
+      pedir<{ revisao: number; salvaEm: string; imagensExcluidas?: string[] }>(
         `/api/projetos/${projetoId}/variantes/${varianteId}`,
         json('PUT', corpo),
       ),
