@@ -29,11 +29,13 @@ import { PainelFoto } from '../paineis/PainelFoto';
 import { Comparacao } from './comparacao/Comparacao';
 import { Biblioteca, TIPO_ARRASTO_IMAGEM } from './editor/Biblioteca';
 import { cenaDaParede, dadosDaParede } from './editor/cenas';
+import { DialogoExportar } from './editor/DialogoExportar';
+import { DialogoImagem } from './editor/DialogoImagem';
 import { DialogoTemplates } from './editor/DialogoTemplates';
 import { DialogosGlobais } from './editor/DialogosGlobais';
 import { DialogoDecisao, DialogoExcluirVariante, DialogoNomeVariante } from './editor/DialogosVariante';
 import { EstadoVazio } from './editor/EstadoVazio';
-import { HeaderEditor } from './editor/HeaderEditor';
+import { HeaderEditor, MOTIVO_SEM_ESCALA } from './editor/HeaderEditor';
 import { ModoAreaUtil } from './editor/modos/ModoAreaUtil';
 import { ModoCalibracao } from './editor/modos/ModoCalibracao';
 import { ModoPerspectiva } from './editor/modos/ModoPerspectiva';
@@ -179,6 +181,7 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
   const dialogoConflito = useEditor((s) => s.ui.dialogoConflito);
   const avisoRascunho = useEditor((s) => s.documento.avisoRascunho);
   const avisoCriacao = useEditor((s) => s.ui.avisoCriacao);
+  const avisoCiclo = useEditor((s) => s.ui.avisoCiclo);
   const avisoAreaUtilFora = useEditor((s) => s.ui.avisoAreaUtilFora);
   const selecaoId = useEditor((s) => s.ui.selecaoId);
   const bibliotecaSelecaoId = useEditor((s) => s.ui.bibliotecaSelecaoId);
@@ -211,6 +214,13 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
     const id = setTimeout(() => store.getState().dispensarAvisoCriacao(), AVISO_CRIACAO_MS);
     return () => clearTimeout(id);
   }, [avisoCriacao, store]);
+
+  // M4 (A-04, A-11): o aviso do ciclo de vida das imagens também some sozinho.
+  useEffect(() => {
+    if (!avisoCiclo) return undefined;
+    const id = setTimeout(() => store.getState().dispensarAvisoCiclo(), AVISO_CRIACAO_MS);
+    return () => clearTimeout(id);
+  }, [avisoCiclo, store]);
 
   const parede = projeto.parede;
   const dados = dadosDaParede(projeto);
@@ -316,6 +326,10 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
       setDialogoVar({ tipo: 'duplicar', id });
     });
 
+  // A-08: "Escolher outra na biblioteca" leva o foco à primeira miniatura da coluna Biblioteca.
+  const focarBiblioteca = () =>
+    document.querySelector<HTMLElement>('aside[aria-label="Biblioteca"] ul button[aria-pressed]')?.focus();
+
   const aoVoltar = () => {
     if (sujo) setDialogoSair(true);
     else navegar('/');
@@ -406,6 +420,8 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
         }
         onComparar={() => navegar(`${caminhoDoProjeto(projeto._id)}/comparar`)}
         onTemplates={() => comDecisao(() => store.getState().abrirGaleria())}
+        motivoExportar={dados.metodo === null ? MOTIVO_SEM_ESCALA : undefined}
+        onExportar={() => store.getState().abrirExportacao()}
         temParede={parede !== null}
         metodo={dados.metodo}
         pxPorCm={dados.pxPorCm}
@@ -427,7 +443,11 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
       />
 
       <div className="flex min-h-0 flex-1">
-        <Biblioteca api={api} temEscala={dados.metodo !== null} />
+        <Biblioteca
+          api={api}
+          temEscala={dados.metodo !== null}
+          onRemoverOuExcluir={(id) => comDecisao(() => store.getState().abrirDialogoImagem(id))}
+        />
 
         <section className="flex min-w-0 flex-1 flex-col">
           <ToolbarCanvas
@@ -508,6 +528,18 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
                 </Alert>
               )}
               {avisoCriacao && <Alert className="pointer-events-auto max-w-[560px]">{avisoCriacao}</Alert>}
+              {avisoCiclo && (
+                <Alert className="pointer-events-auto max-w-[560px]">
+                  <span>{avisoCiclo}</span>
+                  <Button
+                    variant="ghost"
+                    className="ml-2 h-7 px-3 text-sm"
+                    onClick={() => store.getState().dispensarAvisoCiclo()}
+                  >
+                    Dispensar
+                  </Button>
+                </Alert>
+              )}
               {erroSalvamento && !conflito && (
                 <Alert variant="alerta" className="pointer-events-auto max-w-[560px]">
                   {erroSalvamento}
@@ -572,6 +604,9 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
               onRemover={() => store.getState().removerFoto(selecionada._id)}
               podePreencher={bibliotecaSelecaoId !== null}
               onPreencher={() => store.getState().preencherVagaSelecionada()}
+              recomendada={store.getState().recomendacaoDaFoto(selecionada._id) ?? undefined}
+              onUsarAnterior={() => store.getState().usarFotoAnterior(selecionada._id)}
+              onEscolherOutra={focarBiblioteca}
             />
           ) : (
             <PainelComposicao
@@ -615,6 +650,8 @@ function EditorNormal({ api, navegar }: { api: ClienteApi; navegar: (caminho: st
         onSairSemSalvar={() => navegar('/')}
         onSalvarESair={() => void aoSalvarESair()}
       />
+      <DialogoImagem />
+      <DialogoExportar />
       <DialogoDecisao
         aberto={pendente !== null}
         nome={nomeVariante}

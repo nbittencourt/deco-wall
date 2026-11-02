@@ -51,6 +51,10 @@ export interface ImagemDesenhavel {
 
 export type OrigemImagem = { tipo: 'parede'; arquivo: string } | { tipo: 'foto'; imagemId: string };
 
+// Chave de cada imagem no pedido ao Worker (a URL sai do mapa `urls`).
+export const chaveDaOrigem = (origem: OrigemImagem): string =>
+  origem.tipo === 'parede' ? `parede:${origem.arquivo}` : `foto:${origem.imagemId}`;
+
 const COR_DANGER = '#B42318'; // tokens do tema (danger e sand) fixos em hex: o Worker não lê CSS
 const COR_IMAGEM_INDISPONIVEL = '#EFEAE1';
 const ALFA_FAIXA_FORTE = 0.45;

@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi, type Mock } from 'vitest';
 import { ProvedorStore } from '../../../app/StoreContext';
-import type { Exportador } from '../../../infra/exportacao';
+import type { Exportador, ResultadoExportacao } from '../../../infra/exportacao';
 import {
   abrirCenario,
   foto,
@@ -33,7 +33,9 @@ afterEach(cleanup);
 const AGORA = new Date('2026-11-02T14:35:00-03:00');
 const BLOB = new Blob(['x'], { type: 'image/png' });
 
-function exportadorFalso(sobrescrita: Partial<Exportador> = {}) {
+type ExportadorFalso = { previa: Mock<Exportador['previa']>; exportar: Mock<Exportador['exportar']> };
+
+function exportadorFalso(sobrescrita: Partial<ExportadorFalso> = {}): ExportadorFalso {
   return {
     previa: vi.fn<Exportador['previa']>(async () => ({ blob: BLOB, imagensIndisponiveis: 0 })),
     exportar: vi.fn<Exportador['exportar']>(async () => ({ blob: BLOB, imagensIndisponiveis: 0 })),
@@ -136,7 +138,7 @@ describe('prévia (M4-12, A-17)', () => {
 
   it('avisa quantas fotos saem como retângulo cinza (imagem indisponível)', async () => {
     const exportador = exportadorFalso({
-      previa: vi.fn(async () => ({ blob: BLOB, imagensIndisponiveis: 2 })),
+      previa: vi.fn<Exportador['previa']>(async () => ({ blob: BLOB, imagensIndisponiveis: 2 })),
     });
     const c = await montar({ variantes: VARIANTES() }, exportador);
     await abrir(c);
@@ -147,7 +149,7 @@ describe('prévia (M4-12, A-17)', () => {
 
   it('no singular', async () => {
     const exportador = exportadorFalso({
-      previa: vi.fn(async () => ({ blob: BLOB, imagensIndisponiveis: 1 })),
+      previa: vi.fn<Exportador['previa']>(async () => ({ blob: BLOB, imagensIndisponiveis: 1 })),
     });
     const c = await montar({ variantes: VARIANTES() }, exportador);
     await abrir(c);
@@ -215,9 +217,9 @@ describe('gerando, cancelar e erro (M4-12, A-19)', () => {
   it('enquanto gera: "Gerando…" desabilitado; Cancelar aborta e fecha', async () => {
     let sinal: AbortSignal | undefined;
     const exportador = exportadorFalso({
-      exportar: vi.fn(
+      exportar: vi.fn<Exportador['exportar']>(
         (pedido) =>
-          new Promise((_resolver, rejeitar) => {
+          new Promise<ResultadoExportacao>((_resolver, rejeitar) => {
             sinal = pedido.sinal;
             pedido.sinal?.addEventListener('abort', () =>
               rejeitar(new DOMException('Operação cancelada.', 'AbortError')),
@@ -239,9 +241,9 @@ describe('gerando, cancelar e erro (M4-12, A-19)', () => {
   it('fechar o diálogo (Esc) aborta a prévia em curso', async () => {
     let sinal: AbortSignal | undefined;
     const exportador = exportadorFalso({
-      previa: vi.fn((pedido) => {
+      previa: vi.fn<Exportador['previa']>((pedido) => {
         sinal = pedido.sinal;
-        return new Promise(() => undefined);
+        return new Promise<ResultadoExportacao>(() => undefined);
       }),
     });
     const c = await montar({ variantes: VARIANTES() }, exportador);

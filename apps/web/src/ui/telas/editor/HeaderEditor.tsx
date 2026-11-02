@@ -1,7 +1,7 @@
 import { formatarCmCurto, type Grid } from '@deco-wall/domain';
 import { ArrowLeft, ChevronDown, EyeOff, Grid3x3, Magnet, Redo2, Undo2 } from 'lucide-react';
 import type { MouseEvent, ReactNode } from 'react';
-import { BotaoEmBreve, BotaoInativo, TEXTO_EM_BREVE } from '../../componentes/proprios/BotaoEmBreve';
+import { BotaoInativo, TEXTO_EM_BREVE } from '../../componentes/proprios/BotaoEmBreve';
 import { ChipEscala } from '../../componentes/proprios/ChipEscala';
 import { ComDica } from '../../componentes/proprios/ComDica';
 import { NomeProjeto } from '../../componentes/proprios/NomeProjeto';
@@ -32,6 +32,9 @@ export interface PropsHeaderEditor {
   motivoComparar?: string;
   onComparar: () => void;
   onTemplates: () => void;
+  // M4 (A-13): Exportar pede a escala definida; fora do modo editor o header nem aparece.
+  motivoExportar?: string;
+  onExportar: () => void;
   temParede: boolean;
   metodo: 'perspectiva' | 'linear' | null;
   pxPorCm: number | null;
@@ -258,7 +261,13 @@ export function HeaderEditor(props: PropsHeaderEditor) {
           Salvar
         </Button>
       </ComDica>
-      <BotaoEmBreve variant="default">Exportar</BotaoEmBreve>
+      {props.motivoExportar ? (
+        <BotaoInativo variant="default" motivo={props.motivoExportar}>
+          Exportar
+        </BotaoInativo>
+      ) : (
+        <Button onClick={props.onExportar}>Exportar</Button>
+      )}
     </header>
   );
 }

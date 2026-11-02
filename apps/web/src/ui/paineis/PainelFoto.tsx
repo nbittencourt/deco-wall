@@ -40,6 +40,10 @@ export interface PropsPainelFoto {
   // M3-01, A-23: preencher a vaga com a miniatura escolhida na biblioteca; só no placeholder.
   onPreencher: () => void;
   podePreencher: boolean;
+  // M4-08 (RF-30a): a imagem anterior do placeholder, se estiver ativa na biblioteca; "Usar" preenche com ela.
+  recomendada?: ImagemDto;
+  onUsarAnterior?: () => void;
+  onEscolherOutra?: () => void;
 }
 
 // Retrato · Paisagem (152 px); inativo em tamanho quadrado (RN-05).
@@ -82,6 +86,9 @@ export function PainelFoto({
   onRemover,
   onPreencher,
   podePreencher,
+  recomendada,
+  onUsarAnterior,
+  onEscolherOutra,
 }: PropsPainelFoto) {
   const orientacao = orientacaoDe(foto.tamanho);
   const quadrado = orientacao === 'quadrado';
@@ -212,6 +219,27 @@ export function PainelFoto({
             <p key={aviso}>{aviso}</p>
           ))}
         </Alert>
+      )}
+
+      {placeholder && recomendada && (
+        <div className="flex flex-col gap-2 rounded-lg border-2 border-accent bg-accent-wash p-3">
+          <span className="text-label">Foto anterior, restaurada</span>
+          <div className="flex items-center gap-2">
+            <img
+              src={urlArquivoImagem(recomendada._id, 'thumb')}
+              alt=""
+              draggable={false}
+              className="h-8 w-12 shrink-0 rounded-[4px] bg-sand object-cover"
+            />
+            <span className="min-w-0 truncate text-body-sm text-ink">{recomendada.nomeOriginal}</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={onUsarAnterior}>Usar</Button>
+            <Button variant="ghost" onClick={onEscolherOutra}>
+              Escolher outra na biblioteca
+            </Button>
+          </div>
+        </div>
       )}
 
       {placeholder &&

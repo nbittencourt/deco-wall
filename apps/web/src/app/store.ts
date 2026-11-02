@@ -2123,7 +2123,8 @@ export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): Sto
           // ---- M4: exportação ----
 
           abrirExportacao() {
-            if (!paredeInteiraDe(get().documento.projeto)) return;
+            // A-13: exige a escala e o modo editor (os modos trocam o header por uma barra própria).
+            if (!paredeInteiraDe(get().documento.projeto) || get().ui.modo !== 'editor') return;
             set((estado) => {
               estado.ui.exportacaoAberta = true;
             });

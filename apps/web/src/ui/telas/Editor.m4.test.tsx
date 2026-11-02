@@ -29,6 +29,7 @@ vi.mock('../canvas/Palco', () => ({
   ),
 }));
 vi.mock('../../infra/exportacao', () => ({
+  baixarArquivo: vi.fn(),
   exportadorWorker: {
     previa: vi.fn(async () => ({ blob: new Blob(['x']), imagensIndisponiveis: 0 })),
     exportar: vi.fn(async () => ({ blob: new Blob(['x']), imagensIndisponiveis: 0 })),
@@ -174,11 +175,11 @@ describe('Exportar no header (A-13)', () => {
     expect(screen.queryByText('Exportar imagem')).toBeNull();
   });
 
-  it('fica inativo em qualquer modo (ex.: Área útil)', async () => {
+  it('nos modos o header é trocado pela barra do modo: Exportar não aparece (Área útil)', async () => {
     await montar();
     fireEvent.click(screen.getByRole('button', { name: 'Área útil' }));
     await screen.findByText('Ajuste onde as fotos podem ficar.');
-    expect(screen.getByRole('button', { name: 'Exportar' }).getAttribute('aria-disabled')).toBe('true');
+    expect(screen.queryByRole('button', { name: 'Exportar' })).toBeNull();
   });
 });
 

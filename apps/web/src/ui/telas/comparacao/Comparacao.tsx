@@ -1,4 +1,11 @@
-import { boundingBox, formatarDimensao, ZOOM } from '@deco-wall/domain';
+import {
+  boundingBox,
+  escolherVarianteDoPainel,
+  formatarDimensao,
+  parInicial,
+  ZOOM,
+  type ParComparacao,
+} from '@deco-wall/domain';
 import { ArrowLeft, Minus, Plus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { caminhoDoProjeto } from '../../../app/navegacao';
@@ -28,11 +35,7 @@ export function Comparacao({ navegar }: { navegar: (caminho: string) => void }) 
   const imagens = useEditor((s) => s.biblioteca.imagens);
 
   // M3-10: a ativa à esquerda e a seguinte na ordem à direita (a anterior, se a ativa for a última).
-  const [par, setPar] = useState<[string, string] | null>(() => {
-    const i = lista.findIndex((item) => item._id === ativa?._id);
-    const outra = lista[i + 1] ?? lista[i - 1];
-    return i >= 0 && outra ? [lista[i]!._id, outra._id] : null;
-  });
+  const [par, setPar] = useState<ParComparacao | null>(() => parInicial(lista, ativa?._id));
   const [mostrar, setMostrar] = useState({ grid: false, areaUtil: false, alertas: false });
   const [viewport, setViewport] = useState<ViewportCompartilhado | null>(null);
   const esquerdo = useRef<PalcoApi>(null);
@@ -61,12 +64,8 @@ export function Comparacao({ navegar }: { navegar: (caminho: string) => void }) 
   const base = dados.pxPorCm ?? 1;
   const percentual = viewport ? Math.round((viewport.escala / base) * 100) : 100;
 
-  // Escolher no seletor a variante que está no outro lado troca os lados (M3-10).
-  const escolher = (lado: Lado, id: string) => {
-    const [esq, dir] = par;
-    if (lado === 'esquerdo') setPar(id === dir ? [dir, esq] : [id, dir]);
-    else setPar(id === esq ? [dir, esq] : [esq, id]);
-  };
+  // RN-36, M4-02: a escolha vale só para o painel em que o usuário escolheu; a mesma variante pode estar nos dois.
+  const escolher = (lado: Lado, id: string) => setPar(escolherVarianteDoPainel(par, lado, id));
 
   const zoom = (fator: number) =>
     setViewport((atual) =>
