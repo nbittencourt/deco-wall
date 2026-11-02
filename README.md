@@ -2,7 +2,7 @@
 
 App web local para simular a decoração de uma parede com fotos: carrega uma foto da parede, calibra a escala em cm, envia fotos para uma biblioteca e posiciona as fotos com grid, snap e medidas. Tudo roda na sua máquina (navegador, servidor Node e MongoDB local).
 
-Requisitos em `docs/PRD.md`; arquitetura em `docs/ARCHITECTURE.md`; especificações dos marcos em `docs/specs/` (M0, M1 e M2 aceitos; M3 implementado, aguardando o aceite).
+Requisitos em `docs/PRD.md`; arquitetura em `docs/ARCHITECTURE.md`; especificações dos marcos em `docs/specs/` (M0 a M3 aceitos; M4 implementado, aguardando o aceite).
 
 ## Pré-requisitos
 
@@ -54,6 +54,8 @@ npm run seed:test     # recria o banco parede-fotos-test com dados de teste
 `npm run start` precisa de `npm run build` antes, senão a API sobe mas não serve a interface.
 
 `npm run seed:test` usa o mesmo servidor de `MONGODB_URI`, mas grava no banco `parede-fotos-test` (apagado e recriado a cada execução). As fotos de teste vão para uma pasta temporária, cujo caminho é impresso no fim.
+
+Ciclo de vida das imagens (M4): no menu ⋯ da miniatura, "Remover ou excluir…" tira a imagem do projeto ou a leva para "Excluídas" por 30 dias (restaurável, sem repor os espaços sem foto). A API apaga as vencidas ao iniciar e a cada 24 h. "Exportar" (header) baixa a composição em PNG ou JPG, na resolução da parede.
 
 Rotas da interface: `/` (Projetos), `/projetos/<id>` (editor), `/projetos/<id>/comparar` (comparação de variantes) e `/dev/ui` (fundação de design, pranchas 00 e 17).
 

@@ -2,10 +2,10 @@
 
 | Campo | Valor |
 |---|---|
-| Versão | 1.0 (concluída pelo Nicholas em 02/11; lacunas M4-01 a M4-18 e premissas A-01 a A-28 aprovadas) |
+| Versão | 1.1 (v1.0 concluída pelo Nicholas em 02/11; lacunas M4-01 a M4-18 e premissas A-01 a A-28 aprovadas; v1.1 acrescenta o registro da implementação, §12) |
 | Data | 2026-11-02 |
 | Base | `docs/PRD.md` v0.15 · `docs/ARCHITECTURE.md` v0.9 · `docs/DESIGN.md` v0.5 + protótipos 08, 10, 12 (e 03, 06, 11 no que tocam o M4) · `docs/specs/M0-setup.md` v0.6 (§4.10) · `docs/specs/M1-parede-e-escala.md` v0.3 · `docs/specs/M2-biblioteca-e-composicao.md` v0.4 · `docs/specs/M3-variantes-templates-e-salvamento.md` (aceita) · `MEMORY.md` (Questões em aberto) |
-| Status | **Concluída pelo Nicholas** (02/11): lacunas (§0.1) e premissas (§0.2) aprovadas; §11 aplicada aos outros documentos (PR-M4-05). Escrita só com a documentação (regra do `CLAUDE.md`). **Implementação não iniciada**: o gate está liberado, mas só começa quando o Nicholas pedir. |
+| Status | **Concluída pelo Nicholas** (02/11): lacunas (§0.1) e premissas (§0.2) aprovadas; §11 aplicada aos outros documentos (PR-M4-05). Escrita só com a documentação (regra do `CLAUDE.md`). **Implementada em 02/11** (T1 a T14 prontas; registro na §12). **Aguardando a validação do Nicholas (T15): o M4 ainda não está aceito.** |
 
 ## 0. Pré-requisitos
 

@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Versão | 0.10 (M4: ciclo de vida, exportação, ADR-16 decidida) |
+| Versão | 0.11 (M4 implementado: ADR-16 medida após a opção (b), compositor da exportação, E2E do M4) |
 | Data | 2026-11-02 |
 | Base | `docs/PRD.md` v0.16 |
 | Status | Decisões fechadas; modelo de dados em `docs/specs/M0-setup.md` §4 |
@@ -287,6 +287,7 @@ Medição no Chromium (Worker com warp + codificação WebP; `performance.measur
 - O warp (a parte que a ADR-04 previa como risco) custa ~0,9 s em 28 MP: **o plano B (WebGL) não resolve nada** — o que domina é o encoder WebP (libwebp), igual no Chromium e no `sharp` (7 s em Node para a mesma imagem ruidosa). Mover a codificação para o servidor não ajuda.
 - Leve e Médio (o uso normal; Leve é o padrão) cumprem os 3 s com folga. **Só o perfil Alto, com foto de 28 MP, fica no limite (≈ 3 s) ou acima dele (fotos com textura).**
 - Otimizações aplicadas: laço do warp sem alocações e com saída em `Uint8Array` (de 0,97 para ~0,78 s em Node).
+- **Medição depois da opção (b) (M4, 02/11, Chromium headless):** Alto com foto sintética **2,4 s** (warp 0,7 s + WebP 1,5 s); Alto com ruído gaussiano suavizado **3,7 s** (WebP 2,4 s, decodificação 0,4 s) — abaixo dos 4,5 s, sem precisar da opção (a).
 - **Decisão (Nicholas, 02/11): opção (b)** — WebP com qualidade 0,80 só na retificada, em todos os perfis (pipeline da ADR-04 mantido; fotos e parede enviada seguem a ADR-05). Meta: Alto com foto sintética ≤ 3 s (§8); o tempo da foto ruidosa é medido e registrado no `MEMORY.md` (tarefa T13 do M4). Se o Alto ruidoso passar de 4,5 s, parar e perguntar (o próximo passo seria a opção (a), que reduz a exportação do Alto). O app mostra "Aplicando perspectiva…" com **Cancelar** (aborta o Worker). Antes da decisão valia o pipeline atual com teto de 4,5 s no E2E.
 - **Opções consideradas; escolhida a (b)** (cada uma muda a ADR-05 ou a arquitetura): (a) limitar o lado maior da retificada a 4096 px em qualquer perfil (÷2,25 nos dois custos); (b) qualidade WebP 0,8 só na retificada (de 3 a 5× mais rápido em imagens com ruído, arquivos 2× menores); (c) dividir o warp em 2–4 Workers (−0,6 s; exige `SharedArrayBuffer`, logo cabeçalhos COOP/COEP na API); (d) JPEG quando a retificada não tem transparência (0,2 s, mas fora do `.webp` do modelo de dados).
 
@@ -337,7 +338,8 @@ deco-wall/
           dto.ts            # formatos da API, porta `ClienteApi` e `ErroApi`
           clienteApi.ts     # implementação com fetch (upload com progresso por XMLHttpRequest)
           retificacao.ts    # cliente do Worker (prévia e retificação completa)
-          exportacao.ts     # M4: cliente do Worker de exportação (prévia e arquivo final)
+          exportacao.ts     # M4: cliente do Worker de exportação (prévia e arquivo final) e download
+          exportacao-compositor.ts  # M4: desenha os comandos do domínio num contexto 2D (Worker e testes), uma imagem por vez
           workers/
             retificar.worker.ts   # warp + codificação WebP fora da thread da UI (ADR-04)
             exportar.worker.ts    # M4: compositor 2D em OffscreenCanvas, PNG/JPG (ADR-08)
@@ -384,7 +386,7 @@ deco-wall/
         imagens/            # M4: converter em placeholder, remover fotos da imagem, usos, dias restantes, recomendação, escolha de variante na comparação (RN-36)
         exportacao/         # M4: região, resolução, comandos de desenho, nome do arquivo, formato padrão
   tests/
-    e2e/                    # Playwright: smoke, rede, projetos, parede e escala, salvamento, desempenho, biblioteca, composição (ajudantes.ts)
+    e2e/                    # Playwright: smoke, rede, projetos, parede e escala, salvamento, desempenho, biblioteca, composição, variantes, ciclo de vida das imagens, exportação, pacote JS, telas do M4 (ajudantes.ts)
     fixtures/
       templates-md.ts       # M3: lê `docs/specs/templates.md` para os testes conferirem o catálogo contra a fonte
       imagens/

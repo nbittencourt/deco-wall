@@ -515,3 +515,83 @@ test.describe('template e comparação (spec M3 A-29)', () => {
     if (acrescimo !== null) expect(acrescimo).toBeLessThan(400);
   });
 });
+
+// Exportação e diálogo de imagem com 40 fotos (spec M4 A-20): exportar a variante com 40 fotos no perfil Leve em
+// menos de 3 s, sem tarefa longa (> 100 ms) na thread principal; prévia em menos de 500 ms; diálogo de imagem com as
+// associações em menos de 300 ms. Os tempos entram no MEMORY.md.
+test.describe('exportação e diálogo de imagem com 40 fotos (A-20)', () => {
+  test('exportar 40 fotos no perfil Leve', async ({ page, request }) => {
+    test.setTimeout(120_000);
+    const p = await criarProjetoComEscalaLinear(request, nomeUnico('Desempenho exportar'));
+    const imagem = await enviarImagem(request, p.id, 'retrato.jpg');
+    const atual = (await lerProjeto(request, p.id)).variantes[0]!;
+    const fotos = Array.from({ length: 40 }, (_, i) => ({
+      _id: (i + 1).toString(16).padStart(24, '0'),
+      imagemId: imagem._id,
+      imagemAnteriorId: null,
+      tamanho: { sugeridoId: '10x15', larguraCm: 10, alturaCm: 15 },
+      xCm: 10 + (i % 8) * 30,
+      yCm: 10 + Math.floor(i / 8) * 40,
+      recorte: { offsetX: 0, offsetY: 0 },
+      borda: { larguraCm: 1, cor: '#FFFFFF' },
+    }));
+    const salvo = await request.put(`/api/projetos/${p.id}/variantes/${p.varianteId}`, {
+      data: {
+        sessaoId: 'e2e',
+        revisaoBase: atual.revisao,
+        grid: { visivel: true, snap: true, passoCm: 5, principalACada: 5, cor: '#1F1B16', opacidade: 0.08 },
+        bordaPadrao: { larguraCm: 0, cor: '#FFFFFF' },
+        areaUtil: atual.areaUtil,
+        fotos,
+      },
+    });
+    expect(salvo.status()).toBe(200);
+
+    await page.goto(`/projetos/${p.id}`);
+    await esperarPalco(page);
+    await page.waitForTimeout(1500);
+    await page.evaluate(() => {
+      const w = window as unknown as { __tarefasLongas: number[] };
+      w.__tarefasLongas = [];
+      new PerformanceObserver((lista) => {
+        for (const e of lista.getEntries()) w.__tarefasLongas.push(e.duration);
+      }).observe({ entryTypes: ['longtask'] });
+    });
+
+    const aberturaInicio = Date.now();
+    await page.getByRole('button', { name: 'Exportar', exact: true }).click();
+    const dialogo = page.getByRole('dialog', { name: 'Exportar imagem' });
+    await expect(dialogo.getByAltText('Prévia da exportação')).toBeVisible({ timeout: 10_000 });
+    const previaMs = Date.now() - aberturaInicio;
+    const [download] = await Promise.all([
+      page.waitForEvent('download', { timeout: 60_000 }),
+      dialogo.getByRole('button', { name: /^Baixar/ }).click(),
+    ]);
+    await download.path();
+    const medidas = await page.evaluate(() => ({
+      exportacao: performance.getEntriesByName('deco:exportacao').at(-1)?.duration ?? -1,
+      tarefasLongas: (window as unknown as { __tarefasLongas: number[] }).__tarefasLongas,
+    }));
+    console.log(
+      `[exportação 40 fotos, Leve] arquivo ${Math.round(medidas.exportacao)} ms · prévia ${previaMs} ms (do clique, com o diálogo) · tarefas longas: ${JSON.stringify(medidas.tarefasLongas.map(Math.round))}`,
+    );
+    expect(medidas.exportacao).toBeLessThan(3000);
+    // A tarefa longa do próprio abrir do diálogo (React) não conta como geração: o limite é de 100 ms.
+    expect(Math.max(0, ...medidas.tarefasLongas)).toBeLessThanOrEqual(100);
+
+    // Diálogo de imagem com as associações (A-20): < 300 ms do clique no item do menu até a tabela.
+    await page.reload();
+    await esperarPalco(page);
+    await page
+      .getByRole('complementary', { name: 'Biblioteca' })
+      .getByRole('button', { name: 'Mais ações de retrato.jpg' })
+      .first()
+      .click();
+    const inicio = Date.now();
+    await page.getByRole('menuitem', { name: 'Remover ou excluir…' }).click();
+    await expect(page.getByText('Usada em 40 lugares')).toBeVisible();
+    const associacoesMs = Date.now() - inicio;
+    console.log(`[diálogo de imagem, 40 usos] ${associacoesMs} ms`);
+    expect(associacoesMs).toBeLessThan(300);
+  });
+});

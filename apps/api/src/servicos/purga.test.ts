@@ -209,3 +209,36 @@ describe('iniciarPurga — inicialização e agendamento a cada 24 h (A-10)', ()
     expect(cancelado).toBe(true);
   });
 });
+
+describe('desempenho da purga (A-20)', () => {
+  it('purga 200 imagens vencidas em menos de 5 s', async () => {
+    const { projeto } = await criarProjetoComEscalaApi(t.app, 'Perf');
+    const modelo = await imagemNova(projeto._id, 'modelo.jpg');
+    const { copyFile } = await import('node:fs/promises');
+    const base = (await t.db.collection('imagens').findOne({ _id: new ObjectId(modelo._id) }))!;
+    const docs = [];
+    for (let i = 0; i < 200; i += 1) {
+      const _id = new ObjectId();
+      const hex = _id.toHexString();
+      const arquivos = { render: `imagens/${hex}.webp`, thumb: `imagens/${hex}.thumb.webp` };
+      await copyFile(join(t.pasta, modelo.arquivos.render), join(t.pasta, arquivos.render));
+      await copyFile(join(t.pasta, modelo.arquivos.thumb), join(t.pasta, arquivos.thumb));
+      docs.push({
+        ...base,
+        _id,
+        arquivos,
+        excluidaEm: new Date(AGORA.getTime() - 40 * DIA),
+        purgaEm: new Date(AGORA.getTime() - DIA),
+      });
+    }
+    await t.db.collection('imagens').insertMany(docs);
+
+    const inicio = performance.now();
+    const resumo = await purgarImagens(contexto());
+    const duracao = performance.now() - inicio;
+    console.log(`[purga] 200 imagens em ${Math.round(duracao)} ms`);
+    expect(resumo).toMatchObject({ removidas: 200, falhas: 0 });
+    expect(duracao).toBeLessThan(5000);
+    expect(await existe(`imagens/${docs[0]!._id.toHexString()}.webp`)).toBe(false);
+  });
+});
