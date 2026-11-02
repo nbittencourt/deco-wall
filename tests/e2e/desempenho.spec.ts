@@ -29,7 +29,10 @@ import {
 // (ADR-16); o teste guarda contra regressões com o teto da ADR e imprime o tempo medido.
 
 const META_MS = 3000;
-const TETO_ALTO_MS = 4500; // ADR-16
+// ADR-16, M4-13: com a retificada em WebP 0,8, o Alto sintético cumpre os 3 s. A foto ruidosa (pior caso do
+// codificador) é medida e registrada; se passar de 4,5 s o trabalho para e pergunta (a opção seguinte reduziria a
+// resolução da exportação do Alto).
+const TETO_ALTO_RUIDOSO_MS = 4500;
 
 async function fotoSintetica(largura: number, altura: number): Promise<string> {
   const bruto = Buffer.alloc(largura * altura * 3);
@@ -52,15 +55,38 @@ async function fotoSintetica(largura: number, altura: number): Promise<string> {
   return arquivo;
 }
 
+// Textura de verdade (ruído gaussiano suavizado): o pior caso para o codificador de WebP.
+async function fotoRuidosa(largura: number, altura: number): Promise<string> {
+  const pasta = await mkdtemp(join(tmpdir(), 'deco-wall-desempenho-'));
+  const arquivo = join(pasta, `parede-ruidosa-${largura}x${altura}.jpg`);
+  await writeFile(
+    arquivo,
+    await sharp({
+      create: {
+        width: largura,
+        height: altura,
+        channels: 3,
+        background: { r: 128, g: 128, b: 128 },
+        noise: { type: 'gaussian', mean: 128, sigma: 40 },
+      },
+    })
+      .blur(0.8)
+      .jpeg({ quality: 60 })
+      .toBuffer(),
+  );
+  return arquivo;
+}
+
 async function medirRetificacao(
   page: Page,
   request: Parameters<typeof criarProjeto>[0],
   perfil: 'Leve' | 'Alto',
   largura: number,
   altura: number,
+  gerar: (l: number, a: number) => Promise<string> = fotoSintetica,
 ): Promise<number> {
   const p = await criarProjeto(request, nomeUnico(`Desempenho ${perfil}`));
-  const arquivo = await fotoSintetica(largura, altura);
+  const arquivo = await gerar(largura, altura);
 
   page.on('console', (mensagem) => {
     if (mensagem.text().startsWith('[retificacao]')) console.log(mensagem.text());
@@ -107,11 +133,21 @@ test('retificação no perfil Leve (padrão) leva até 3 s', async ({ page, requ
   expect(await medirRetificacao(page, request, 'Leve', 4000, 3000)).toBeLessThanOrEqual(META_MS);
 });
 
-test('retificação no perfil Alto (28 MP) fica dentro do teto da ADR-16', async ({ page, request }) => {
+test('retificação no perfil Alto (28 MP, foto sintética) cumpre os 3 s (ADR-16 b, M4-13)', async ({
+  page,
+  request,
+}) => {
   test.setTimeout(120_000);
-  const duracao = await medirRetificacao(page, request, 'Alto', 6144, 4608);
-  // Meta de 3 s (ARCHITECTURE §8) não atingida em 28 MP: ver ADR-16.
-  expect(duracao).toBeLessThanOrEqual(TETO_ALTO_MS);
+  expect(await medirRetificacao(page, request, 'Alto', 6144, 4608)).toBeLessThanOrEqual(META_MS);
+});
+
+test('retificação no perfil Alto (28 MP, foto ruidosa) é medida e fica abaixo de 4,5 s (ADR-16 b, M4-13)', async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(180_000);
+  const duracao = await medirRetificacao(page, request, 'Alto', 6144, 4608, fotoRuidosa);
+  expect(duracao).toBeLessThanOrEqual(TETO_ALTO_RUIDOSO_MS);
 });
 
 // Arrastar com 40 fotos (RNF-03, ARCHITECTURE §8: 60 fps, mínimo 50). A sonda conta os quadros que o

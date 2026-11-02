@@ -2,8 +2,6 @@
 import { expect, test } from '@playwright/test';
 import { criarProjeto, criarProjetoComEscalaLinear, lerProjeto, nomeUnico } from './ajudantes';
 
-const TEXTO_INATIVO = 'Disponível em uma próxima versão';
-
 // Smoke do M0 adaptado às rotas do M1 (A-01: `/editor` e o spike do Konva saíram; o editor é /projetos/<id>).
 
 test.describe('smoke', () => {
@@ -94,7 +92,10 @@ test.describe('controles inativos (aceite 12 do M0)', () => {
     expect(await exportar.evaluate((el) => el.hasAttribute('disabled'))).toBe(false);
 
     await exportar.focus();
-    await expect(page.getByRole('tooltip').filter({ hasText: TEXTO_INATIVO }).first()).toBeVisible();
+    // M4 (A-13): sem escala, o motivo do Exportar é o estado, não "próxima versão".
+    await expect(
+      page.getByRole('tooltip').filter({ hasText: 'Defina a escala primeiro.' }).first(),
+    ).toBeVisible();
   });
 });
 

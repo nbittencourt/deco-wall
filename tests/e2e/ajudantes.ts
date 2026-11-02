@@ -93,6 +93,9 @@ export async function criarProjetoComEscalaLinear(
 export async function criarProjetoComPerspectiva(
   request: APIRequestContext,
   nome?: string,
+  // M4 (E2E da exportação): quadrado transparente no canto superior esquerdo da retificada, como fica a parede
+  // quando a foto não cobre toda a região retificada.
+  cantoTransparentePx = 0,
 ): Promise<ProjetoE2E> {
   const p = await criarProjeto(request, nome);
   const revisao = await enviarParede(request, p, CAMINHO_PERSPECTIVA);
@@ -104,15 +107,18 @@ export async function criarProjetoComPerspectiva(
     alturaImagemPx: PERSPECTIVA.alturaImagemPx,
     ladoMaxPx: PERFIS.leve.ladoParedePx,
   });
-  const bitmap = await sharp({
-    create: {
-      width: r.larguraPx,
-      height: r.alturaPx,
-      channels: 4,
-      background: { r: 200, g: 190, b: 170, alpha: 1 },
-    },
-  })
-    .webp({ quality: 40 })
+  const pixels = Buffer.alloc(r.larguraPx * r.alturaPx * 4);
+  for (let y = 0; y < r.alturaPx; y += 1) {
+    for (let x = 0; x < r.larguraPx; x += 1) {
+      const i = (y * r.larguraPx + x) * 4;
+      pixels[i] = 200;
+      pixels[i + 1] = 190;
+      pixels[i + 2] = 170;
+      pixels[i + 3] = x < cantoTransparentePx && y < cantoTransparentePx ? 0 : 255;
+    }
+  }
+  const bitmap = await sharp(pixels, { raw: { width: r.larguraPx, height: r.alturaPx, channels: 4 } })
+    .webp({ quality: 40, alphaQuality: 100 })
     .toBuffer();
   const res = await request.put(`/api/projetos/${p.id}/parede/escala`, {
     multipart: {

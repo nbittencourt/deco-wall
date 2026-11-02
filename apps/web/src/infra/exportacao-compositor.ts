@@ -165,7 +165,9 @@ function desenharGrid(
   origem: { x: number; y: number },
 ) {
   const { passoCm, origemCm, tamanhoCm } = comando;
-  const entre = (valor: number, maximo: number) => Math.min(Math.max(valor, 0.5), maximo - 0.5);
+  // Linha de 1 px no centro do pixel (nítida, sem repartir a intensidade entre dois), dentro do canvas.
+  const entre = (valor: number, maximo: number) =>
+    Math.min(Math.max(Math.round(valor) + 0.5, 0.5), maximo - 0.5);
   ctx.beginPath();
   for (const x of multiplos(passoCm, origemCm.x, origemCm.x + tamanhoCm.larguraCm)) {
     const xpx = entre((x - origem.x) * pxPorCm, larguraPx);

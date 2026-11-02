@@ -169,12 +169,15 @@ test.describe('biblioteca global e filtros (RF-27, RF-28, PRD aceite 10)', () =>
     await expect(naBiblioteca.getByRole('button', { name: 'paisagem.jpg, Paisagem' })).toHaveCount(1);
   });
 
-  test('"Excluídas" e a busca seguem visíveis e inativas (M4 e RF-33c)', async ({ page, request }) => {
+  test('a busca segue inativa (RF-33c) e "Excluídas" ficou ativa no M4 (A-07)', async ({ page, request }) => {
     const p = await criarProjetoComEscalaLinear(request, nomeUnico('Inativos'));
     await page.goto(`/projetos/${p.id}`);
     await expect(page.getByLabel('Buscar por nome')).toHaveAttribute('aria-disabled', 'true');
     await page.getByRole('button', { name: 'Mais filtros' }).click();
-    await expect(page.getByRole('menuitem', { name: 'Excluídas' })).toHaveAttribute('aria-disabled', 'true');
+    await expect(page.getByRole('menuitem', { name: 'Excluídas' })).not.toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
   });
 
   test('sem escala: "Carregar fotos" ativo, miniaturas sem arrastar e o texto da biblioteca (A-20, §3.1)', async ({
