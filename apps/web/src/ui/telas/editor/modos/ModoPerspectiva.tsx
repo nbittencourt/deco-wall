@@ -3,6 +3,7 @@ import {
   formatarCmCurto,
   ordenarCantos,
   PERFIS,
+  QUALIDADE_WEBP_RETIFICADA,
   validarMedidaReferencia,
   validarQuadrilatero,
   type Pt,
@@ -131,7 +132,7 @@ export function ModoPerspectiva() {
             alturaImagemPx: parede.alturaPx,
             ladoMaxPx: PERFIS[parede.perfil].ladoParedePx,
           },
-          qualidadeWebp: PERFIS[parede.perfil].qualidadeWebp,
+          qualidadeWebp: QUALIDADE_WEBP_RETIFICADA,
         },
         controle.signal,
       );

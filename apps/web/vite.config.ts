@@ -22,11 +22,22 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: 'dist',
       emptyOutDir: true,
-      rollupOptions: {
+      rolldownOptions: {
         // Radix e Lucide trazem "use client"; é inofensivo fora de um bundle de servidor.
         onwarn(aviso, padrao) {
           if (aviso.code === 'MODULE_LEVEL_DIRECTIVE') return;
           padrao(aviso);
+        },
+        output: {
+          // M4-15, A-24: o pacote de entrada só leva o essencial da tela Projetos; o Konva e o bson ficam em
+          // chunks próprios, baixados ao abrir o editor (as rotas do editor, da comparação e de /dev/ui são lazy).
+          codeSplitting: {
+            groups: [
+              { name: 'konva', test: /node_modules[/\\](konva|react-konva)[/\\]/ },
+              { name: 'bson', test: /node_modules[/\\]bson[/\\]/ },
+              { name: 'react', test: /node_modules[/\\](react|react-dom|scheduler)[/\\]/ },
+            ],
+          },
         },
       },
     },

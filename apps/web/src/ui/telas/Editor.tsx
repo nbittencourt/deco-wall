@@ -10,7 +10,7 @@ import {
   type DirecaoSeta,
   type Perfil,
 } from '@deco-wall/domain';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { agendador, MS_POR_MINUTO } from '../../app/autosave';
 import { useAvisoAoSair } from '../../app/avisoAoSair';
 import { caminhoDoProjeto, navegarPadrao } from '../../app/navegacao';
@@ -26,7 +26,6 @@ import { Alert } from '../componentes/ui/alert';
 import { Button } from '../componentes/ui/button';
 import { PainelComposicao } from '../paineis/PainelComposicao';
 import { PainelFoto } from '../paineis/PainelFoto';
-import { Comparacao } from './comparacao/Comparacao';
 import { Biblioteca, TIPO_ARRASTO_IMAGEM } from './editor/Biblioteca';
 import { cenaDaParede, dadosDaParede } from './editor/cenas';
 import { DialogoExportar } from './editor/DialogoExportar';
@@ -47,6 +46,9 @@ import { ToolbarCanvas } from './editor/ToolbarCanvas';
 // Editor da parede (DESIGN §7, protótipos 02, 03 e 11; spec M1 §3.2, §3.3, §3.8; spec M2 §3). Header, três
 // colunas e barra de status; os modos Perspectiva, Calibração, Área útil e Recorte trocam o header por uma
 // barra escura.
+
+// M4-15: a comparação é um chunk próprio (as duas telas usam a mesma store; só o código é separado).
+const Comparacao = lazy(() => import('./comparacao/Comparacao').then((m) => ({ default: m.Comparacao })));
 
 export interface PropsEditor {
   projetoId: string;
@@ -134,8 +136,13 @@ function EditorConteudo({
   }
 
   let conteudo = <EditorNormal api={api} navegar={navegar} />;
-  if (tela === 'comparar') conteudo = <Comparacao navegar={navegar} />;
-  else if (modo === 'perspectiva') conteudo = <ModoPerspectiva />;
+  if (tela === 'comparar') {
+    conteudo = (
+      <Suspense fallback={null}>
+        <Comparacao navegar={navegar} />
+      </Suspense>
+    );
+  } else if (modo === 'perspectiva') conteudo = <ModoPerspectiva />;
   else if (modo === 'calibracao') conteudo = <ModoCalibracao />;
   else if (modo === 'area-util') conteudo = <ModoAreaUtil />;
   else if (modo === 'recorte') conteudo = <ModoRecorte />;

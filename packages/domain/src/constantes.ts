@@ -64,6 +64,9 @@ export const CORES_GRID = [
 // A-07: abaixo disto (px na tela entre duas linhas) o grid não é desenhado.
 export const GRID_PASSO_MIN_PX = 4;
 
+// ADR-16 (b), M4-13: a retificada da parede sai em WebP 0,8 em todos os perfis (a codificação é o gargalo).
+export const QUALIDADE_WEBP_RETIFICADA = 0.8;
+
 // RN-03: borda padrão 0 cm, cor branca.
 export const BORDA_PADRAO = { larguraCm: 0, cor: '#FFFFFF' } as const;
 
