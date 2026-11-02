@@ -2,7 +2,7 @@
 
 App web local para simular a decoração de uma parede com fotos: carrega uma foto da parede, calibra a escala em cm, envia fotos para uma biblioteca e posiciona as fotos com grid, snap e medidas. Tudo roda na sua máquina (navegador, servidor Node e MongoDB local).
 
-Requisitos em `docs/PRD.md`; arquitetura em `docs/ARCHITECTURE.md`; especificações dos marcos em `docs/specs/` (M0 e M1 aceitos; M2 implementado e ajustado à spec v0.4, aguardando o aceite).
+Requisitos em `docs/PRD.md`; arquitetura em `docs/ARCHITECTURE.md`; especificações dos marcos em `docs/specs/` (M0, M1 e M2 aceitos; M3 implementado, aguardando o aceite).
 
 ## Pré-requisitos
 
@@ -29,7 +29,7 @@ Variáveis (`.env`, não versionado):
 | `MONGODB_URI` | `mongodb://127.0.0.1:27017/parede-fotos` | Conexão com o MongoDB local |
 | `API_PORT` | `3001` | Porta da API (escuta só em `127.0.0.1`) |
 | `WEB_PORT` | `5173` | Porta do Vite em desenvolvimento |
-| `AUTOSAVE_MINUTOS` | `5` | Intervalo do salvamento automático |
+| `AUTOSAVE_MINUTOS` | `5` | Intervalo do salvamento automático do rascunho (a web lê o valor em `GET /api/config`) |
 | `UPLOAD_MAX_MB` | `50` | Tamanho máximo por arquivo no upload (a web lê o valor em `GET /api/config`) |
 
 Se a pasta de fotos não existir ou o MongoDB estiver fora do ar, a API não sobe e informa o motivo.
@@ -55,7 +55,7 @@ npm run seed:test     # recria o banco parede-fotos-test com dados de teste
 
 `npm run seed:test` usa o mesmo servidor de `MONGODB_URI`, mas grava no banco `parede-fotos-test` (apagado e recriado a cada execução). As fotos de teste vão para uma pasta temporária, cujo caminho é impresso no fim.
 
-Rotas da interface: `/` (Projetos), `/projetos/<id>` (editor) e `/dev/ui` (fundação de design, pranchas 00 e 17).
+Rotas da interface: `/` (Projetos), `/projetos/<id>` (editor), `/projetos/<id>/comparar` (comparação de variantes) e `/dev/ui` (fundação de design, pranchas 00 e 17).
 
 Os testes de API e o E2E usam o mesmo banco `parede-fotos-test`: não rode `npm run test` e `npm run e2e` ao mesmo tempo.
 

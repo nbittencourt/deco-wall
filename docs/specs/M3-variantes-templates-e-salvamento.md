@@ -5,7 +5,7 @@
 | Versão | 0.2 |
 | Data | 2026-11-02 |
 | Base | `docs/PRD.md` v0.13 · `docs/ARCHITECTURE.md` v0.8 · `docs/DESIGN.md` v0.4 + protótipos 06, 09, 14, 15, 15b (e 03, 03a, 11, 13, 17 no que tocam o M3) · `docs/specs/M0-setup.md` v0.6 · `docs/specs/M1-parede-e-escala.md` v0.3 (aceita) · `docs/specs/M2-biblioteca-e-composicao.md` v0.4 (implementada e aceita) · `docs/specs/templates.md` v0.2 |
-| Status | **Pronta para implementação** (02/11) — decisões M3-01 a M3-10 e premissas A-01 a A-31 aprovadas pelo Nicholas; M2 aceito (31/10); §11 aplicada aos outros documentos (PR-M3-04). Escrita só com a documentação (regra do `CLAUDE.md`), em paralelo ao M2. |
+| Status | **Implementada** (02/11), aguardando o aceite do Nicholas (T14) — decisões M3-01 a M3-10 e premissas A-01 a A-31 aprovadas; M2 aceito (31/10); §11 aplicada aos outros documentos (PR-M3-04). Escrita só com a documentação (regra do `CLAUDE.md`), em paralelo ao M2; registro da implementação na §12. |
 
 ## 0. Pré-requisitos
 
@@ -361,3 +361,36 @@ Dependências novas: nenhuma prevista. Qualquer uma para e pede aprovação.
 | `docs/specs/M1-parede-e-escala.md` | A-04: indicador "sem foto" no M3; §3.8: Salvar grava a variante ativa e há decisão ao deixá-la suja; troca de parede apaga rascunhos. |
 | `docs/specs/M2-biblioteca-e-composicao.md` | M2-06: associação de imagem a placeholder passa ao M3 (básica); A-26: novos estados do status; §6: histórico por variante já efetivo. |
 | `MEMORY.md` | Decisões M3-01 a M3-10 (com a data da decisão) e premissas alteradas na revisão. |
+
+## 12. Registro da implementação (02/11)
+
+Implementada em `claude/m3-implementation-fb9960`, que **carrega o código do M2** (mesclado de `claude/m2-implementation-8f6bef`, aceito em 31/10): a `main` ainda não tem o M2. Ordem do TDD: `test(m3)` vermelho antes de cada `feat(m3)`, **por camada** (domínio e API; store e cliente HTTP; UI; E2E), e não num único commit de testes como pedia a A-30 — a UI foi escrita contra os contratos dos testes das camadas de baixo, o que deixou o laço de correção curto. Os E2E foram escritos junto da UI.
+
+### 12.1 Números
+
+Vitest 1.337 testes (domínio, API e web), Playwright 98/98, `typecheck`, `lint` e `format:check` verdes. Cobertura do domínio: 98,6% das instruções, 95,7% dos ramos e 99,4% das linhas. Desempenho no Chromium headless (Windows), meta da A-29 em parênteses:
+
+| Medida | Resultado |
+|---|---|
+| Abrir o posicionamento do template (clique até o modo pintado) | 85–98 ms (< 200 ms) |
+| Arrastar o conjunto do template, 10 vagas | 60 fps, quadro médio 16,7 ms (≥ 50 fps) |
+| Pan e zoom na comparação, 2 × 40 fotos de 12 MP no perfil Leve | 60 fps, quadro médio 16,7 ms (≥ 50 fps) |
+| Memória do navegador inteiro nessa comparação | +285 a +297 MB sobre o navegador vazio (< 400 MB); heap JS 20–23 MB |
+
+### 12.2 Escolhas da implementação que a spec não fixava
+
+| # | Escolha | Por quê |
+|---|---|---|
+| I-01 | `GET /api/projetos/:id` e a criação de variante gravam `atualizadoEm` (§5, item 4); só o `PATCH` de `ultimaVarianteId` o preserva. A M3-04 fala em "sem alterar `atualizadoEm`" só para trocar de variante. | A §5 e a M3-04 se contradiziam na criação; vale a §5 (criar variante é uma edição real). |
+| I-02 | O temporizador do rascunho passa por `agendador.periodico` (`apps/web/src/app/autosave.ts`). | Os testes capturam o intervalo e disparam os ticks sem relógio falso, que atrapalha a espera do Testing Library. Os E2E usam `page.clock`. |
+| I-03 | Em base antiga, a recuperação busca o conteúdo do rascunho antes da escolha (`ui.recuperacao.previa`) para o diálogo mostrar as duas versões (A-09). | O resumo do projeto só traz o número de fotos. |
+| I-04 | Duplicar pelo menu ⋯ de outra variante primeiro abre essa variante (com a decisão da A-12) e depois o diálogo de nome. | "Duplicar copia o estado em tela" (M3-04): só a ativa tem estado em tela. |
+| I-05 | O cartão "A minha" do conflito usa a hora da última alteração local (`documento.alteradoEm`). | A-14 pede a hora; a store não a guardava. |
+| I-06 | O PUT da variante responde 422 "A parede está sem escala." com fotos e sem escala (A-11), **revendo a M2-14** (que tirou os acréscimos do servidor). O E2E e o teste de API do M2 que esperavam 200 foram ajustados. | Decisão já aprovada nesta spec (A-11, §2). |
+| I-07 | As vagas do conjunto saem a 80% de opacidade nos nós da cena (cm); a hachura de placeholder, que o Palco desenha na camada em px de tela, mantém opacidade cheia. | Reaproveita a camada de placeholders do M2 sem duplicá-la. |
+| I-08 | A pill do total do conjunto é desenhada no palco (ícone ✥ e medida). | DESIGN §7.3 / A-21. |
+
+### 12.3 Alterações em testes do M1 e do M2 que o M3 muda de propósito
+
+`store.test.ts` (forma do conflito), `Editor.test.tsx` (Comparar e Templates ativos; 409 abre o diálogo), `Projetos.test.tsx` (`semFoto`), `variantes.test.ts` e `config.test.ts`/`projetos.test.ts` da API (rascunhos obsoletos, 422 sem escala, `autosaveMinutos`, `semFoto`, `rascunhos` no `GET`), `composicao.spec.ts`, `parede.spec.ts` e `projetos.spec.ts` (E2E).
+
