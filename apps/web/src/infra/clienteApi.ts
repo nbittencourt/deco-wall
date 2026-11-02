@@ -1,11 +1,15 @@
 import {
   ErroApi,
   type ClienteApi,
+  type CorpoCriarVariante,
+  type CorpoRascunho,
   type CorpoSalvarVariante,
   type DadosPerspectiva,
   type ImagemDto,
   type OpcoesEnvio,
+  type ProjetoCompletoDto,
   type ProjetoDto,
+  type RascunhoDto,
   type RespostaParede,
   type ResumoProjeto,
   type SegmentoLinear,
@@ -84,7 +88,7 @@ export function criarClienteHttp(
         json('POST', nome === undefined ? {} : { nome }),
       ),
 
-    obterProjeto: (id) => pedir<{ projeto: ProjetoDto; variantes: VarianteDto[] }>(`/api/projetos/${id}`),
+    obterProjeto: (id) => pedir<ProjetoCompletoDto>(`/api/projetos/${id}`),
 
     renomearProjeto: (id, nome) => pedir<ProjetoDto>(`/api/projetos/${id}`, json('PATCH', { nome })),
 
@@ -120,7 +124,7 @@ export function criarClienteHttp(
       });
     },
 
-    obterConfig: () => pedir<{ uploadMaxMb: number }>('/api/config'),
+    obterConfig: () => pedir<{ uploadMaxMb: number; autosaveMinutos: number }>('/api/config'),
 
     listarImagens: () => pedir<ImagemDto[]>('/api/imagens'),
 
@@ -136,6 +140,44 @@ export function criarClienteHttp(
       pedir<{ revisao: number; salvaEm: string }>(
         `/api/projetos/${projetoId}/variantes/${varianteId}`,
         json('PUT', corpo),
+      ),
+
+    obterVariante: (projetoId, varianteId) =>
+      pedir<VarianteDto>(`/api/projetos/${projetoId}/variantes/${varianteId}`),
+
+    criarVariante: async (projetoId, corpo: CorpoCriarVariante) =>
+      (await pedir<{ variante: VarianteDto }>(`/api/projetos/${projetoId}/variantes`, json('POST', corpo)))
+        .variante,
+
+    renomearVariante: (projetoId, varianteId, nome) =>
+      pedir<{ _id: string; nome: string }>(
+        `/api/projetos/${projetoId}/variantes/${varianteId}`,
+        json('PATCH', { nome }),
+      ),
+
+    excluirVariante: (projetoId, varianteId) =>
+      pedir<void>(`/api/projetos/${projetoId}/variantes/${varianteId}`, { method: 'DELETE' }),
+
+    definirUltimaVariante: (projetoId, varianteId) =>
+      pedir<ProjetoDto>(`/api/projetos/${projetoId}`, json('PATCH', { ultimaVarianteId: varianteId })),
+
+    salvarRascunho: (projetoId, varianteId, corpo: CorpoRascunho) =>
+      pedir<{ salvoEm: string }>(
+        `/api/projetos/${projetoId}/variantes/${varianteId}/rascunho`,
+        json('PUT', corpo),
+      ),
+
+    obterRascunho: (projetoId, varianteId, sessaoId) =>
+      pedir<RascunhoDto>(
+        `/api/projetos/${projetoId}/variantes/${varianteId}/rascunho${
+          sessaoId === undefined ? '' : `?sessaoId=${encodeURIComponent(sessaoId)}`
+        }`,
+      ),
+
+    apagarRascunho: (projetoId, varianteId, sessaoId) =>
+      pedir<void>(
+        `/api/projetos/${projetoId}/variantes/${varianteId}/rascunho?sessaoId=${encodeURIComponent(sessaoId)}`,
+        { method: 'DELETE' },
       ),
   };
 }

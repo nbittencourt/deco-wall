@@ -1,4 +1,10 @@
-import { aplicarTemplate, centralizarNaAreaUtil, templatePorId, totalDoTemplate } from '@deco-wall/domain';
+import {
+  aplicarTemplate,
+  centralizarNaAreaUtil,
+  GRID_PADRAO,
+  templatePorId,
+  totalDoTemplate,
+} from '@deco-wall/domain';
 import { describe, expect, it } from 'vitest';
 import { ErroApi } from '../infra/dto';
 import {
@@ -153,15 +159,18 @@ describe('posicionar template (RN-32, TPL-06, M3-06, A-21, A-22)', () => {
   });
 
   it('sem snap, move a 0,1 cm', async () => {
-    const { estado } = await abrirCenario();
-    estado().alterarGrid({ snap: false });
+    const { estado } = await abrirCenario({
+      variantes: [variante({ grid: { ...GRID_PADRAO, snap: false } })],
+    });
     estado().abrirPosicionarTemplate({ templateId: 'piramide', borda: BORDA });
     estado().moverConjunto(42.34, 33.16);
     expect(estado().ui.template!.conjunto).toMatchObject({ xCm: 42.3, yCm: 33.2 });
   });
 
   it('as vagas acompanham o conjunto', async () => {
-    const { estado } = await abrirCenario();
+    const { estado } = await abrirCenario({
+      variantes: [variante({ grid: { ...GRID_PADRAO, snap: false } })],
+    });
     estado().abrirPosicionarTemplate({ templateId: 'trio', borda: BORDA });
     const antes = estado().ui.template!.fotos.map((f) => ({ x: f.xCm, y: f.yCm }));
     const c0 = { ...estado().ui.template!.conjunto };

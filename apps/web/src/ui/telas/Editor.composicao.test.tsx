@@ -640,7 +640,7 @@ describe('diálogo Carregar fotos (RF-20, RF-21, RF-25, DV-10, A-17, A-18, A-28)
 
   it('o limite de upload vem do servidor, não fixo em 50 MB (A-28)', async () => {
     const { dialogo, api } = await abrirDialogo({
-      api: { obterConfig: vi.fn(async () => ({ uploadMaxMb: 2 })) },
+      api: { obterConfig: vi.fn(async () => ({ uploadMaxMb: 2, autosaveMinutos: 5 })) },
     });
     expect(api.enviarImagem).not.toHaveBeenCalled();
     await waitFor(() => expect(api.obterConfig).toHaveBeenCalled());

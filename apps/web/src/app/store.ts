@@ -1,22 +1,36 @@
 import {
   AGRUPAR_SETAS_MS,
   alternarOrientacao,
+  aplicarTemplate,
   areaUtilForaDaParede,
   arredondarCm,
   BORDA_MAX_CM,
+  centralizarNaAreaUtil,
   duplicarFoto as duplicarFotoDaComposicao,
+  encaixarConjunto,
   encaixarPosicao,
   enviarParaTras as enviarParaTrasNaOrdem,
+  estadoDeSalvamento,
+  FALHAS_ANTES_DO_AVISO,
+  formatarHoraMinuto,
   HISTORICO_LIMITE,
   limitarAreaUtil,
+  limitarConjunto,
   limitarPosicao,
+  maiorQueAreaUtil,
   moverPorTeclado,
   mudarBorda,
   mudarTamanho,
+  nomeDoTemplateUnico,
   novaFoto,
   orientacaoDe,
   paredeInteira,
+  preencherVaga as preencherVagaNaVariante,
+  rascunhoDesatualizado,
+  semFoto,
+  templatePorId,
   trazerParaFrente as trazerParaFrenteNaOrdem,
+  truncarNome,
   type AreaUtil,
   type Borda,
   type DirecaoSeta,
@@ -37,8 +51,10 @@ import {
   type ClienteApi,
   type DadosPerspectiva,
   type ImagemDto,
+  type OrigemVariante,
   type ProjetoDto,
   type RespostaParede,
+  type ResumoRascunhoDto,
   type SegmentoLinear,
   type VarianteDto,
 } from '../infra/dto';
@@ -49,15 +65,62 @@ import {
 // porque o zundo restaura o estado mesclando só o primeiro nível, e assim desfazer nunca toca no projeto, nas
 // revisões nem no grid. Mutações só por ações nomeadas.
 
-export type Modo = 'editor' | 'perspectiva' | 'calibracao' | 'area-util' | 'recorte';
+export type Modo = 'editor' | 'perspectiva' | 'calibracao' | 'area-util' | 'recorte' | 'template';
 // Texto da barra do modo Área útil (§3.6): de onde o usuário veio.
 export type ContextoAreaUtil = 'perspectiva' | 'linear' | 'ajuste';
 
 export type EstadoSalvamentoStore =
-  { tipo: 'salvo'; em?: Date } | { tipo: 'alteracoes' } | { tipo: 'salvando' } | { tipo: 'conflito' };
+  | { tipo: 'salvo'; em?: Date }
+  | { tipo: 'alteracoes' }
+  | { tipo: 'salvando' }
+  | { tipo: 'rascunho'; em: Date }
+  | { tipo: 'conflito' };
 
-// Origem do 409: outra aba salvou a variante (§3.8) ou alterou a parede do projeto (SV-09).
-export type Conflito = { origem: 'variante'; salvaEm: Date } | { origem: 'projeto' };
+// Origem do 409: outra aba salvou a variante (§3.8, M3 §3.5) ou alterou a parede do projeto (SV-09). Na variante,
+// `deRascunho` diz se o conflito veio do rascunho (só `Alert`) ou do Salvar (diálogo); `excluida` é o 404 (M3-09);
+// `salva` é a versão oficial, buscada para os cartões do diálogo.
+export type Conflito =
+  | { origem: 'variante'; salvaEm: Date; deRascunho: boolean; excluida: boolean; salva: VarianteDto | null }
+  | { origem: 'projeto' };
+
+// M3 (A-01): uma linha do seletor. A contagem da ativa vem do conteúdo em tela (`resumoDasVariantes`).
+export interface ItemLista {
+  _id: string;
+  nome: string;
+  ordem: number;
+  qtdFotos: number;
+  semFoto: number;
+}
+
+export interface ResumoVariante extends ItemLista {
+  ativa: boolean;
+  naoSalva: boolean;
+}
+
+// M3-08: a oferta de recuperar um rascunho mais novo que a versão oficial.
+export interface Recuperacao {
+  varianteId: string;
+  sessaoId: string;
+  salvoEm: Date;
+  revisaoBase: number;
+  qtdFotos: number;
+  // Base antiga (SV-07): a revisão oficial passou da que o rascunho conhecia.
+  desatualizado: boolean;
+}
+
+// M3, RN-32: o posicionamento do template, com as vagas já calculadas pelo domínio.
+export interface EstadoTemplate {
+  templateId: string;
+  nome: string;
+  borda: Borda;
+  // Caixa do conjunto, com o canto superior esquerdo na posição atual.
+  conjunto: AreaUtil;
+  fotos: FotoNaParede[];
+  vagasMaiores: number;
+  maiorQueAreaUtil: boolean;
+  criando: boolean;
+  erro: string | null;
+}
 
 // O que o desfazer cobre (M2-03): fotos, área útil e borda padrão. O grid fica de fora.
 export interface ConteudoVariante {
@@ -91,6 +154,9 @@ export interface Documento {
   salvamento: EstadoSalvamentoStore;
   conflito: Conflito | null;
   erroSalvamento: string | null;
+  // M3: todas as variantes do projeto, na ordem; aviso do rascunho depois de falhas seguidas (A-07).
+  lista: ItemLista[];
+  avisoRascunho: boolean;
   carregando: boolean;
   erroCarregar: string | null;
 }
@@ -121,6 +187,12 @@ export interface Ui {
   bibliotecaSelecaoId: string | null;
   recorte: RascunhoRecorte | null;
   arrasto: Arrasto | null;
+  // M3: diálogo de conflito, oferta de recuperação, galeria e posicionamento de template.
+  dialogoConflito: boolean;
+  recuperacao: Recuperacao | null;
+  galeriaAberta: boolean;
+  template: EstadoTemplate | null;
+  avisoCriacao: string | null;
 }
 
 export interface Biblioteca {
@@ -141,7 +213,7 @@ export interface EstadoEditor {
   ui: Ui;
   biblioteca: Biblioteca;
   // A-28: limite de upload lido do servidor; 50 MB até a leitura chegar.
-  config: { uploadMaxMb: number };
+  config: { uploadMaxMb: number; autosaveMinutos: number };
   // Quantos passos há para desfazer e refazer (espelho do zundo, para a UI reagir).
   passos: { desfazer: number; refazer: number };
   abrirProjeto(id: string): Promise<void>;
@@ -199,6 +271,39 @@ export interface EstadoEditor {
   refazer(): void;
   podeDesfazer(): boolean;
   podeRefazer(): boolean;
+
+  // ---- M3: variantes (RF-91, M3-03 a M3-05) ----
+  // Só a ativa tem estado de trabalho: com alterações não salvas (ou fora do modo editor), alternar recusa.
+  alternarVariante(id: string): Promise<boolean>;
+  descartarAlteracoes(): Promise<void>;
+  criarVarianteEmBranco(nome: string): Promise<void>;
+  duplicarVariante(nome: string): Promise<void>;
+  renomearVariante(id: string, nome: string): Promise<void>;
+  excluirVariante(id: string): Promise<void>;
+
+  // ---- M3: rascunho, conflito e recuperação (RF-71, RF-73) ----
+  salvarRascunho(): Promise<void>;
+  dispensarAvisoRascunho(): void;
+  abrirDialogoConflito(): Promise<void>;
+  fecharDialogoConflito(): void;
+  resolverConflito(saida: 'manter' | 'usar-salva' | 'nova-variante'): Promise<void>;
+  resolverVarianteExcluida(acao: 'nova' | 'descartar'): Promise<void>;
+  recuperarRascunho(): Promise<void>;
+  descartarRascunhoOferecido(): Promise<void>;
+  fecharRecuperacao(): void;
+  recuperarComoNovaVariante(): Promise<void>;
+
+  // ---- M3: vagas e templates (M3-01, RF-93) ----
+  preencherVaga(fotoId: string, imagemId: string): void;
+  preencherVagaSelecionada(): void;
+  abrirGaleria(): void;
+  fecharGaleria(): void;
+  abrirPosicionarTemplate(escolha: { templateId: string; borda: Borda }): void;
+  moverConjunto(xCm: number, yCm: number): void;
+  centralizarConjunto(): void;
+  cancelarTemplate(): void;
+  confirmarTemplate(): Promise<void>;
+  dispensarAvisoCriacao(): void;
 }
 
 // O que o zundo guarda a cada passo.
@@ -236,11 +341,69 @@ const mesmoTamanho = (a: Tamanho, b: Tamanho) =>
 
 const limitarBorda = (cm: number) => arredondarCm(Math.min(Math.max(cm, 0), BORDA_MAX_CM));
 
+const MENSAGEM_ULTIMA = 'Todo projeto precisa de ao menos uma variante.';
+const MENSAGEM_SUJA = 'Há alterações não salvas.';
+
+const itemDe = (v: VarianteDto): ItemLista => ({
+  _id: v._id,
+  nome: v.nome,
+  ordem: v.ordem,
+  qtdFotos: v.fotos.length,
+  semFoto: semFoto(v.fotos),
+});
+
+// A-05: o que se guarda de uma variante salva que não está aberta; a pilha do zundo volta na reativação.
+interface EntradaCache {
+  variante: VarianteAberta;
+  conteudo: ConteudoVariante;
+  salvo: SnapshotSalvo;
+  revisaoBase: number;
+  past: Partial<ParteDesfazivel>[];
+  future: Partial<ParteDesfazivel>[];
+}
+
+const entradaDe = (v: VarianteDto, em?: Date): EntradaCache => ({
+  variante: semConteudo(v),
+  conteudo: conteudoDe(v),
+  salvo: { grid: v.grid, conteudo: conteudoDe(v), em },
+  revisaoBase: v.revisao,
+  past: [],
+  future: [],
+});
+
+// A-01: lista do seletor, com a contagem da ativa tirada do conteúdo em tela (M3-02).
+export function resumoDasVariantes(estado: EstadoEditor): ResumoVariante[] {
+  const ativa = estado.documento.variante;
+  return estado.documento.lista.map((item) =>
+    ativa && ativa._id === item._id && estado.conteudo
+      ? {
+          ...item,
+          nome: ativa.nome,
+          qtdFotos: estado.conteudo.fotos.length,
+          semFoto: semFoto(estado.conteudo.fotos),
+          ativa: true,
+          naoSalva: estado.documento.sujo,
+        }
+      : { ...item, ativa: false, naoSalva: false },
+  );
+}
+
+const mensagemDe = (erro: unknown, padrao: string) => (erro instanceof Error ? erro.message : padrao);
+
 export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): StoreEditor {
   const gerarId = opcoes.gerarId ?? (() => new ObjectId().toHexString());
 
   // A-08: a última seta, para agrupar as seguintes (mesma foto, menos de 1 s e nenhuma outra mudança no meio).
   let ultimaSeta: { id: string; em: number; conteudo: ConteudoVariante | null } | null = null;
+
+  // M3 (A-05): as variantes salvas que não estão abertas, o que o rascunho da sessão já gravou (A-06, A-07) e as
+  // ofertas de recuperação já feitas (A-08). Fora da store: a UI só precisa do `lista` e do `ui.recuperacao`.
+  const cache = new Map<string, EntradaCache>();
+  const jaOfereceu = new Set<string>();
+  let resumosRascunho: ResumoRascunhoDto[] = [];
+  let rascunhoGravado: { snapshot: string; em: Date } | null = null;
+  let falhasRascunho = 0;
+  let sequenciaPrevia = 0;
 
   const store: StoreEditor = createStore<EstadoEditor>()(
     temporal(
@@ -267,9 +430,26 @@ export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): Sto
             JSON.stringify(estado.conteudo) === JSON.stringify(doc.salvo.conteudo) &&
             JSON.stringify(doc.variante.grid) === JSON.stringify(doc.salvo.grid);
           doc.sujo = !igual;
-          if (doc.salvamento.tipo !== 'salvando' && doc.salvamento.tipo !== 'conflito') {
-            doc.salvamento = igual ? { tipo: 'salvo', em: doc.salvo.em } : { tipo: 'alteracoes' };
-          }
+          if (doc.salvamento.tipo === 'salvando' || doc.salvamento.tipo === 'conflito') return;
+          // A-06: difere da oficial e nada mudou depois do rascunho = "Rascunho salvo".
+          const mudouDepoisDoRascunho =
+            !rascunhoGravado ||
+            JSON.stringify({ grid: doc.variante.grid, conteudo: estado.conteudo }) !==
+              rascunhoGravado.snapshot;
+          const situacao = estadoDeSalvamento({
+            conflito: false,
+            salvando: false,
+            sujoOficial: !igual,
+            sujoRascunho: mudouDepoisDoRascunho,
+            salvoEm: doc.salvo.em,
+            rascunhoEm: rascunhoGravado?.em,
+          });
+          doc.salvamento =
+            situacao.tipo === 'salvo'
+              ? { tipo: 'salvo', em: situacao.em }
+              : situacao.tipo === 'rascunho'
+                ? { tipo: 'rascunho', em: situacao.em }
+                : { tipo: 'alteracoes' };
         };
 
         // Marca a variante como alterada, mesmo que o conteúdo seja igual ao salvo (confirmar a área útil).
@@ -325,10 +505,184 @@ export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): Sto
           });
         };
 
-        const carregar = async (id: string) => {
-          const { projeto, variantes } = await api.obterProjeto(id);
-          const variante = variantes.find((v) => v._id === projeto.ultimaVarianteId) ?? variantes[0] ?? null;
+        // M3-08, A-08: na primeira ativação da variante na sessão, oferece o rascunho elegível, se houver.
+        const oferecerRecuperacao = (varianteId: string) => {
+          if (jaOfereceu.has(varianteId)) return;
+          jaOfereceu.add(varianteId);
+          const resumo = resumosRascunho.find((r) => r.varianteId === varianteId);
+          const variante = get().documento.variante;
+          if (!resumo || !variante || variante._id !== varianteId) return;
           set((estado) => {
+            estado.ui.recuperacao = {
+              varianteId,
+              sessaoId: resumo.sessaoId,
+              salvoEm: new Date(resumo.salvoEm),
+              revisaoBase: resumo.revisaoBase,
+              qtdFotos: resumo.qtdFotos,
+              desatualizado: rascunhoDesatualizado(resumo, variante),
+            };
+          });
+        };
+
+        // A contagem do seletor da ativa acompanha o conteúdo, mas a lista guarda a última situação salva.
+        const sincronizarLista = (estado: EstadoEditor) => {
+          const v = estado.documento.variante;
+          const c = estado.conteudo;
+          if (!v || !c) return;
+          const item = estado.documento.lista.find((i) => i._id === v._id);
+          if (!item) return;
+          item.nome = v.nome;
+          item.qtdFotos = c.fotos.length;
+          item.semFoto = semFoto(c.fotos);
+        };
+
+        // A-05: a ativa, limpa, vai para o cache com a pilha de desfazer; a escolhida vem de lá.
+        const guardarAtivaNoCache = () => {
+          const doc = get().documento;
+          const conteudo = get().conteudo;
+          if (!doc.variante || !conteudo || !doc.salvo) return;
+          const t = historico();
+          cache.set(doc.variante._id, {
+            variante: doc.variante,
+            conteudo,
+            salvo: doc.salvo,
+            revisaoBase: doc.revisaoBase,
+            past: [...t.pastStates],
+            future: [...t.futureStates],
+          });
+        };
+
+        const ativarEntrada = (entrada: EntradaCache) => {
+          rascunhoGravado = null;
+          falhasRascunho = 0;
+          ultimaSeta = null;
+          semPasso(() => {
+            set((estado) => {
+              const doc = estado.documento;
+              doc.variante = entrada.variante;
+              estado.conteudo = entrada.conteudo;
+              doc.salvo = entrada.salvo;
+              doc.revisaoBase = entrada.revisaoBase;
+              doc.sujo = false;
+              doc.alteracoes = 0;
+              doc.salvamento = { tipo: 'salvo', em: entrada.salvo.em };
+              doc.conflito = null;
+              doc.erroSalvamento = null;
+              doc.avisoRascunho = false;
+              estado.ui.dialogoConflito = false;
+              estado.ui.selecaoId = null;
+              estado.ui.recorte = null;
+              estado.ui.arrasto = null;
+              sincronizarLista(estado);
+            });
+            // A pilha da variante entra sem registrar a troca como passo (RN-18, PRD aceite 12).
+            store.temporal.setState({ pastStates: entrada.past, futureStates: entrada.future });
+          });
+        };
+
+        // "Usar a salva" e o 409: a versão oficial vira o estado de trabalho; histórico e rascunho da sessão saem.
+        const adotarVersaoSalva = (salva: VarianteDto) => {
+          ativarEntrada(entradaDe(salva, new Date(salva.salvaEm)));
+        };
+
+        const apagarRascunhoDaSessao = async () => {
+          const { projeto, variante, sessaoId } = get().documento;
+          if (!projeto || !variante) return;
+          try {
+            await api.apagarRascunho(projeto._id, variante._id, sessaoId);
+          } catch {
+            // O rascunho velho some no próximo salvamento (A-10); não atrapalha o que o usuário decidiu.
+          }
+        };
+
+        const registrarNovaNaLista = (nova: VarianteDto) => {
+          set((estado) => {
+            estado.documento.lista.push(itemDe(nova));
+            if (estado.documento.projeto) estado.documento.projeto.ultimaVarianteId = nova._id;
+          });
+          jaOfereceu.add(nova._id);
+        };
+
+        // Cria no servidor e abre a nova (com a ativa limpa, M3-03). Grid, borda padrão e área útil vêm da ativa
+        // em tela (M3-05).
+        const criarEAtivar = async (nome: string, origem: OrigemVariante): Promise<VarianteDto> => {
+          const { projeto, variante, sessaoId, sujo } = get().documento;
+          const conteudo = get().conteudo;
+          if (!projeto || !variante || !conteudo) throw new Error('Nenhum projeto aberto.');
+          if (sujo) throw new Error(MENSAGEM_SUJA);
+          const nova = await api.criarVariante(projeto._id, {
+            sessaoId,
+            nome,
+            grid: variante.grid,
+            bordaPadrao: conteudo.bordaPadrao,
+            areaUtil: conteudo.areaUtil,
+            origem,
+          });
+          guardarAtivaNoCache();
+          registrarNovaNaLista(nova);
+          ativarEntrada(entradaDe(nova));
+          return nova;
+        };
+
+        // Variante vizinha (anterior na ordem, ou a seguinte se era a primeira) para depois de uma exclusão.
+        const vizinhaDe = (id: string): ItemLista | undefined => {
+          const lista = get().documento.lista;
+          const i = lista.findIndex((item) => item._id === id);
+          return lista[i - 1] ?? lista[i + 1];
+        };
+
+        const tirarDaLista = (id: string) => {
+          set((estado) => {
+            estado.documento.lista = estado.documento.lista.filter((item) => item._id !== id);
+          });
+        };
+
+        // Busca a versão oficial para os cartões do diálogo de conflito (A-14).
+        const buscarVersaoSalva = async () => {
+          const { projeto, variante, conflito } = get().documento;
+          if (
+            !projeto ||
+            !variante ||
+            conflito?.origem !== 'variante' ||
+            conflito.excluida ||
+            conflito.salva
+          ) {
+            return;
+          }
+          try {
+            const salva = await api.obterVariante(projeto._id, variante._id);
+            set((estado) => {
+              const atual = estado.documento.conflito;
+              if (atual?.origem === 'variante') atual.salva = salva;
+            });
+          } catch (erro) {
+            if (erro instanceof ErroApi && erro.status === 404) {
+              set((estado) => {
+                const atual = estado.documento.conflito;
+                if (atual?.origem === 'variante') atual.excluida = true;
+              });
+            }
+          }
+        };
+
+        const carregar = async (id: string) => {
+          const { projeto, variantes, rascunhos } = await api.obterProjeto(id);
+          const variante = variantes.find((v) => v._id === projeto.ultimaVarianteId) ?? variantes[0] ?? null;
+          cache.clear();
+          jaOfereceu.clear();
+          // As fakes de teste do M1/M2 não devolvem rascunhos.
+          resumosRascunho = rascunhos ?? [];
+          rascunhoGravado = null;
+          falhasRascunho = 0;
+          for (const v of variantes) if (v._id !== variante?._id) cache.set(v._id, entradaDe(v));
+          set((estado) => {
+            estado.documento.lista = variantes.map(itemDe);
+            estado.documento.avisoRascunho = false;
+            estado.ui.dialogoConflito = false;
+            estado.ui.recuperacao = null;
+            estado.ui.galeriaAberta = false;
+            estado.ui.template = null;
+            estado.ui.avisoCriacao = null;
             estado.documento.projeto = projeto;
             estado.documento.variante = variante ? semConteudo(variante) : null;
             estado.conteudo = variante ? conteudoDe(variante) : null;
@@ -350,6 +704,7 @@ export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): Sto
           // A-27: abrir e recarregar (depois de um 409) descartam o histórico.
           historico().clear();
           ultimaSeta = null;
+          if (variante) oferecerRecuperacao(variante._id);
         };
 
         // Aplica uma mudança ao conteúdo desfazível como UM passo do histórico (M2-03). A função recebe o conteúdo
@@ -407,6 +762,8 @@ export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): Sto
             salvamento: { tipo: 'salvo' },
             conflito: null,
             erroSalvamento: null,
+            lista: [],
+            avisoRascunho: false,
             carregando: false,
             erroCarregar: null,
           },
@@ -419,9 +776,14 @@ export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): Sto
             bibliotecaSelecaoId: null,
             recorte: null,
             arrasto: null,
+            dialogoConflito: false,
+            recuperacao: null,
+            galeriaAberta: false,
+            template: null,
+            avisoCriacao: null,
           },
           biblioteca: { imagens: [], carregando: false, erro: null },
-          config: { uploadMaxMb: 50 },
+          config: { uploadMaxMb: 50, autosaveMinutos: 5 },
           passos: { desfazer: 0, refazer: 0 },
 
           async abrirProjeto(id) {
@@ -579,9 +941,10 @@ export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): Sto
 
           async carregarConfig() {
             try {
-              const { uploadMaxMb } = await api.obterConfig();
+              const { uploadMaxMb, autosaveMinutos } = await api.obterConfig();
               set((estado) => {
                 estado.config.uploadMaxMb = uploadMaxMb;
+                if (autosaveMinutos) estado.config.autosaveMinutos = autosaveMinutos;
               });
             } catch {
               // Sem a configuração, vale o padrão de 50 MB; o servidor confere de qualquer forma.
@@ -847,11 +1210,16 @@ export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): Sto
           podeRefazer: () => get().passos.refazer > 0,
 
           async salvarVariante() {
-            const { projeto, variante, sujo, sessaoId, revisaoBase, salvamento } = get().documento;
+            const { projeto, variante, sujo, sessaoId, revisaoBase, salvamento, conflito } = get().documento;
             const conteudo = get().conteudo;
             // A-11: durante o modo de recorte, Salvar e Ctrl+S ficam inativos.
             if (!projeto || !variante || !conteudo || !sujo || salvamento.tipo === 'salvando') return;
             if (get().ui.modo === 'recorte') return;
+            // M3-09: com o conflito da variante em aberto, Salvar reabre o diálogo em vez de insistir.
+            if (conflito?.origem === 'variante') {
+              await get().abrirDialogoConflito();
+              return;
+            }
 
             // O que vai para o servidor: depois do salvamento é o novo "último salvo" (A-26, M2-05), mesmo que o
             // usuário mexa enquanto a requisição corre.
@@ -869,8 +1237,12 @@ export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): Sto
                 areaUtil: enviado.conteudo.areaUtil,
                 fotos: enviado.conteudo.fotos,
               });
+              // SV-02: o hard save vale como nova base; o rascunho da sessão deixa de contar (A-10).
+              rascunhoGravado = null;
+              falhasRascunho = 0;
               set((estado) => {
                 const doc = estado.documento;
+                doc.avisoRascunho = false;
                 if (doc.variante) {
                   doc.variante.revisao = resposta.revisao;
                   doc.variante.salvaEm = resposta.salvaEm;
@@ -884,6 +1256,7 @@ export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): Sto
                 doc.salvamento = { tipo: 'salvo', em: doc.salvo.em };
                 // Se o usuário mexeu durante a gravação, continua sujo.
                 reavaliarStatus(estado);
+                sincronizarLista(estado);
               });
               // M2-05: os filtros Projeto e Variante refletem o estado salvo, que acabou de mudar.
               void get().carregarBiblioteca();
@@ -891,9 +1264,31 @@ export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): Sto
               if (erro instanceof ErroApi && erro.status === 409) {
                 const salvaEm =
                   typeof erro.corpo.salvaEm === 'string' ? new Date(erro.corpo.salvaEm) : new Date();
+                // M3-09: o 409 do Salvar abre o diálogo na hora, com a versão salva para os cartões.
                 set((estado) => {
-                  estado.documento.conflito = { origem: 'variante', salvaEm };
+                  estado.documento.conflito = {
+                    origem: 'variante',
+                    salvaEm,
+                    deRascunho: false,
+                    excluida: false,
+                    salva: null,
+                  };
                   estado.documento.salvamento = { tipo: 'conflito' };
+                  estado.ui.dialogoConflito = true;
+                });
+                await buscarVersaoSalva();
+              } else if (erro instanceof ErroApi && erro.status === 404) {
+                // M3-09: a variante foi excluída em outra aba.
+                set((estado) => {
+                  estado.documento.conflito = {
+                    origem: 'variante',
+                    salvaEm: new Date(),
+                    deRascunho: false,
+                    excluida: true,
+                    salva: null,
+                  };
+                  estado.documento.salvamento = { tipo: 'conflito' };
+                  estado.ui.dialogoConflito = true;
                 });
               } else {
                 set((estado) => {
@@ -904,6 +1299,501 @@ export function criarStoreEditor(api: ClienteApi, opcoes: OpcoesStore = {}): Sto
               }
               throw erro;
             }
+          },
+
+          // ---- M3: variantes (RF-91, M3-03 a M3-05, A-05) ----
+
+          async alternarVariante(id) {
+            const { projeto, variante, sujo, salvamento } = get().documento;
+            if (!projeto || !variante || variante._id === id) return false;
+            if (get().ui.modo !== 'editor' || sujo || salvamento.tipo === 'salvando') return false;
+            const entrada = cache.get(id);
+            if (!entrada) return false;
+            guardarAtivaNoCache();
+            cache.delete(id);
+            ativarEntrada(entrada);
+            set((estado) => {
+              if (estado.documento.projeto) estado.documento.projeto.ultimaVarianteId = id;
+            });
+            oferecerRecuperacao(id);
+            void api.definirUltimaVariante(projeto._id, id).catch(() => undefined);
+            return true;
+          },
+
+          // A-12: "Descartar alterações" volta ao salvo, zera a pilha e apaga o rascunho da sessão.
+          async descartarAlteracoes() {
+            const { salvo } = get().documento;
+            if (!salvo) return;
+            rascunhoGravado = null;
+            falhasRascunho = 0;
+            ultimaSeta = null;
+            semPasso(() =>
+              set((estado) => {
+                const doc = estado.documento;
+                estado.conteudo = salvo.conteudo;
+                if (doc.variante) doc.variante.grid = salvo.grid;
+                doc.sujo = false;
+                doc.alteracoes += 1;
+                doc.salvamento = { tipo: 'salvo', em: salvo.em };
+                doc.conflito = null;
+                doc.erroSalvamento = null;
+                doc.avisoRascunho = false;
+                estado.ui.dialogoConflito = false;
+                estado.ui.selecaoId = null;
+                estado.ui.recorte = null;
+                estado.ui.arrasto = null;
+                sincronizarLista(estado);
+              }),
+            );
+            historico().clear();
+            await apagarRascunhoDaSessao();
+          },
+
+          async criarVarianteEmBranco(nome) {
+            await criarEAtivar(nome, { tipo: 'vazia' });
+          },
+
+          // M3-04: duplicar copia o estado em tela.
+          async duplicarVariante(nome) {
+            const fotos = get().conteudo?.fotos ?? [];
+            await criarEAtivar(nome, { tipo: 'copia', fotos });
+          },
+
+          async renomearVariante(id, nome) {
+            const projeto = get().documento.projeto;
+            if (!projeto) return;
+            const resposta = await api.renomearVariante(projeto._id, id, nome);
+            const entrada = cache.get(id);
+            if (entrada) entrada.variante = { ...entrada.variante, nome: resposta.nome };
+            set((estado) => {
+              const item = estado.documento.lista.find((i) => i._id === id);
+              if (item) item.nome = resposta.nome;
+              if (estado.documento.variante?._id === id) estado.documento.variante.nome = resposta.nome;
+            });
+          },
+
+          // M3-04, RN-23: a última não se exclui; se era a ativa, abre a vizinha e as alterações dela se perdem.
+          async excluirVariante(id) {
+            const { projeto, variante, lista } = get().documento;
+            if (!projeto) return;
+            if (lista.length <= 1) throw new Error(MENSAGEM_ULTIMA);
+            await api.excluirVariante(projeto._id, id);
+            if (variante?._id === id) {
+              const vizinha = vizinhaDe(id);
+              const entrada = vizinha ? cache.get(vizinha._id) : undefined;
+              tirarDaLista(id);
+              if (vizinha && entrada) {
+                cache.delete(vizinha._id);
+                ativarEntrada(entrada);
+                set((estado) => {
+                  if (estado.documento.projeto) estado.documento.projeto.ultimaVarianteId = vizinha._id;
+                });
+                oferecerRecuperacao(vizinha._id);
+              }
+            } else {
+              cache.delete(id);
+              tirarDaLista(id);
+            }
+          },
+
+          // ---- M3: rascunho — um tick do salvamento automático (RF-71, SV-01, A-07) ----
+
+          async salvarRascunho() {
+            const { projeto, variante, sujo, salvamento, sessaoId, revisaoBase } = get().documento;
+            const conteudo = get().conteudo;
+            if (!projeto || !variante || !conteudo || !sujo) return;
+            if (salvamento.tipo === 'salvando' || salvamento.tipo === 'conflito') return;
+            const snapshot = JSON.stringify({ grid: variante.grid, conteudo });
+            if (rascunhoGravado?.snapshot === snapshot) return;
+            try {
+              const { salvoEm } = await api.salvarRascunho(projeto._id, variante._id, {
+                sessaoId,
+                revisaoBase,
+                conteudo: {
+                  grid: variante.grid,
+                  bordaPadrao: conteudo.bordaPadrao,
+                  areaUtil: conteudo.areaUtil,
+                  fotos: conteudo.fotos,
+                },
+              });
+              rascunhoGravado = { snapshot, em: new Date(salvoEm) };
+              falhasRascunho = 0;
+              set((estado) => {
+                estado.documento.avisoRascunho = false;
+                reavaliarStatus(estado);
+              });
+            } catch (erro) {
+              if (erro instanceof ErroApi && (erro.status === 409 || erro.status === 404)) {
+                // M3-07: conflito no rascunho = `Alert` com "Resolver…"; o rascunho fica suspenso (SV-06).
+                const excluida = erro.status === 404;
+                const salvaEm =
+                  typeof erro.corpo.salvaEm === 'string' ? new Date(erro.corpo.salvaEm) : new Date();
+                set((estado) => {
+                  estado.documento.conflito = {
+                    origem: 'variante',
+                    salvaEm,
+                    deRascunho: true,
+                    excluida,
+                    salva: null,
+                  };
+                  estado.documento.salvamento = { tipo: 'conflito' };
+                });
+                return;
+              }
+              falhasRascunho += 1;
+              if (falhasRascunho >= FALHAS_ANTES_DO_AVISO) {
+                set((estado) => {
+                  estado.documento.avisoRascunho = true;
+                });
+              }
+            }
+          },
+
+          dispensarAvisoRascunho() {
+            set((estado) => {
+              estado.documento.avisoRascunho = false;
+            });
+          },
+
+          // ---- M3: conflito (RF-73, SV-05, M3-09, A-14) ----
+
+          async abrirDialogoConflito() {
+            if (get().documento.conflito?.origem !== 'variante') return;
+            set((estado) => {
+              estado.ui.dialogoConflito = true;
+            });
+            await buscarVersaoSalva();
+          },
+
+          // Esc ou ×: a decisão fica para depois; o conflito e o `Alert` continuam.
+          fecharDialogoConflito() {
+            set((estado) => {
+              estado.ui.dialogoConflito = false;
+            });
+          },
+
+          async resolverConflito(saida) {
+            const { projeto, variante, conflito, sessaoId } = get().documento;
+            const conteudo = get().conteudo;
+            if (!projeto || !variante || !conteudo) return;
+            if (conflito?.origem !== 'variante' || conflito.excluida) return;
+            const salva = conflito.salva ?? (await api.obterVariante(projeto._id, variante._id));
+
+            if (saida === 'manter') {
+              // Grava a minha sobre a revisão atual do servidor; um novo 409 reabre o diálogo.
+              set((estado) => {
+                estado.documento.conflito = null;
+                estado.documento.revisaoBase = salva.revisao;
+                estado.documento.salvamento = { tipo: 'alteracoes' };
+                estado.ui.dialogoConflito = false;
+              });
+              await get().salvarVariante();
+              return;
+            }
+
+            if (saida === 'usar-salva') {
+              await apagarRascunhoDaSessao();
+              adotarVersaoSalva(salva);
+              return;
+            }
+
+            // 'nova-variante': o meu conteúdo vira variante nova e a original adota a versão salva.
+            const nome = truncarNome(variante.nome, ` (cópia ${formatarHoraMinuto(new Date())})`);
+            const nova = await api.criarVariante(projeto._id, {
+              sessaoId,
+              nome,
+              grid: variante.grid,
+              bordaPadrao: conteudo.bordaPadrao,
+              areaUtil: conteudo.areaUtil,
+              origem: { tipo: 'copia', fotos: conteudo.fotos },
+            });
+            await apagarRascunhoDaSessao();
+            cache.set(variante._id, entradaDe(salva, new Date(salva.salvaEm)));
+            set((estado) => {
+              const item = estado.documento.lista.find((i) => i._id === variante._id);
+              if (item) Object.assign(item, itemDe(salva));
+            });
+            registrarNovaNaLista(nova);
+            ativarEntrada(entradaDe(nova));
+          },
+
+          // 404 ao salvar: a variante foi excluída em outra aba (M3-09).
+          async resolverVarianteExcluida(acao) {
+            const { projeto, variante, conflito, sessaoId } = get().documento;
+            const conteudo = get().conteudo;
+            if (!projeto || !variante || !conteudo) return;
+            if (conflito?.origem !== 'variante' || !conflito.excluida) return;
+            const excluidaId = variante._id;
+
+            if (acao === 'nova') {
+              const nome = truncarNome(variante.nome, ` (cópia ${formatarHoraMinuto(new Date())})`);
+              const nova = await api.criarVariante(projeto._id, {
+                sessaoId,
+                nome,
+                grid: variante.grid,
+                bordaPadrao: conteudo.bordaPadrao,
+                areaUtil: conteudo.areaUtil,
+                origem: { tipo: 'copia', fotos: conteudo.fotos },
+              });
+              tirarDaLista(excluidaId);
+              registrarNovaNaLista(nova);
+              ativarEntrada(entradaDe(nova));
+              return;
+            }
+
+            const vizinha = vizinhaDe(excluidaId);
+            const entrada = vizinha ? cache.get(vizinha._id) : undefined;
+            tirarDaLista(excluidaId);
+            if (vizinha && entrada) {
+              cache.delete(vizinha._id);
+              ativarEntrada(entrada);
+              set((estado) => {
+                if (estado.documento.projeto) estado.documento.projeto.ultimaVarianteId = vizinha._id;
+              });
+              oferecerRecuperacao(vizinha._id);
+              void api.definirUltimaVariante(projeto._id, vizinha._id).catch(() => undefined);
+            }
+          },
+
+          // ---- M3: recuperação de rascunho (SV-03, SV-07, M3-08, A-09) ----
+
+          async recuperarRascunho() {
+            const { projeto, variante } = get().documento;
+            const oferta = get().ui.recuperacao;
+            if (!projeto || !variante || !oferta || oferta.varianteId !== variante._id) return;
+            const rascunho = await api.obterRascunho(projeto._id, variante._id, oferta.sessaoId);
+            ultimaSeta = null;
+            // Entra como alteração não salva sobre a revisão oficial de agora (A-09).
+            rascunhoGravado = null;
+            semPasso(() => {
+              set((estado) => {
+                const doc = estado.documento;
+                estado.conteudo = {
+                  fotos: rascunho.conteudo.fotos,
+                  areaUtil: rascunho.conteudo.areaUtil,
+                  bordaPadrao: rascunho.conteudo.bordaPadrao,
+                };
+                if (doc.variante) doc.variante.grid = rascunho.conteudo.grid;
+                doc.revisaoBase = doc.variante?.revisao ?? doc.revisaoBase;
+                doc.alteracoes += 1;
+                estado.ui.recuperacao = null;
+                estado.ui.selecaoId = null;
+                reavaliarStatus(estado);
+                if (!doc.sujo) sujar(estado);
+              });
+            });
+            historico().clear();
+          },
+
+          async descartarRascunhoOferecido() {
+            const { projeto } = get().documento;
+            const oferta = get().ui.recuperacao;
+            if (!projeto || !oferta) return;
+            try {
+              await api.apagarRascunho(projeto._id, oferta.varianteId, oferta.sessaoId);
+            } catch {
+              // O rascunho obsoleto é limpo no próximo hard save (A-10).
+            }
+            resumosRascunho = resumosRascunho.filter(
+              (r) => !(r.varianteId === oferta.varianteId && r.sessaoId === oferta.sessaoId),
+            );
+            set((estado) => {
+              estado.ui.recuperacao = null;
+            });
+          },
+
+          // ×/Esc: abre a versão salva e mantém o rascunho; a pergunta volta na próxima abertura do projeto.
+          fecharRecuperacao() {
+            set((estado) => {
+              estado.ui.recuperacao = null;
+            });
+          },
+
+          // A-09: com base antiga, o rascunho pode virar variante própria em vez de sobrescrever a salva.
+          async recuperarComoNovaVariante() {
+            const { projeto, variante, sessaoId } = get().documento;
+            const oferta = get().ui.recuperacao;
+            if (!projeto || !variante || !oferta || get().documento.sujo) return;
+            const rascunho = await api.obterRascunho(projeto._id, variante._id, oferta.sessaoId);
+            const nome = truncarNome(
+              variante.nome,
+              ` (rascunho ${formatarHoraMinuto(new Date(rascunho.salvoEm))})`,
+            );
+            const nova = await api.criarVariante(projeto._id, {
+              sessaoId,
+              nome,
+              grid: rascunho.conteudo.grid,
+              bordaPadrao: rascunho.conteudo.bordaPadrao,
+              areaUtil: rascunho.conteudo.areaUtil,
+              origem: { tipo: 'copia', fotos: rascunho.conteudo.fotos },
+            });
+            try {
+              await api.apagarRascunho(projeto._id, variante._id, oferta.sessaoId);
+            } catch {
+              // O rascunho obsoleto é limpo no próximo hard save (A-10).
+            }
+            resumosRascunho = resumosRascunho.filter((r) => r.varianteId !== variante._id);
+            guardarAtivaNoCache();
+            registrarNovaNaLista(nova);
+            ativarEntrada(entradaDe(nova));
+            set((estado) => {
+              estado.ui.recuperacao = null;
+            });
+          },
+
+          // ---- M3: preencher vaga (M3-01, A-23) ----
+
+          preencherVaga(fotoId, imagemId) {
+            if (!get().biblioteca.imagens.some((i) => i._id === imagemId)) return;
+            trocarFoto(fotoId, (f) => preencherVagaNaVariante(f, imagemId));
+          },
+
+          preencherVagaSelecionada() {
+            const { selecaoId, bibliotecaSelecaoId } = get().ui;
+            if (selecaoId && bibliotecaSelecaoId) get().preencherVaga(selecaoId, bibliotecaSelecaoId);
+          },
+
+          // ---- M3: templates (RF-93, RN-29 a RN-32, M3-06) ----
+
+          abrirGaleria() {
+            set((estado) => {
+              estado.ui.galeriaAberta = true;
+            });
+          },
+
+          fecharGaleria() {
+            set((estado) => {
+              estado.ui.galeriaAberta = false;
+            });
+          },
+
+          abrirPosicionarTemplate({ templateId, borda }) {
+            const { projeto, variante, sujo } = get().documento;
+            const conteudo = get().conteudo;
+            const parede = paredeInteiraDe(projeto);
+            const template = templatePorId(templateId);
+            // A-12: a decisão sobre as alterações vem antes; sem escala não há onde posicionar.
+            if (!variante || !conteudo || !parede || !template || sujo || get().ui.modo !== 'editor') return;
+            const area = conteudo.areaUtil ?? parede;
+            const calcular = (xCm: number, yCm: number) =>
+              aplicarTemplate({
+                template,
+                posicaoCm: { xCm, yCm },
+                borda,
+                novoId: () => `previa-${(sequenciaPrevia += 1)}`,
+              });
+            const centro = centralizarNaAreaUtil(calcular(0, 0).conjunto, area);
+            const resultado = calcular(centro.xCm, centro.yCm);
+            set((estado) => {
+              estado.ui.template = {
+                templateId,
+                nome: template.nome,
+                borda,
+                conjunto: resultado.conjunto,
+                fotos: resultado.fotos,
+                vagasMaiores: resultado.vagasMaiores,
+                maiorQueAreaUtil: maiorQueAreaUtil(resultado.conjunto, area),
+                criando: false,
+                erro: null,
+              };
+              estado.ui.modo = 'template';
+              estado.ui.galeriaAberta = false;
+              estado.ui.selecaoId = null;
+            });
+          },
+
+          // Snap só no canto do conjunto; a caixa mantém 1 cm dentro da parede inteira (M3-06).
+          moverConjunto(xCm, yCm) {
+            const atual = get().ui.template;
+            const grid = get().documento.variante?.grid;
+            const parede = paredeInteiraDe(get().documento.projeto);
+            const template = atual && templatePorId(atual.templateId);
+            if (!atual || !grid || !parede || !template) return;
+            const posicao = limitarConjunto(
+              encaixarConjunto({ xCm, yCm }, { snap: grid.snap, passoCm: grid.passoCm }),
+              atual.conjunto,
+              parede,
+            );
+            const resultado = aplicarTemplate({
+              template,
+              posicaoCm: posicao,
+              borda: atual.borda,
+              novoId: () => `previa-${(sequenciaPrevia += 1)}`,
+            });
+            set((estado) => {
+              if (!estado.ui.template) return;
+              estado.ui.template.conjunto = resultado.conjunto;
+              estado.ui.template.fotos = resultado.fotos;
+            });
+          },
+
+          centralizarConjunto() {
+            const atual = get().ui.template;
+            const conteudo = get().conteudo;
+            const parede = paredeInteiraDe(get().documento.projeto);
+            const template = atual && templatePorId(atual.templateId);
+            if (!atual || !conteudo || !parede || !template) return;
+            const centro = centralizarNaAreaUtil(atual.conjunto, conteudo.areaUtil ?? parede);
+            const resultado = aplicarTemplate({
+              template,
+              posicaoCm: centro,
+              borda: atual.borda,
+              novoId: () => `previa-${(sequenciaPrevia += 1)}`,
+            });
+            set((estado) => {
+              if (!estado.ui.template) return;
+              estado.ui.template.conjunto = resultado.conjunto;
+              estado.ui.template.fotos = resultado.fotos;
+            });
+          },
+
+          // RN-32: Cancelar volta à galeria; fechar a galeria não cria nada.
+          cancelarTemplate() {
+            set((estado) => {
+              estado.ui.template = null;
+              estado.ui.modo = 'editor';
+              estado.ui.galeriaAberta = true;
+            });
+          },
+
+          async confirmarTemplate() {
+            const atual = get().ui.template;
+            if (!atual || atual.criando) return;
+            set((estado) => {
+              if (estado.ui.template) {
+                estado.ui.template.criando = true;
+                estado.ui.template.erro = null;
+              }
+            });
+            try {
+              const nome = nomeDoTemplateUnico(
+                atual.nome,
+                get().documento.lista.map((i) => i.nome),
+              );
+              const nova = await criarEAtivar(nome, {
+                tipo: 'template',
+                templateId: atual.templateId,
+                posicaoCm: { xCm: atual.conjunto.xCm, yCm: atual.conjunto.yCm },
+                borda: atual.borda,
+              });
+              set((estado) => {
+                estado.ui.template = null;
+                estado.ui.modo = 'editor';
+                estado.ui.avisoCriacao = `Variante “${nova.nome}” criada com ${nova.fotos.length} vagas.`;
+              });
+            } catch (erro) {
+              set((estado) => {
+                if (!estado.ui.template) return;
+                estado.ui.template.criando = false;
+                estado.ui.template.erro = mensagemDe(erro, 'Não foi possível criar a variante.');
+              });
+            }
+          },
+
+          dispensarAvisoCriacao() {
+            set((estado) => {
+              estado.ui.avisoCriacao = null;
+            });
           },
         };
       }),

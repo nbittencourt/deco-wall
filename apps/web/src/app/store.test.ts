@@ -254,7 +254,14 @@ describe('salvarVariante (hard save, §3.8)', () => {
 
     const { documento } = store.getState();
     expect(documento.salvamento.tipo).toBe('conflito');
-    expect(documento.conflito).toEqual({ origem: 'variante', salvaEm: new Date(SALVA_EM) });
+    // M3: o 409 do Salvar marca a origem (Salvar, não rascunho) e abre o diálogo com a versão salva (M3-09).
+    expect(documento.conflito).toMatchObject({
+      origem: 'variante',
+      salvaEm: new Date(SALVA_EM),
+      deRascunho: false,
+      excluida: false,
+    });
+    expect(store.getState().ui.dialogoConflito).toBe(true);
     expect(documento.sujo).toBe(true);
     expect(documento.variante?.grid.passoCm).toBe(10);
   });

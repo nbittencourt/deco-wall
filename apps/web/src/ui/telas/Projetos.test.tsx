@@ -34,6 +34,7 @@ const SALA: ResumoProjeto = {
   nome: 'Sala de estar',
   atualizadoEm: '2026-10-24T14:35:00-03:00',
   qtdVariantes: 3,
+  semFoto: 0,
   temParede: true,
   thumbUrl: `/api/projetos/${'a'.repeat(24)}/parede/arquivo?tipo=thumb`,
 };
@@ -42,6 +43,7 @@ const CORREDOR: ResumoProjeto = {
   nome: 'Corredor',
   atualizadoEm: '2026-10-12T14:35:00-03:00',
   qtdVariantes: 1,
+  semFoto: 0,
   temParede: false,
   thumbUrl: null,
 };

@@ -50,6 +50,11 @@ export function formatarBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1).replace('.', ',')} MB`;
 }
 
+// "14:35", sem o "às": nomes sugeridos (cópia, rascunho) e cartões do conflito.
+export function formatarHoraMinuto(data: Date): string {
+  return horaBrasilia(data);
+}
+
 function horaBrasilia(data: Date): string {
   return new Intl.DateTimeFormat('en-GB', {
     timeZone: FUSO_BRASILIA,
