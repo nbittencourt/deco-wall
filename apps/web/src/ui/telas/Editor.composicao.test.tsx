@@ -247,14 +247,14 @@ describe('biblioteca (RF-22, RF-27, RF-28)', () => {
     expect(miniatura('retrato.jpg').getAttribute('draggable')).toBe('false');
   });
 
-  it('"Excluídas" fica no menu ⋯, visível e inativa (M4)', async () => {
+  it('"Excluídas" fica no menu ⋯ e está ativa desde o M4 (A-07)', async () => {
     await montar();
     fireEvent.pointerDown(screen.getByRole('button', { name: 'Mais filtros' }), {
       button: 0,
       ctrlKey: false,
     });
     const item = await screen.findByRole('menuitem', { name: 'Excluídas' });
-    expect(item.getAttribute('aria-disabled')).toBe('true');
+    expect(item.getAttribute('aria-disabled')).toBeNull();
   });
 
   it('a busca por nome segue inativa (RF-33c)', async () => {

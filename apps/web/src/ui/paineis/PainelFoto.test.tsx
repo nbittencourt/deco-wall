@@ -290,3 +290,48 @@ describe('placeholder (M2-06, A-15)', () => {
     expect(props.onRemover).toHaveBeenCalled();
   });
 });
+
+describe('placeholder: foto anterior restaurada (RF-30a, M4-08, A-08)', () => {
+  const VAGA: FotoNaParede = { ...FOTO, imagemId: null, imagemAnteriorId: hex(1) };
+
+  it('com recomendação, mostra o card com o nome do arquivo e as ações Usar e Escolher outra', () => {
+    const props = montar({
+      foto: VAGA,
+      imagem: undefined,
+      recomendada: IMAGEM,
+      onUsarAnterior: vi.fn(),
+      onEscolherOutra: vi.fn(),
+    });
+    expect(screen.getByText('Foto anterior, restaurada')).toBeTruthy();
+    expect(screen.getByText('IMG_2041.jpg')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Usar' }));
+    expect(props.onUsarAnterior).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Escolher outra na biblioteca' }));
+    expect(props.onEscolherOutra).toHaveBeenCalledTimes(1);
+  });
+
+  it('o card vem acima de "Preencher com a foto selecionada", que continua como está', () => {
+    montar({
+      foto: VAGA,
+      imagem: undefined,
+      recomendada: IMAGEM,
+      onUsarAnterior: vi.fn(),
+      onEscolherOutra: vi.fn(),
+    });
+    const card = screen.getByText('Foto anterior, restaurada');
+    const preencher = screen.getByText('Preencher com a foto selecionada');
+    expect(card.compareDocumentPosition(preencher) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('sem recomendação (imagem anterior excluída ou purgada), o card não aparece', () => {
+    montar({ foto: VAGA, imagem: undefined });
+    expect(screen.queryByText('Foto anterior, restaurada')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Usar' })).toBeNull();
+    expect(screen.getByText('Preencher com a foto selecionada')).toBeTruthy();
+  });
+
+  it('foto com imagem nunca mostra o card', () => {
+    montar({ recomendada: IMAGEM, onUsarAnterior: vi.fn(), onEscolherOutra: vi.fn() });
+    expect(screen.queryByText('Foto anterior, restaurada')).toBeNull();
+  });
+});

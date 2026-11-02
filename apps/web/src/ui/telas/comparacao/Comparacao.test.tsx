@@ -195,15 +195,45 @@ describe('zoom e pan sincronizados (PRD aceite 11, A-17)', () => {
   });
 });
 
-describe('trocar variantes e sair (M3-10, A-26, A-27)', () => {
-  it('escolher no seletor a variante do outro lado troca os lados', async () => {
+describe('trocar variantes e sair (M3-10, RN-36, M4-02, A-21, A-27)', () => {
+  const combo = (lado: 'esquerdo' | 'direito') => within(painel(lado)).getByRole('combobox');
+
+  it('RN-36: escolher no segundo painel a variante do primeiro deixa os dois iguais, sem trocar os lados', async () => {
     await montar();
-    fireEvent.click(within(painel('direito')).getByRole('combobox'));
+    fireEvent.click(combo('direito'));
     fireEvent.click(await screen.findByRole('option', { name: /^Base/ }));
-    await waitFor(() =>
-      expect(within(painel('esquerdo')).getByRole('combobox').textContent).toContain('Variante 2'),
-    );
-    expect(within(painel('direito')).getByRole('combobox').textContent).toContain('Base');
+    await waitFor(() => expect(combo('direito').textContent).toContain('Base'));
+    expect(combo('esquerdo').textContent).toContain('Base');
+  });
+
+  it('RN-36: depois, escolher outra no primeiro painel não altera o segundo', async () => {
+    await montar();
+    fireEvent.click(combo('direito'));
+    fireEvent.click(await screen.findByRole('option', { name: /^Base/ }));
+    await waitFor(() => expect(combo('direito').textContent).toContain('Base'));
+    fireEvent.click(combo('esquerdo'));
+    fireEvent.click(await screen.findByRole('option', { name: /^Variante 2/ }));
+    await waitFor(() => expect(combo('esquerdo').textContent).toContain('Variante 2'));
+    expect(combo('direito').textContent).toContain('Base');
+  });
+
+  it('os dois seletores listam todas as variantes, inclusive a do outro painel', async () => {
+    await montar();
+    fireEvent.click(combo('esquerdo'));
+    expect(await screen.findByRole('option', { name: /^Base/ })).toBeTruthy();
+    expect(screen.getByRole('option', { name: /^Variante 2/ })).toBeTruthy();
+  });
+
+  it('com a mesma variante nos dois lados, os painéis mostram o mesmo conteúdo e a vista segue compartilhada', async () => {
+    await montar();
+    fireEvent.click(combo('direito'));
+    fireEvent.click(await screen.findByRole('option', { name: /^Base/ }));
+    await waitFor(() => expect(combo('direito').textContent).toContain('Base'));
+    const [esq, dir] = palcos();
+    expect(esq!.getAttribute('data-fotos')).toBe(dir!.getAttribute('data-fotos'));
+    fireEvent.click(screen.getAllByRole('button', { name: 'mover vista' })[0]!);
+    expect(palcos()[0]!.getAttribute('data-viewport')).toBe(palcos()[1]!.getAttribute('data-viewport'));
+    expect(palcos()[0]!.getAttribute('data-viewport')).toContain('"escala":8');
   });
 
   it('escolher uma terceira variante troca só aquele lado', async () => {
@@ -214,12 +244,10 @@ describe('trocar variantes e sair (M3-10, A-26, A-27)', () => {
         variante({ _id: '0'.repeat(23) + '3', nome: 'Variante 3', ordem: 2 }),
       ],
     });
-    fireEvent.click(within(painel('direito')).getByRole('combobox'));
+    fireEvent.click(combo('direito'));
     fireEvent.click(await screen.findByRole('option', { name: /^Variante 3/ }));
-    await waitFor(() =>
-      expect(within(painel('direito')).getByRole('combobox').textContent).toContain('Variante 3'),
-    );
-    expect(within(painel('esquerdo')).getByRole('combobox').textContent).toContain('Base');
+    await waitFor(() => expect(combo('direito').textContent).toContain('Variante 3'));
+    expect(combo('esquerdo').textContent).toContain('Base');
   });
 
   it('Voltar ao editor leva ao editor do projeto, sem salvar nem zerar nada', async () => {

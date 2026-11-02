@@ -217,10 +217,10 @@ describe('criar, duplicar, renomear e excluir (M3-04, A-02)', () => {
 });
 
 describe('Comparar e Templates no header (A-25)', () => {
-  it('Comparar fica inativo com menos de 2 variantes e Exportar continua inativo', async () => {
+  it('Comparar fica inativo com menos de 2 variantes e Exportar fica ativo com a escala definida (M4, A-13)', async () => {
     await montar({ variantes: [variante()] });
     expect(screen.getByRole('button', { name: 'Comparar' }).getAttribute('aria-disabled')).toBe('true');
-    expect(screen.getByRole('button', { name: 'Exportar' }).getAttribute('aria-disabled')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Exportar' }).getAttribute('aria-disabled')).toBeNull();
     expect(screen.getByRole('button', { name: 'Templates' }).getAttribute('aria-disabled')).toBeNull();
   });
 

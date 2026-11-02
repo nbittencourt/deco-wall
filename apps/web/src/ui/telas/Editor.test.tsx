@@ -319,9 +319,9 @@ describe('parede com escala', () => {
     await waitFor(() => expect(screen.queryByText('Ajuste onde as fotos podem ficar.')).toBeNull());
   });
 
-  it('controles do M4 em diante continuam visíveis e inativos; Comparar e Templates ativaram no M3 (§2, A-25)', async () => {
+  it('Exportar ativou no M4 (A-13); Comparar e Templates ativaram no M3 (§2, A-25)', async () => {
     await montar({ parede: PAREDE_LINEAR, areaUtil: AREA_LINEAR });
-    expect(screen.getByRole('button', { name: 'Exportar' }).getAttribute('aria-disabled')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Exportar' }).getAttribute('aria-disabled')).toBeNull();
     // Com uma só variante, Comparar fica inativo pelo estado; Templates abre a galeria.
     expect(screen.getByRole('button', { name: 'Comparar' }).getAttribute('aria-disabled')).toBe('true');
     expect(screen.getByRole('button', { name: 'Templates' }).getAttribute('aria-disabled')).toBeNull();
