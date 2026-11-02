@@ -22,6 +22,8 @@ export interface ResumoProjeto {
   nome: string;
   atualizadoEm: Date;
   qtdVariantes: number;
+  // M3-02: soma dos placeholders (vagas sem foto) das variantes salvas.
+  semFoto: number;
   temParede: boolean;
   thumbUrl: string | null;
 }
@@ -83,9 +85,23 @@ export async function listarProjetos(db: Db): Promise<ResumoProjeto[]> {
   const projetos = await db.collection('projetos').find({}).sort({ atualizadoEm: -1 }).toArray();
   const contagens = await db
     .collection('variantes')
-    .aggregate<{ _id: ObjectId; total: number }>([{ $group: { _id: '$projetoId', total: { $sum: 1 } } }])
+    .aggregate<{ _id: ObjectId; total: number; semFoto: number }>([
+      {
+        $group: {
+          _id: '$projetoId',
+          total: { $sum: 1 },
+          semFoto: {
+            $sum: {
+              $size: {
+                $filter: { input: '$fotos', cond: { $eq: [{ $ifNull: ['$$this.imagemId', null] }, null] } },
+              },
+            },
+          },
+        },
+      },
+    ])
     .toArray();
-  const total = new Map(contagens.map((c) => [c._id.toHexString(), c.total]));
+  const total = new Map(contagens.map((c) => [c._id.toHexString(), c]));
 
   return projetos.map((doc) => {
     const id = doc._id.toHexString();
@@ -94,7 +110,8 @@ export async function listarProjetos(db: Db): Promise<ResumoProjeto[]> {
       _id: id,
       nome: doc.nome as string,
       atualizadoEm: doc.atualizadoEm as Date,
-      qtdVariantes: total.get(id) ?? 0,
+      qtdVariantes: total.get(id)?.total ?? 0,
+      semFoto: total.get(id)?.semFoto ?? 0,
       temParede,
       thumbUrl: temParede ? `/api/projetos/${id}/parede/arquivo?tipo=thumb` : null,
     };
@@ -108,6 +125,38 @@ export async function obterProjeto(db: Db, id: string): Promise<{ projeto: Proje
   if (!doc) throw naoEncontrado();
   const variantes = await db.collection('variantes').find({ projetoId: _id }).sort({ ordem: 1 }).toArray();
   return { projeto: paraDominio<Projeto>(doc), variantes: variantes.map((v) => paraDominio<Variante>(v)) };
+}
+
+// M3-04: `ultimaVarianteId` muda ao trocar de variante sem alterar `atualizadoEm` (a lista de projetos não
+// reordena); renomear atualiza `atualizadoEm`.
+export async function atualizarProjeto(
+  db: Db,
+  id: string,
+  campos: { nome?: string; ultimaVarianteId?: string },
+  agora: Date,
+): Promise<Projeto> {
+  const _id = oid(id);
+  if (!_id) throw naoEncontrado();
+  const $set: Record<string, unknown> = {};
+  if (campos.ultimaVarianteId !== undefined) {
+    const idVariante = oid(campos.ultimaVarianteId);
+    const existe =
+      idVariante &&
+      (await db
+        .collection('variantes')
+        .findOne({ _id: idVariante, projetoId: _id }, { projection: { _id: 1 } }));
+    if (!existe) throw naoEncontrado('Variante não encontrada.');
+    $set.ultimaVarianteId = idVariante;
+  }
+  if (campos.nome !== undefined) {
+    $set.nome = campos.nome;
+    $set.atualizadoEm = agora;
+  }
+  const doc = await db
+    .collection('projetos')
+    .findOneAndUpdate({ _id }, { $set }, { returnDocument: 'after' });
+  if (!doc) throw naoEncontrado();
+  return paraDominio<Projeto>(doc);
 }
 
 // A-05: renomear não usa revisão (vale a última gravação) e atualiza `atualizadoEm`.

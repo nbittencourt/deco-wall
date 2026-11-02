@@ -164,8 +164,9 @@ export async function enviarParede(
     throw new ErroHttp(409, MENSAGEM_CONFLITO_PROJETO);
   }
 
-  // Parede nova: a escala e a área útil anteriores deixam de valer.
+  // Parede nova: a escala e a área útil anteriores deixam de valer, e os rascunhos do projeto também (A-10).
   const variantesAlteradas = await atualizarAreasUtil(ctx, _id, 'com-area', null);
+  await ctx.db.collection('rascunhos').deleteMany({ projetoId: _id });
   await promoverTemporario(tmpPrincipal, caminhos.original);
   await promoverTemporario(tmpThumb, caminhos.thumb);
   await apagarArquivo(caminhos.retificada);

@@ -340,6 +340,7 @@ export interface VarianteJson {
   grid: Record<string, unknown>;
   bordaPadrao: Record<string, unknown>;
   areaUtil: null | { xCm: number; yCm: number; larguraCm: number; alturaCm: number };
+  templateOrigem?: string | null;
   fotos: Record<string, unknown>[];
 }
 

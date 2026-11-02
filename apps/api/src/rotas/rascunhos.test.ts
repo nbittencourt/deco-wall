@@ -211,17 +211,15 @@ describe('GET …/rascunho', () => {
         .statusCode,
     ).toBe(404);
     expect((await t.app.inject({ method: 'GET', url: url(projeto._id, base._id) })).statusCode).toBe(404);
-    await t.db
-      .collection('rascunhos')
-      .insertOne(
-        paraMongo(
-          rascunho({
-            varianteId: base._id,
-            projetoId: projeto._id,
-            salvoEm: new Date('2000-01-01T00:00:00Z'),
-          }),
-        ) as never,
-      );
+    await t.db.collection('rascunhos').insertOne(
+      paraMongo(
+        rascunho({
+          varianteId: base._id,
+          projetoId: projeto._id,
+          salvoEm: new Date('2000-01-01T00:00:00Z'),
+        }),
+      ) as never,
+    );
     expect((await t.app.inject({ method: 'GET', url: url(projeto._id, base._id) })).statusCode).toBe(404);
   });
 });

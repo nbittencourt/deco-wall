@@ -15,12 +15,15 @@ export interface DependenciasApp {
   mongo: MongoClient;
   // Limite por arquivo no upload (UPLOAD_MAX_MB); padrão 50.
   uploadMaxMb?: number;
+  // Intervalo do salvamento automático (AUTOSAVE_MINUTOS); padrão 5.
+  autosaveMinutos?: number;
   agora?: () => Date;
   logger?: boolean;
 }
 
 export async function criarApp(deps: DependenciasApp): Promise<FastifyInstance> {
   const uploadMaxMb = deps.uploadMaxMb ?? 50;
+  const autosaveMinutos = deps.autosaveMinutos ?? 5;
   // O limite do corpo JSON acompanha o do upload; o multipart tem limite próprio por arquivo.
   const app = Fastify({ logger: deps.logger ?? false, bodyLimit: (uploadMaxMb + 1) * 1024 * 1024 });
   const ctx: ContextoApi = {
@@ -42,8 +45,8 @@ export async function criarApp(deps: DependenciasApp): Promise<FastifyInstance> 
     return reply.code(500).send({ erro: 'Erro interno do servidor.' });
   });
 
-  // A-28: o browser lê o limite real de upload ao abrir o editor.
-  app.get('/api/config', async () => ({ uploadMaxMb }));
+  // A-28, M3-07: o browser lê o limite real de upload e o intervalo do salvamento automático.
+  app.get('/api/config', async () => ({ uploadMaxMb, autosaveMinutos }));
   await registrarSaude(app, { pastaFotos: deps.pastaFotos, mongo: deps.mongo });
   await registrarProjetos(app, ctx);
   await registrarParede(app, ctx);

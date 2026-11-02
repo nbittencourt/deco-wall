@@ -210,7 +210,7 @@ describe('PUT /api/projetos/:pid/variantes/:id — validação (400/404)', () =>
 });
 
 describe('PUT /api/projetos/:pid/variantes/:id — fotos (M2-06, M2-14, RN-13, DM-05)', () => {
-  it('salva fotos mesmo sem escala definida: o servidor não recusa (M2-14)', async () => {
+  it('recusa fotos sem escala definida: 422 (A-11 do M3 revê a M2-14; o conteúdo continua em memória)', async () => {
     const { projeto, base } = await novo();
     const imagem = (await enviarImagemApi(t.app, { projetoId: projeto._id })).json() as ImagemJson;
     const res = await salvarVarianteApi(
@@ -219,10 +219,10 @@ describe('PUT /api/projetos/:pid/variantes/:id — fotos (M2-06, M2-14, RN-13, D
       base._id,
       corpo(base, { fotos: [foto({ imagemId: imagem._id })] }),
     );
-    expect(res.statusCode).toBe(200);
+    expect(res.statusCode).toBe(422);
     const salva = await t.db.collection('variantes').findOne({ _id: new ObjectId(base._id) });
-    expect(salva!.revisao).toBe(base.revisao + 1);
-    expect(salva!.fotos).toHaveLength(1);
+    expect(salva!.revisao).toBe(base.revisao);
+    expect(salva!.fotos).toHaveLength(0);
   });
 
   it('sem fotos, salvar continua valendo sem escala (grid e área útil do M1)', async () => {

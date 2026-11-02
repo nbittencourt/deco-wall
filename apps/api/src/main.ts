@@ -61,6 +61,7 @@ async function iniciar(config: Config): Promise<void> {
     pastaFotos: config.pastaFotos,
     mongo,
     uploadMaxMb: config.uploadMaxMb,
+    autosaveMinutos: config.autosaveMinutos,
     logger: true,
   });
   if (reparo.variantesCriadas + reparo.variantesApagadas + reparo.rascunhosApagados > 0) {
