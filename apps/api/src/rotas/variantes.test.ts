@@ -253,7 +253,7 @@ describe('PUT /api/projetos/:pid/variantes/:id — fotos (M2-06, M2-14, RN-13, D
     expect(salva!.revisao).toBe(base.revisao);
   });
 
-  it('imagem excluída conta como existente: a foto é salva (a exclusão é do M4)', async () => {
+  it('imagem excluída não recusa o salvamento: a foto vira placeholder (M4-06, substitui a M2-14)', async () => {
     const { projeto, base, imagem } = await comEscalaEImagem();
     await t.db
       .collection('imagens')
@@ -268,6 +268,10 @@ describe('PUT /api/projetos/:pid/variantes/:id — fotos (M2-06, M2-14, RN-13, D
       corpo(base, { fotos: [foto({ imagemId: imagem._id })] }),
     );
     expect(res.statusCode).toBe(200);
+    expect((res.json() as { imagensExcluidas: string[] }).imagensExcluidas).toEqual([imagem._id]);
+    const salva = await t.db.collection('variantes').findOne({ _id: new ObjectId(base._id) });
+    expect(salva!.fotos[0].imagemId).toBeNull();
+    expect(salva!.fotos[0].imagemAnteriorId.toHexString()).toBe(imagem._id);
   });
 
   it('_id de foto repetido não é recusado pelo servidor (M2-14)', async () => {

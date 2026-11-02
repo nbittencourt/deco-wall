@@ -306,7 +306,7 @@ describe('GET /api/imagens — biblioteca global (RF-27, RN-22)', () => {
     expect(lista[0]).toMatchObject({ nomeOriginal: 'dois.jpg', projetos: [b._id] });
   });
 
-  it('imagens excluídas não aparecem (o fluxo de exclusão é do M4)', async () => {
+  it('imagens excluídas não aparecem na lista de ativas (a lista de excluídas é do M4)', async () => {
     const projeto = await projetoNovo();
     const viva = (await enviarImagemApi(t.app, { projetoId: projeto._id })).json() as ImagemJson;
     const morta = (await enviarImagemApi(t.app, { projetoId: projeto._id })).json() as ImagemJson;

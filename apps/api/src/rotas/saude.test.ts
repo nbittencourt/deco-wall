@@ -41,6 +41,7 @@ describe('GET /api/saude (docs/specs/M0-setup.md §5.3)', () => {
     const app = await servidor(pasta, mongo);
     try {
       const res = await app.inject({ method: 'GET', url: '/api/saude' });
+      expect(res.statusCode).toBe(200);
       expect(res.json()).toEqual({
         api: 'ok',
         mongo: 'ok',
@@ -52,21 +53,34 @@ describe('GET /api/saude (docs/specs/M0-setup.md §5.3)', () => {
     }
   });
 
-  it('marca mongo como erro quando o banco não responde, sem derrubar a API', async () => {
+  it('marca mongo como erro quando o banco não responde, sem derrubar a API (503 com o mesmo corpo)', async () => {
     const app = await servidor(pasta, mortoClient);
     try {
-      const corpo = (await app.inject({ method: 'GET', url: '/api/saude' })).json();
-      expect(corpo).toMatchObject({ api: 'ok', mongo: 'erro', pasta: 'ok' });
+      const res = await app.inject({ method: 'GET', url: '/api/saude' });
+      expect(res.statusCode).toBe(503);
+      expect(res.json()).toEqual({ api: 'ok', mongo: 'erro', pasta: 'ok', versao: expect.any(String) });
     } finally {
       await app.close();
     }
   });
 
-  it('marca pasta como erro quando PASTA_FOTOS não existe', async () => {
+  it('marca pasta como erro quando PASTA_FOTOS não existe (503 com o mesmo corpo)', async () => {
     const app = await servidor(join(pasta, 'nao-existe'), mongo);
     try {
-      const corpo = (await app.inject({ method: 'GET', url: '/api/saude' })).json();
-      expect(corpo).toMatchObject({ api: 'ok', mongo: 'ok', pasta: 'erro' });
+      const res = await app.inject({ method: 'GET', url: '/api/saude' });
+      expect(res.statusCode).toBe(503);
+      expect(res.json()).toEqual({ api: 'ok', mongo: 'ok', pasta: 'erro', versao: expect.any(String) });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('com mongo e pasta em erro, 503 e os dois componentes marcados (M4-14, A-23)', async () => {
+    const app = await servidor(join(pasta, 'nao-existe'), mortoClient);
+    try {
+      const res = await app.inject({ method: 'GET', url: '/api/saude' });
+      expect(res.statusCode).toBe(503);
+      expect(res.json()).toMatchObject({ api: 'ok', mongo: 'erro', pasta: 'erro' });
     } finally {
       await app.close();
     }
